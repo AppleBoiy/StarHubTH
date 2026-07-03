@@ -11,6 +11,21 @@
 *   **บันทึกนักพัฒนา (Developer Logs)**: ติดตามการทำงานของ SMAPI ได้แบบเรียลไทม์ภายในแอป
 *   **UI สไตล์ Native macOS**: หน้าตาแอปพลิเคชันที่สวยงาม ใช้งานง่าย ออกแบบมาให้กลมกลืนกับระบบ macOS อย่างสมบูรณ์แบบ
 
+### 📸 ภาพตัวอย่างการใช้งาน (Screenshots & Use Cases)
+
+| หน้าแรก (Home / Profile) | การตั้งค่าแอปพลิเคชัน (Settings) |
+| :---: | :---: |
+| <img src="screenshots/profile.png" width="400"> | <img src="screenshots/settings.png" width="400"> |
+
+| การจัดการเซฟเกม (Saves) | การแก้ไขข้อมูลเซฟ (Save Editor) |
+| :---: | :---: |
+| <img src="screenshots/save.png" width="400"> | <img src="screenshots/save_edit.png" width="400"> |
+
+| การจัดการส่วนเสริม (Mods Manager) |
+| :---: |
+| <img src="screenshots/mods.png" width="400"> |
+
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/install_banner.png" alt="วิธีติดตั้ง" width="300">
 </p>
