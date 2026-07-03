@@ -13,12 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved UI alignment by allowing components to size naturally and align right in settings.
 - Moved search bars and action buttons (like refresh/status badges) to the native macOS Navigation Toolbar.
 - Renamed "Game System Info" section to "App Info".
+- Added native-style section headers to the Sidebar (e.g., "Game Management", "System Settings", "Online Services") to group menu items logically.
 
 ### Fixed
 - Fixed app launching to the incorrect default tab (now opens to the Home/Profile page).
 - Implemented full Navigation History, allowing the macOS Back/Forward toolbar buttons to correctly navigate through previously visited tabs.
 - Reduced sizes of toggle switches and info popover buttons to be properly proportional to the surrounding text.
 - Removed redundant English parenthetical texts from localized Thai UI strings.
+- Fixed a bug where English and Japanese localizations in the Settings page failed to display properly due to mismatched translation keys.
 
 ## [1.0.2] - 2026-07-03
 
