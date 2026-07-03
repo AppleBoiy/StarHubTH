@@ -14,44 +14,7 @@ struct ModListView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 32) {
-                // ── Toolbar ───────────────────────────────────────────────
-                HStack(spacing: 12) {
-                    // Search
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-                            .font(.system(size: 13))
-                        TextField("ค้นหาส่วนเสริม...", text: $searchText)
-                            .textFieldStyle(PlainTextFieldStyle())
-                            .font(.system(size: 13))
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(Color(nsColor: .textBackgroundColor))
-                    .cornerRadius(8)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.2), lineWidth: 1))
-                    .frame(maxWidth: 240)
-    
-                    Spacer()
-    
-                    // SMAPI status badge
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(vm.smapiInstalledVersion == "ยังไม่ได้ติดตั้ง" ? Color.red : Color.green)
-                            .frame(width: 8, height: 8)
-                            .shadow(color: vm.smapiInstalledVersion == "ยังไม่ได้ติดตั้ง" ? .clear : Color.green.opacity(0.5), radius: 3)
-                        
-                        Text(LocalizedStringKey(vm.smapiInstalledVersion == "ยังไม่ได้ติดตั้ง" ? "API ออฟไลน์" : "API ทำงานปกติ"))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(nsColor: .windowBackgroundColor))
-                    .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.1), lineWidth: 1))
-                }
-                
+
                 // ── List ──────────────────────────────────────────────────
                 VStack(alignment: .leading, spacing: 32) {
                     if filteredMods.isEmpty {
@@ -86,6 +49,26 @@ struct ModListView: View {
             .padding(24)
         }
         .background(Color(nsColor: .controlBackgroundColor))
+        .searchable(text: $searchText, prompt: Text(vm.localizedString(for: "ค้นหาส่วนเสริม...")))
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(vm.smapiInstalledVersion == "ยังไม่ได้ติดตั้ง" ? Color.red : Color.green)
+                        .frame(width: 8, height: 8)
+                        .shadow(color: vm.smapiInstalledVersion == "ยังไม่ได้ติดตั้ง" ? .clear : Color.green.opacity(0.5), radius: 3)
+                    
+                    Text(vm.localizedString(for: vm.smapiInstalledVersion == "ยังไม่ได้ติดตั้ง" ? "API ออฟไลน์" : "API ทำงานปกติ"))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color(nsColor: .windowBackgroundColor))
+                .cornerRadius(12)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.1), lineWidth: 1))
+            }
+        }
     }
 }
 

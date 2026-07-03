@@ -34,18 +34,6 @@ struct ThaiTranslationHubView: View {
                                 .lineSpacing(2)
                         }
                         
-                        Spacer()
-                        
-                        Button(action: {
-                            vm.fetchThaiTranslations()
-                        }) {
-                            Image(systemName: "arrow.clockwise")
-                                .foregroundColor(.secondary)
-                                .font(.system(size: 14, weight: .semibold))
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .pointingHandCursor()
-                        .padding(.top, 2)
                     }
                     .padding(16)
                 }
