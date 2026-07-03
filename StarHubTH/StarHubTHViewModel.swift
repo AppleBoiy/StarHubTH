@@ -2,8 +2,25 @@ import Foundation
 import Cocoa
 import SwiftUI
 
+extension Dictionary where Key == String {
+    func caseInsensitiveValue(forKey key: String) -> Value? {
+        if let value = self[key] { return value }
+        let lowerKey = key.lowercased()
+        if let match = self.first(where: { $0.key.lowercased() == lowerKey }) {
+            return match.value
+        }
+        return nil
+    }
+}
+
+struct ModDependency: Equatable {
+    let uniqueId: String
+    let isRequired: Bool
+}
+
 struct ModItem: Identifiable, Equatable {
     var id: String { folderName }
+    let uniqueId: String
     let name: String
     let folderName: String
     let version: String
@@ -11,6 +28,9 @@ struct ModItem: Identifiable, Equatable {
     let description: String
     let nexusUrl: String
     var isEnabled: Bool
+    let dependencies: [ModDependency]
+    var children: [ModItem]?
+    var isGroup: Bool = false
 }
 
 class StarHubTHViewModel: ObservableObject {
@@ -174,19 +194,53 @@ class StarHubTHViewModel: ObservableObject {
             guard fm.fileExists(atPath: manifestPath) else { return nil }
             
             var name = (path as NSString).lastPathComponent
+            var uniqueId = ""
             var version = "Unknown"
             var author = "Unknown"
             var description = ""
             var nexusUrl = ""
+            var dependencies: [ModDependency] = []
             
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: manifestPath)),
-               let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                if let mName = json["Name"] as? String { name = mName }
-                if let mVer = json["Version"] as? String { version = mVer }
-                if let mAuthor = json["Author"] as? String { author = mAuthor }
-                if let mDesc = json["Description"] as? String { description = mDesc }
+            if let rawData = try? Data(contentsOf: URL(fileURLWithPath: manifestPath)),
+               let rawString = String(data: rawData, encoding: .utf8) {
                 
-                if let updateKeys = json["UpdateKeys"] as? [String] {
+                // Strip block comments (/* ... */) often added by ModManifestBuilder
+                let cleanString = rawString.replacingOccurrences(of: "/\\*[\\s\\S]*?\\*/", with: "", options: .regularExpression)
+                
+                var options: JSONSerialization.ReadingOptions = []
+                if #available(macOS 12.0, *) {
+                    options.insert(.json5Allowed)
+                }
+                
+                if let data = cleanString.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: data, options: options) as? [String: Any] {
+                    
+                    if let mName = json.caseInsensitiveValue(forKey: "Name") as? String { name = mName }
+                if let mUniqueId = json.caseInsensitiveValue(forKey: "UniqueID") as? String { uniqueId = mUniqueId }
+                
+                let mVer = json.caseInsensitiveValue(forKey: "Version")
+                if let vStr = mVer as? String { 
+                    version = vStr 
+                } else if let vDict = mVer as? [String: Any] {
+                    let major = vDict.caseInsensitiveValue(forKey: "MajorVersion") as? Int ?? 1
+                    let minor = vDict.caseInsensitiveValue(forKey: "MinorVersion") as? Int ?? 0
+                    let patch = vDict.caseInsensitiveValue(forKey: "PatchVersion") as? Int ?? 0
+                    version = "\(major).\(minor).\(patch)"
+                }
+                
+                if let mAuthor = json.caseInsensitiveValue(forKey: "Author") as? String { author = mAuthor }
+                if let mDesc = json.caseInsensitiveValue(forKey: "Description") as? String { description = mDesc }
+                
+                if let deps = json.caseInsensitiveValue(forKey: "Dependencies") as? [[String: Any]] {
+                    for dep in deps {
+                        if let depId = dep.caseInsensitiveValue(forKey: "UniqueID") as? String {
+                            let isReq = dep.caseInsensitiveValue(forKey: "IsRequired") as? Bool ?? true
+                            dependencies.append(ModDependency(uniqueId: depId, isRequired: isReq))
+                        }
+                    }
+                }
+                
+                if let updateKeys = json.caseInsensitiveValue(forKey: "UpdateKeys") as? [String] {
                     for key in updateKeys {
                         if key.lowercased().hasPrefix("nexus:") {
                             let id = key.replacingOccurrences(of: "nexus:", with: "", options: .caseInsensitive)
@@ -196,53 +250,113 @@ class StarHubTHViewModel: ObservableObject {
                     }
                 }
             }
+        }
             
             return ModItem(
+                uniqueId: uniqueId,
                 name: name,
                 folderName: (path as NSString).lastPathComponent,
                 version: version,
                 author: author,
                 description: description,
                 nexusUrl: nexusUrl,
-                isEnabled: isEnabled
+                isEnabled: isEnabled,
+                dependencies: dependencies
             )
         }
         
-        // Scan enabled mods folder
-        if let contents = try? fm.contentsOfDirectory(atPath: modsPath) {
-            for entry in contents {
-                if entry.hasPrefix(".") { continue }
-                let entryPath = (modsPath as NSString).appendingPathComponent(entry)
-                var isDir: ObjCBool = false
-                if fm.fileExists(atPath: entryPath, isDirectory: &isDir) && isDir.boolValue {
-                    if let mod = parseModFolder(at: entryPath, isEnabled: true) {
-                        scannedMods.append(mod)
+        // Helper to recursively scan folders for manifest.json and group them
+        func scanFolderForMods(at path: String, isEnabled: Bool) {
+            let url = URL(fileURLWithPath: path)
+            var groups: [String: [ModItem]] = [:]
+            var ungrouped: [ModItem] = []
+            
+            if let enumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
+                for case let fileURL as URL in enumerator {
+                    if fileURL.lastPathComponent.lowercased() == "manifest.json" {
+                        let modFolderURL = fileURL.deletingLastPathComponent()
+                        if let mod = parseModFolder(at: modFolderURL.path, isEnabled: isEnabled) {
+                            
+                            // Determine top-level folder
+                            let pathComponents = modFolderURL.path.replacingOccurrences(of: url.path, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/")).components(separatedBy: "/")
+                            
+                            if pathComponents.count > 1, let topFolder = pathComponents.first, !topFolder.isEmpty {
+                                groups[topFolder, default: []].append(mod)
+                            } else {
+                                ungrouped.append(mod)
+                            }
+                        }
                     }
                 }
             }
+            
+            scannedMods.append(contentsOf: ungrouped)
+            
+            for (groupName, modsInGroup) in groups {
+                if modsInGroup.count == 1 {
+                    scannedMods.append(modsInGroup[0])
+                } else {
+                    let groupMod = ModItem(
+                        uniqueId: "",
+                        name: groupName,
+                        folderName: groupName,
+                        version: "",
+                        author: "Group",
+                        description: "\(modsInGroup.count) mods",
+                        nexusUrl: "",
+                        isEnabled: isEnabled,
+                        dependencies: [],
+                        children: modsInGroup,
+                        isGroup: true
+                    )
+                    scannedMods.append(groupMod)
+                }
+            }
+        }
+        
+        // Scan enabled mods folder
+        if fm.fileExists(atPath: modsPath) {
+            scanFolderForMods(at: modsPath, isEnabled: true)
         }
         
         // Scan disabled mods folder
-        if let contents = try? fm.contentsOfDirectory(atPath: disabledModsPath) {
-            for entry in contents {
-                if entry.hasPrefix(".") { continue }
-                let entryPath = (disabledModsPath as NSString).appendingPathComponent(entry)
-                var isDir: ObjCBool = false
-                if fm.fileExists(atPath: entryPath, isDirectory: &isDir) && isDir.boolValue {
-                    if let mod = parseModFolder(at: entryPath, isEnabled: false) {
-                        scannedMods.append(mod)
-                    }
+        if fm.fileExists(atPath: disabledModsPath) {
+            scanFolderForMods(at: disabledModsPath, isEnabled: false)
+        }
+            
+        DispatchQueue.main.async {
+            self.mods = scannedMods.sorted { 
+                if $0.isGroup != $1.isGroup {
+                    return $0.isGroup 
                 }
+                return $0.name.lowercased() < $1.name.lowercased() 
+            }
+            if self.selectedMod == nil, let first = self.mods.first {
+                self.selectedMod = first
+            }
+            self.isThaiTranslationInstalled = scannedMods.contains {
+                $0.folderName.lowercased() == "stardew valley - thai" ||
+                $0.name.localizedCaseInsensitiveContains("thai")
+            }
+        }
+    }
+    
+    // Returns missing required unique IDs for a given mod
+    func getMissingDependencies(for mod: ModItem) -> [String] {
+        var allUniqueIds = Set<String>()
+        for m in mods {
+            if m.isGroup, let children = m.children {
+                for c in children {
+                    allUniqueIds.insert(c.uniqueId.lowercased())
+                }
+            } else {
+                allUniqueIds.insert(m.uniqueId.lowercased())
             }
         }
         
-        self.mods = scannedMods.sorted { $0.name.lowercased() < $1.name.lowercased() }
-        if self.selectedMod == nil, let first = self.mods.first {
-            self.selectedMod = first
-        }
-        self.isThaiTranslationInstalled = scannedMods.contains {
-            $0.folderName.lowercased() == "stardew valley - thai" ||
-            $0.name.localizedCaseInsensitiveContains("thai")
+        return mod.dependencies.compactMap { dep in
+            guard dep.isRequired else { return nil }
+            return allUniqueIds.contains(dep.uniqueId.lowercased()) ? nil : dep.uniqueId
         }
     }
     

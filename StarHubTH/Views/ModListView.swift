@@ -83,7 +83,7 @@ struct ModListView: View {
                     }
                 }
             }
-            .padding(40)
+            .padding(24)
         }
         .background(Color(nsColor: .controlBackgroundColor))
     }
@@ -99,7 +99,12 @@ struct ModSectionGroup: View {
         StandardSection(title: title) {
             VStack(spacing: 0) {
                 ForEach(Array(mods.enumerated()), id: \.element.id) { idx, mod in
-                    ModListRow(mod: mod, vm: vm)
+                    if mod.isGroup, let children = mod.children {
+                        ModGroupRow(mod: mod, children: children, vm: vm)
+                    } else {
+                        ModListRow(mod: mod, vm: vm, isChild: false, isGroupHeader: false, isExpanded: .constant(false))
+                    }
+                    
                     if idx < mods.count - 1 {
                         Rectangle()
                             .fill(Color.primary.opacity(0.05))
@@ -109,8 +114,42 @@ struct ModSectionGroup: View {
                     }
                 }
             }
-            // Offset the default 16px padding inside StandardSection to make it tighter
             .padding(.vertical, -8)
+        }
+    }
+}
+
+// MARK: - Mod Group Row
+struct ModGroupRow: View {
+    let mod: ModItem
+    let children: [ModItem]
+    @ObservedObject var vm: StarHubTHViewModel
+    @State private var isExpanded = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            ModListRow(mod: mod, vm: vm, isChild: false, isGroupHeader: true, isExpanded: $isExpanded)
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isExpanded.toggle()
+                    }
+                }
+            
+            if isExpanded {
+                VStack(spacing: 0) {
+                    ForEach(Array(children.enumerated()), id: \.element.id) { cIdx, child in
+                        ModListRow(mod: child, vm: vm, isChild: true, isGroupHeader: false, isExpanded: .constant(false))
+                        if cIdx < children.count - 1 {
+                            Rectangle()
+                                .fill(Color.primary.opacity(0.05))
+                                .frame(height: 1)
+                                .padding(.leading, 64)
+                                .padding(.vertical, 2)
+                        }
+                    }
+                }
+                .padding(.top, 2)
+            }
         }
     }
 }
@@ -120,13 +159,27 @@ struct ModListRow: View {
     let mod: ModItem
     @ObservedObject var vm: StarHubTHViewModel
     @State private var isHovered = false
+    var isChild: Bool = false
+    var isGroupHeader: Bool = false
+    @Binding var isExpanded: Bool
 
     var body: some View {
-        HStack(spacing: 14) {
-            // Icon Placeholder / Cover
-            ModCoverView(name: mod.name, size: 36)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .frame(width: 36, height: 36)
+        HStack(spacing: 12) {
+            
+            // Chevron space (ensures perfect alignment for all top-level items)
+            if !isChild {
+                ZStack {
+                    if isGroupHeader {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(width: 14, alignment: .center)
+            } else {
+                // Indent children
+                Spacer().frame(width: 32)
+            }
 
             // Info
             VStack(alignment: .leading, spacing: 2) {
@@ -134,15 +187,40 @@ struct ModListRow: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.primary)
                     .lineLimit(1)
-                HStack(spacing: 6) {
-                    Text(mod.author)
+                
+                if mod.name != mod.folderName {
+                    Text(mod.folderName)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.7))
+                        .lineLimit(1)
+                }
+                
+                if !mod.isGroup {
+                    HStack(spacing: 6) {
+                        Text(mod.author)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Text("•")
+                            .foregroundColor(.secondary.opacity(0.5))
+                        Text("v\(mod.version)")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    Text(mod.description)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
-                    Text("•")
-                        .foregroundColor(.secondary.opacity(0.5))
-                    Text("v\(mod.version)")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
+                }
+                let missingDeps = vm.getMissingDependencies(for: mod)
+                if !missingDeps.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.yellow)
+                        Text("Missing: \(missingDeps.joined(separator: ", "))")
+                            .foregroundColor(.yellow)
+                    }
+                    .font(.system(size: 11))
+                    .padding(.top, 2)
                 }
             }
 
@@ -179,10 +257,16 @@ struct ModListRow: View {
                 .padding(.trailing, 8)
 
             // macOS Native Switch Toggle
-            Toggle("", isOn: Binding(get: { mod.isEnabled }, set: { _ in vm.toggleMod(mod) }))
-                .toggleStyle(StardewToggleStyle())
-                .labelsHidden()
-                .tint(.green)
+            if !isChild {
+                Toggle("", isOn: Binding(get: { mod.isEnabled }, set: { _ in vm.toggleMod(mod) }))
+                    .toggleStyle(StardewToggleStyle())
+                    .labelsHidden()
+            } else {
+                Toggle("", isOn: .constant(false))
+                    .toggleStyle(StardewToggleStyle())
+                    .labelsHidden()
+                    .opacity(0)
+            }
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 8)

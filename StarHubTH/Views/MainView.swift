@@ -235,29 +235,23 @@ struct SidebarNavItem: View {
 
     var body: some View {
         Button(action: { currentTab = tab }) {
-            HStack(spacing: 10) {
-                // Colored icon box
-                ZStack {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(iconColor)
-                        .frame(width: 28, height: 28)
-                        .shadow(color: Color.black.opacity(0.1), radius: 1, y: 1)
-                    Image(systemName: icon)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                }
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(isSelected ? .white : .primary)
+                    .frame(width: 24, alignment: .center)
                 
                 Text(label)
                     .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(.primary)
+                    .foregroundColor(isSelected ? .white : .primary)
                 Spacer()
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 4)
+            .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(isSelected
-                          ? Color.primary.opacity(0.1)
+                          ? Color.accentColor
                           : (isHovered ? Color.primary.opacity(0.05) : Color.clear))
             )
         }
