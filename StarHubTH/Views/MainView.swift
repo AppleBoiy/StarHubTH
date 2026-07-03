@@ -49,9 +49,9 @@ struct MainView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(Color(nsColor: .textBackgroundColor))
-                .cornerRadius(6)
+                .clipShape(Capsule())
                 .overlay(
-                    RoundedRectangle(cornerRadius: 6)
+                    Capsule()
                         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                 )
                 
@@ -82,6 +82,7 @@ struct MainView: View {
                             }
                             Spacer()
                         }
+                        .contentShape(Rectangle())
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
                         .background(
@@ -91,6 +92,34 @@ struct MainView: View {
                     }
                     .buttonStyle(PlainButtonStyle())
                     .onHover { isProfileHovered = $0 }
+                    .pointingHandCursor()
+                }
+                
+                let alertCount = vm.smapiErrors.count + vm.outOfDateMods.count
+                if alertCount > 0 {
+                    Button(action: { currentTab = "Updates" }) {
+                        HStack {
+                            Text(vm.smapiErrors.isEmpty ? vm.localizedString(for: "อัปเดตซอฟต์แวร์") : vm.localizedString(for: "แจ้งเตือนระบบ"))
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundColor(currentTab == "Updates" ? .white : .primary)
+                            Spacer()
+                            Text("\(alertCount)")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(currentTab == "Updates" ? .blue : .white)
+                                .frame(minWidth: 18, minHeight: 18)
+                                .padding(.horizontal, 4)
+                                .background(currentTab == "Updates" ? Color.white : Color.red)
+                                .clipShape(Capsule())
+                        }
+                        .contentShape(Rectangle())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(currentTab == "Updates" ? Color.blue : Color.clear)
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                     .pointingHandCursor()
                 }
                 
@@ -161,51 +190,7 @@ struct MainView: View {
                 
                 Spacer()
                 
-                let alertCount = vm.smapiErrors.count + vm.outOfDateMods.count
-                if alertCount > 0 {
-                    Button(action: { currentTab = "Updates" }) {
-                        HStack {
-                            Text(vm.smapiErrors.isEmpty ? vm.localizedString(for: "อัปเดตซอฟต์แวร์") : vm.localizedString(for: "แจ้งเตือนระบบ"))
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundColor(currentTab == "Updates" ? .white : .primary)
-                            Spacer()
-                            Text("\(alertCount)")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(currentTab == "Updates" ? .blue : .white)
-                                .frame(minWidth: 18, minHeight: 18)
-                                .padding(.horizontal, 4)
-                                .background(currentTab == "Updates" ? Color.white : Color.red)
-                                .clipShape(Capsule())
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(currentTab == "Updates" ? Color.blue : Color.clear)
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .pointingHandCursor()
-                    .padding(.bottom, 8)
-                }
-                
-                // Launch Button
-                VStack(alignment: .leading, spacing: 6) {
-                    Button(action: { vm.launchGame() }) {
-                        HStack {
-                            Image(systemName: "play.fill")
-                            Text(vm.localizedString(for: vm.isPlayingGame ? "กำลังเปิดเกม..." : "เข้าสู่เกม"))
-                        }
-                        .font(.system(size: 14, weight: .bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .tint(.blue)
-                    .disabled(vm.isPlayingGame)
-                    .pointingHandCursor()
-                }
+
             }
             .padding(.horizontal, 10)
             .padding(.top, 14)
@@ -315,8 +300,8 @@ struct SidebarSectionHeader: View {
             .font(.system(size: 11, weight: .semibold))
             .foregroundColor(.secondary)
             .padding(.leading, 8)
-            .padding(.top, 12)
-            .padding(.bottom, 2)
+            .padding(.top, 8)
+            .padding(.bottom, 0)
     }
 }
 
@@ -344,8 +329,9 @@ struct SidebarNavItem: View {
                     .foregroundColor(isSelected ? .white : .primary)
                 Spacer()
             }
+            .contentShape(Rectangle())
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(isSelected

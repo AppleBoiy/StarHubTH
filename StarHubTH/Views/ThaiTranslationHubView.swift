@@ -2,6 +2,15 @@ import SwiftUI
 
 struct ThaiTranslationHubView: View {
     @ObservedObject var vm: StarHubTHViewModel
+    @State private var searchText = ""
+    
+    var filteredMods: [ThaiTranslationMod] {
+        if searchText.isEmpty {
+            return vm.thaiTranslations
+        } else {
+            return vm.thaiTranslations.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+    }
     
     var body: some View {
         if let mod = vm.viewingThaiMod {
@@ -50,14 +59,14 @@ struct ThaiTranslationHubView: View {
                     .frame(maxWidth: .infinity, minHeight: 200)
                 } else {
                     VStack(spacing: 0) {
-                        ForEach(Array(vm.thaiTranslations.enumerated()), id: \.element.id) { index, mod in
+                        ForEach(Array(filteredMods.enumerated()), id: \.element.id) { index, mod in
                             ThaiModRow(vm: vm, mod: mod)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     vm.viewingThaiMod = mod
                                 }
                             
-                            if index < vm.thaiTranslations.count - 1 {
+                            if index < filteredMods.count - 1 {
                                 Divider()
                                     .padding(.leading, 16)
                             }
@@ -71,6 +80,7 @@ struct ThaiTranslationHubView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
+        .searchable(text: $searchText, prompt: Text(vm.localizedString(for: "ค้นหา")))
         .onAppear {
             if vm.thaiTranslations.isEmpty {
                 vm.fetchThaiTranslations()
