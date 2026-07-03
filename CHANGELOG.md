@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-07-04
+
+### Added
+- Added **Mod Profiles** feature: You can now create, switch, and delete multiple mod profiles to manage different mod setups easily.
+- Added a Profile Indicator badge next to the Steam avatar on the Home screen to quickly identify the active profile.
+- Added "Select All" and "Deselect All" buttons in the Mod Profiles management window.
+- Added Mod ID (`UniqueID`) support to the Mod List search bar, allowing you to search mods by their internal ID.
+
+### Changed
+- **Smart Dependency Management**: 
+  - When enabling a mod, the app will now automatically recursively enable all of its REQUIRED dependencies.
+  - When disabling a mod, the app will now automatically recursively disable all enabled mods that rely on it (preventing crashes from missing dependencies).
+  - This system correctly navigates group folders to find the exact sub-mods causing the dependency.
+- Enhanced the Dependency Status Indicator in the Mod Info popup with 3 clear states:
+  - ✅ Green Checkmark: Dependency is installed AND enabled.
+  - ❕ Orange Exclamation: Dependency is installed BUT disabled.
+  - ❌ Red Cross: Dependency is NOT installed.
+- Simplified the Mod List toolbar by removing the redundant API status indicator (this status is already available on the Home screen).
+
+### Fixed
+- Fixed a major flaw in the Mod toggle logic where group folders failed to resolve sub-mod dependencies.
+- Fixed the API indicator styling conflict that caused a "double border" glitch due to native macOS toolbar styling.
+
 ## [1.0.3] - 2026-07-03
 
 ### Changed

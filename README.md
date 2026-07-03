@@ -24,9 +24,13 @@
 | :---: | :---: |
 | <img src="screenshots/save.png" width="400"> | <img src="screenshots/save_edit.png" width="400"> |
 
-| การจัดการส่วนเสริม (Mods Manager) |
+| การจัดการส่วนเสริม (Mods Manager) | โปรไฟล์ม็อด (Mod Profiles) |
+| :---: | :---: |
+| <img src="screenshots/mods.png" width="400"> | <img src="screenshots/mod_profile.png" width="400"> |
+
+| ศูนย์รวมม็อดแปลไทย (Thai Translation Hub) |
 | :---: |
-| <img src="screenshots/mods.png" width="400"> |
+| <img src="screenshots/th_translation_hub.png" width="400"> |
 
 
 <p align="center">

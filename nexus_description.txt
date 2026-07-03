@@ -4,6 +4,8 @@
 [list]
 [*] [b]รันเกมได้ง่ายๆ[/b]: เลือกรันเกมได้ทั้งโหมดปกติ (Vanilla) และโหมดผ่าน SMAPI สำหรับเล่นม็อด
 [*] [b]จัดการส่วนเสริม (Mods Manager)[/b]: เปิด/ปิด ม็อดต่างๆ ได้อย่างง่ายดายผ่านหน้าตาแอปพลิเคชันที่สวยงาม ไม่ต้องเข้าไปย้ายไฟล์เอง
+[*] [b]ระบบโปรไฟล์ม็อด (Mod Profiles)[/b]: จัดกลุ่มม็อดเป็นหลายๆ ชุด แล้วสลับใช้งานได้ทันทีเพียงแค่คลิกเดียว
+[*] [b]ศูนย์รวมม็อดแปลไทย (Thai Translation Hub)[/b]: หน้าต่างที่รวบรวมม็อดแปลภาษาไทยทั้งหมด ค้นหา ตรวจสอบ ดาวน์โหลด และติดตามสถานะอัปเดตได้จากที่นี่ที่เดียว
 [*] [b]จัดการเซฟเกม (Save Manager)[/b]: 
     [list]
     [*] ดูรายละเอียดเซฟเกมทั้งหมด (จำนวนเงิน, เวลาในเกม, ฤดูกาล, รูปแบบฟาร์ม)
@@ -32,6 +34,12 @@
 
 [b]การจัดการส่วนเสริม (Mods Manager)[/b]
 [img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/mods.png[/img]
+
+[b]โปรไฟล์ม็อด (Mod Profiles)[/b]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/mod_profile.png[/img]
+
+[b]ศูนย์รวมม็อดแปลไทย (Thai Translation Hub)[/b]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/th_translation_hub.png[/img]
 [/center]
 
 [center][img width=300]https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/install_banner.png[/img][/center]

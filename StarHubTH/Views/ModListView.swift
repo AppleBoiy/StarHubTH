@@ -251,11 +251,18 @@ struct ModListRow: View {
                                     ScrollView {
                                         VStack(alignment: .leading, spacing: 6) {
                                             ForEach(mod.dependencies, id: \.uniqueId) { dep in
-                                                let isInstalled = vm.mods.contains { $0.uniqueId.caseInsensitiveCompare(dep.uniqueId) == .orderedSame }
+                                                let targetMod = vm.mods.first { $0.uniqueId.caseInsensitiveCompare(dep.uniqueId) == .orderedSame }
+                                                let isInstalled = targetMod != nil
+                                                let isEnabled = targetMod?.isEnabled ?? false
+                                                
                                                 HStack {
-                                                    if isInstalled {
+                                                    if isEnabled {
                                                         Image(systemName: "checkmark.circle.fill")
                                                             .foregroundColor(.green)
+                                                            .font(.system(size: 10))
+                                                    } else if isInstalled {
+                                                        Image(systemName: "exclamationmark.circle.fill")
+                                                            .foregroundColor(.orange)
                                                             .font(.system(size: 10))
                                                     } else {
                                                         Image(systemName: "xmark.circle.fill")
@@ -265,7 +272,7 @@ struct ModListRow: View {
                                                     
                                                     Text(dep.uniqueId)
                                                         .font(.system(size: 12, design: .monospaced))
-                                                        .foregroundColor(isInstalled ? .primary : .secondary)
+                                                        .foregroundColor(isEnabled ? .primary : .secondary)
                                                     Spacer()
                                                     if dep.isRequired {
                                                         Text("Required")

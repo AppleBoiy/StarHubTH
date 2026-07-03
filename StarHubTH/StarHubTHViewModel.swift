@@ -522,43 +522,73 @@ class StarHubTHViewModel: ObservableObject {
     
     // Toggle Mod Status (Enabled / Disabled)
     func toggleMod(_ mod: ModItem) {
-        var modsToToggle: Set<String> = [mod.uniqueId]
+        // Helper to find the top-level folder that contains a given uniqueId
+        func getTopLevelFolder(for uniqueId: String) -> String? {
+            for m in self.mods {
+                if !m.isGroup && m.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame {
+                    return m.folderName
+                } else if m.isGroup, let children = m.children {
+                    if children.contains(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
+                        return m.folderName
+                    }
+                }
+            }
+            return nil
+        }
+        
+        // Helper to get all dependencies of a top-level folder (including its children)
+        func getDependencies(for folderName: String) -> [ModDependency] {
+            guard let m = self.mods.first(where: { $0.folderName == folderName }) else { return [] }
+            if m.isGroup, let children = m.children {
+                return children.flatMap { $0.dependencies }
+            } else {
+                return m.dependencies
+            }
+        }
+        
+        var foldersToToggle: Set<String> = [mod.folderName]
         let targetState = !mod.isEnabled // True if we are enabling, false if disabling
         
         if targetState == true {
-            // Enabling: Also enable all dependencies recursively
-            var queue = [mod]
+            // Enabling: recursively enable all REQUIRED dependencies
+            var queue = [mod.folderName]
             while !queue.isEmpty {
-                let current = queue.removeFirst()
-                for dep in current.dependencies {
-                    if let depMod = self.mods.first(where: { $0.uniqueId.caseInsensitiveCompare(dep.uniqueId) == .orderedSame }), !depMod.isEnabled {
-                        if !modsToToggle.contains(depMod.uniqueId) {
-                            modsToToggle.insert(depMod.uniqueId)
-                            queue.append(depMod)
+                let currentFolder = queue.removeFirst()
+                let deps = getDependencies(for: currentFolder)
+                
+                for dep in deps where dep.isRequired {
+                    if let depFolder = getTopLevelFolder(for: dep.uniqueId) {
+                        let isDepFolderEnabled = self.mods.first(where: { $0.folderName == depFolder })?.isEnabled ?? false
+                        if !isDepFolderEnabled && !foldersToToggle.contains(depFolder) {
+                            foldersToToggle.insert(depFolder)
+                            queue.append(depFolder)
                         }
                     }
                 }
             }
         } else {
-            // Disabling: Disable dependencies if they are not used by other enabled mods
-            var queue = [mod]
+            // Disabling: recursively disable all enabled mods that REQUIRE this mod
+            var queue = [mod.folderName]
             while !queue.isEmpty {
-                let current = queue.removeFirst()
-                for dep in current.dependencies {
-                    if let depMod = self.mods.first(where: { $0.uniqueId.caseInsensitiveCompare(dep.uniqueId) == .orderedSame }), depMod.isEnabled {
-                        if !modsToToggle.contains(depMod.uniqueId) {
-                            // Check if this dependency is required by another enabled mod that we are NOT disabling
-                            let isUsedByOther = self.mods.contains { otherMod in
-                                otherMod.isEnabled && 
-                                !modsToToggle.contains(otherMod.uniqueId) &&
-                                otherMod.dependencies.contains { $0.uniqueId.caseInsensitiveCompare(depMod.uniqueId) == .orderedSame }
-                            }
-                            
-                            if !isUsedByOther {
-                                modsToToggle.insert(depMod.uniqueId)
-                                queue.append(depMod)
-                            }
-                        }
+                let currentFolder = queue.removeFirst()
+                
+                var providedUniqueIds: [String] = []
+                if let m = self.mods.first(where: { $0.folderName == currentFolder }) {
+                    if m.isGroup, let children = m.children {
+                        providedUniqueIds = children.map { $0.uniqueId }
+                    } else {
+                        providedUniqueIds = [m.uniqueId]
+                    }
+                }
+                
+                for otherMod in self.mods where otherMod.isEnabled && !foldersToToggle.contains(otherMod.folderName) {
+                    let otherDeps = getDependencies(for: otherMod.folderName)
+                    let requiresCurrent = otherDeps.contains { dep in 
+                        dep.isRequired && providedUniqueIds.contains { $0.caseInsensitiveCompare(dep.uniqueId) == .orderedSame }
+                    }
+                    if requiresCurrent {
+                        foldersToToggle.insert(otherMod.folderName)
+                        queue.append(otherMod.folderName)
                     }
                 }
             }
@@ -569,8 +599,8 @@ class StarHubTHViewModel: ObservableObject {
         let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
         var anyMoved = false
         
-        for uniqueId in modsToToggle {
-            guard let m = self.mods.first(where: { $0.uniqueId == uniqueId }) else { continue }
+        for folderName in foldersToToggle {
+            guard let m = self.mods.first(where: { $0.folderName == folderName }) else { continue }
             if m.isEnabled == targetState { continue }
             
             let srcPath = ((m.isEnabled ? modsPath : disabledModsPath) as NSString).appendingPathComponent(m.folderName)
@@ -593,7 +623,7 @@ class StarHubTHViewModel: ObservableObject {
         }
         
         if anyMoved {
-            log("\(targetState ? "เปิดใช้งาน" : "ปิดใช้งาน")ม็อด: \(mod.name)\(modsToToggle.count > 1 ? " และ Dependencies" : "")")
+            log("\(targetState ? "เปิดใช้งาน" : "ปิดใช้งาน")ม็อด: \(mod.name)\(foldersToToggle.count > 1 ? " และ Dependencies" : "")")
             self.scanMods()
         }
     }
