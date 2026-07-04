@@ -107,6 +107,12 @@ enum L10n {
         static let clearLogs            = "ล้างประวัติ"
         static let logs                 = "บันทึกระบบ"
         static let developer            = "นักพัฒนา"
+        static let filterAll            = "ทั้งหมด"
+        static let autoScrollHint       = "เลื่อนอัตโนมัติไปล่างสุด"
+        static let copyAll              = "คัดลอก log ทั้งหมดที่แสดงอยู่"
+        static let searchPlaceholder    = "ค้นหาใน log..."
+        static let entryCount           = "%d / %d รายการ"
+        static let refreshHint          = "โหลด SMAPI-latest.txt ใหม่"
     }
 
     // MARK: - SettingsView

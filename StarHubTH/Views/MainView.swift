@@ -313,6 +313,15 @@ struct MainView: View {
         .frame(width: 900, height: 600)
         .preferredColorScheme(colorScheme)
         .environment(\.locale, Locale(identifier: vm.currentLanguage))
+        .onReceive(NotificationCenter.default.publisher(for: .jumpToMod)) { notification in
+            if let modName = notification.object as? String {
+                vm.selectedModID = vm.mods
+                    .flatMap { m -> [ModItem] in m.isGroup ? (m.children ?? []) : [m] }
+                    .first { $0.name.localizedCaseInsensitiveContains(modName) }?
+                    .folderName
+                currentTab = "Mods"
+            }
+        }
         .alert(isPresented: $vm.showAlert) {
             Alert(
                 title: Text(vm.L(L10n.Main.alert)),

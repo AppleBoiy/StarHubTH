@@ -272,3 +272,11 @@
 
 /* Core Mod Status */
 "ติดตั้งแล้ว แต่ปิดใช้งานอยู่" = "Installed but disabled";
+
+/* LogsView v2 */
+"ทั้งหมด" = "All";
+"เลื่อนอัตโนมัติไปล่างสุด" = "Auto-scroll to bottom";
+"คัดลอก log ทั้งหมดที่แสดงอยู่" = "Copy all visible logs";
+"ค้นหาใน log..." = "Search logs...";
+"%d / %d รายการ" = "%d / %d entries";
+"โหลด SMAPI-latest.txt ใหม่" = "Reload SMAPI-latest.txt";

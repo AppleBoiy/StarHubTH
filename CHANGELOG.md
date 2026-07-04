@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-07-04
+
+### Added
+- **SMAPI Log Viewer v2** — Logs page fully rebuilt:
+  - **Source tabs**: Clearly separates StarHubTH app logs from SMAPI logs. Switch tabs to view only the source you need.
+  - **Level filter pills**: Filter by INFO / WARN / ERROR / TRACE at any time. Works in combination with source tabs (e.g. SMAPI + WARN = only SMAPI warnings).
+  - **Structured log entries**: Each entry carries a level, real SMAPI timestamp (HH:MM:SS), message, source, and mod name.
+  - **Continuation line merging**: SMAPI log lines without a `[` prefix (continuation lines) are automatically merged into the previous entry.
+  - **Reload button**: Reload `SMAPI-latest.txt` at any time without clearing app logs. SMAPI buffers and flushes in batches, not line-by-line.
+  - **Clear app logs**: "Clear Logs" button removes only app-generated entries, leaving SMAPI log intact.
+  - **Search bar**: Real-time search across message text and mod names.
+  - **Clickable mod name badges**: Mod names in SMAPI log entries are clickable — navigates to the Mods page and highlights that mod.
+  - **Copy button**: Copies all currently filtered entries to the clipboard.
+  - **Auto-scroll toggle**: Opt in or out of auto-scrolling to the latest entry.
+  - **Status bar**: Shows filtered entry count vs. total.
+  - **Context menu**: Right-click any entry to copy that line.
+  - **Color coding**: Red (ERROR), orange (WARN), blue (SMAPI/TRACE), default (INFO/app).
+
+### Changed
+- `LogEntry` now has a `source` field (`.app` / `.smapi`) to distinguish log origin.
+- `log()` in ViewModel always sets `source: .app`.
+- `loadSmapiLog()` sets `source: .smapi` and parses timestamps directly from the SMAPI format `[HH:MM:SS LEVEL  Context]`, including double-space handling.
+
+### Notes
+- SMAPI buffers log output and flushes in batches — logs are not written line-by-line in real time. Press Reload after closing the game to see the complete log.
+
 ## [1.0.5] - 2026-07-04
 
 ### Added
@@ -27,9 +53,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **English README & Nexus Description**: Added `README_EN.md` and `nexus_description_en.txt` for international users. Added `[!IMPORTANT]` callout at the top of the Thai README linking to the English version.
 
 ### Changed
-- `smapiInstalledVersion` changed from `String` (using `"ยังไม่ได้ติดตั้ง"` as sentinel) to `String?` (`nil` = not installed) — removes a fragile Thai string comparison from business logic.
+- `smapiInstalledVersion` changed from `String` (using a Thai sentinel string) to `String?` (`nil` = not installed) — removes a fragile string comparison from business logic.
 - `SmapiInstaller` status messages now use `L10n.Smapi` keys instead of `String(localized:)`, ensuring they go through the same runtime language bundle as the rest of the app.
-- `applyChain` in ProfileDetailSheet now delegates entirely to `vm.applyChainToSet(mod:enable:currentEnabled:)` in the ViewModel — single source of truth, guaranteed identical behavior between the Mod List page and the Profile detail page.
+- `applyChain` in `ProfileDetailSheet` now delegates entirely to `vm.applyChainToSet(mod:enable:currentEnabled:)` in the ViewModel — single source of truth, guaranteed identical behavior between the Mod List page and the Profile detail page.
 
 ### Fixed
 - Fixed profile mod count showing 0 on re-open by loading from actual filesystem state for the active profile in `onAppear`.
@@ -38,19 +64,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed sidebar section headers being re-translated via `LocalizedStringKey` after already receiving a translated string — headers now use `Text(string)` directly.
 - Fixed hardcoded Thai strings in `SaveEditorView`, `SettingsView`, `ModListView`, `MainView` alert, and `toggleMod` log messages.
 
-
+## [1.0.4] - 2026-07-04
 
 ### Added
-- Added **Mod Profiles** feature: You can now create, switch, and delete multiple mod profiles to manage different mod setups easily.
+- Added **Mod Profiles** feature: Create, switch, and delete multiple mod profiles to manage different mod setups easily.
 - Added a Profile Indicator badge next to the Steam avatar on the Home screen to quickly identify the active profile.
 - Added "Select All" and "Deselect All" buttons in the Mod Profiles management window.
 - Added Mod ID (`UniqueID`) support to the Mod List search bar, allowing you to search mods by their internal ID.
 
 ### Changed
-- **Smart Dependency Management**: 
-  - When enabling a mod, the app will now automatically recursively enable all of its REQUIRED dependencies.
-  - When disabling a mod, the app will now automatically recursively disable all enabled mods that rely on it (preventing crashes from missing dependencies).
-  - This system correctly navigates group folders to find the exact sub-mods causing the dependency.
+- **Smart Dependency Management**:
+  - When enabling a mod, the app now automatically and recursively enables all REQUIRED dependencies.
+  - When disabling a mod, the app now automatically and recursively disables all enabled mods that rely on it, preventing crashes from missing dependencies.
+  - This system correctly navigates group folders to find the exact sub-mods involved in the dependency chain.
 - Enhanced the Dependency Status Indicator in the Mod Info popup with 3 clear states:
   - ✅ Green Checkmark: Dependency is installed AND enabled.
   - ❕ Orange Exclamation: Dependency is installed BUT disabled.
@@ -58,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified the Mod List toolbar by removing the redundant API status indicator (this status is already available on the Home screen).
 
 ### Fixed
-- Fixed a major flaw in the Mod toggle logic where group folders failed to resolve sub-mod dependencies.
+- Fixed a major flaw in the mod toggle logic where group folders failed to resolve sub-mod dependencies.
 - Fixed the API indicator styling conflict that caused a "double border" glitch due to native macOS toolbar styling.
 
 ## [1.0.3] - 2026-07-03
@@ -86,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed a bug where navigation titles and `String(localized:)` did not dynamically update when changing languages in-app.
 - Fixed a type mismatch bug that caused save file money to display as corrupted memory addresses when formatted with commas.
-- Improved localized format strings in the Saves View to respect native language grammar structures (e.g. "ฟาร์ม our's" instead of "our's Farm" in Thai).
+- Improved localized format strings in the Saves View to respect native language grammar structures.
 - Cleaned up redundant English parentheses in Thai and Japanese UI texts.
 
 ## [1.0.1] - 2026-07-01

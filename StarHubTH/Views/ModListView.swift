@@ -334,6 +334,11 @@ struct ModListRow: View {
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .background(isHovered ? Color.secondary.opacity(0.05) : Color.clear)
+        .background(
+            vm.selectedModID == mod.folderName
+                ? Color.accentColor.opacity(0.08)
+                : Color.clear
+        )
         .cornerRadius(6)
         .animation(.easeInOut(duration: 0.1), value: isHovered)
         .onHover { isHovered = $0 }
