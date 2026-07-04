@@ -33,11 +33,11 @@ struct ThaiTranslationHubView: View {
                         .frame(width: 32, height: 32)
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(vm.localizedString(for: "ม็อดแปลไทย"))
+                            Text(vm.L(L10n.ThaiHub.title))
                                 .font(.system(size: 13, weight: .regular))
                                 .foregroundColor(.primary)
                             
-                            Text(vm.localizedString(for: "หมายเหตุ: ระบบนี้เป็นเพียงศูนย์รวมม็อดแปลภาษาเท่านั้น คุณจำเป็นต้องติดตั้งม็อดต้นฉบับก่อนเพื่อให้ม็อดแปลภาษาทำงานได้"))
+                            Text(vm.L(L10n.ThaiHub.note))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                                 .lineSpacing(2)
@@ -53,7 +53,7 @@ struct ThaiTranslationHubView: View {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.2)
-                        Text(vm.localizedString(for: "กำลังโหลดข้อมูลม็อดแปลไทย..."))
+                        Text(vm.L(L10n.ThaiHub.loading))
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, minHeight: 200)
@@ -80,7 +80,7 @@ struct ThaiTranslationHubView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
-        .searchable(text: $searchText, prompt: Text(vm.localizedString(for: "ค้นหา")))
+        .searchable(text: $searchText, prompt: Text(vm.L(L10n.Main.search)))
         .onAppear {
             if vm.thaiTranslations.isEmpty {
                 vm.fetchThaiTranslations()
@@ -107,7 +107,7 @@ struct ThaiModRow: View {
                     .foregroundColor(.primary)
                 
                 if mod.isInstalled {
-                    Text("\(mod.author) • v\(mod.version) • \(vm.localizedString(for: "ติดตั้งแล้ว"))")
+                    Text("\(mod.author) • v\(mod.version) • \(vm.L(L10n.ThaiHub.installed))")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 } else {
@@ -142,13 +142,13 @@ struct ThaiModDetailView: View {
                     
                     // Description Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(vm.localizedString(for: "รายละเอียด"))
+                        Text(vm.L(L10n.ThaiHub.description))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
                             
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(vm.localizedString(for: "นี่คือม็อดแปลภาษาไทยสำหรับ ") + mod.name + vm.localizedString(for: " โปรดตรวจสอบรายละเอียดเพิ่มเติมจากหน้าม็อดต้นฉบับบน Nexus Mods"))
+                            Text(vm.L(L10n.ThaiHub.descriptionPrefix) + mod.name + vm.L(L10n.ThaiHub.descriptionSuffix))
                                 .font(.system(size: 13))
                                 .foregroundColor(.primary)
                                 .lineSpacing(4)
@@ -161,14 +161,14 @@ struct ThaiModDetailView: View {
                     
                     // Installation Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(vm.localizedString(for: "การติดตั้ง"))
+                        Text(vm.L(L10n.ThaiHub.installation))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
                             
                         VStack(spacing: 0) {
                             HStack {
-                                Text(vm.localizedString(for: "สถานะ:"))
+                                Text(vm.L(L10n.ThaiHub.status))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Text(mod.installationStatusText(vm: vm))
@@ -182,7 +182,7 @@ struct ThaiModDetailView: View {
                             
                             HStack(alignment: .center) {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(vm.localizedString(for: "ดาวน์โหลดและติดตั้ง"))
+                                    Text(vm.L(L10n.ThaiHub.downloadAndInstall))
                                         .font(.system(size: 13))
                                         
                                     HStack(spacing: 4) {
@@ -191,17 +191,15 @@ struct ThaiModDetailView: View {
                                                 .foregroundColor(.yellow)
                                                 .font(.system(size: 10))
                                         }
-                                        Text(mod.isInstalled ? vm.localizedString(for: "คุณได้ติดตั้งม็อดนี้แล้ว แต่อาจมีเวอร์ชันใหม่ให้ดาวน์โหลด") : vm.localizedString(for: "คลิกเพื่อดาวน์โหลดและติดตั้งม็อดแปลไทยลงในโฟลเดอร์เกมของคุณ"))
+                                        Text(vm.L(mod.isInstalled ? L10n.ThaiHub.alreadyInstalled : L10n.ThaiHub.clickToInstall))
                                             .font(.system(size: 11))
                                             .foregroundColor(.secondary)
                                     }
                                 }
                                 Spacer()
                                 
-                                Button(action: {
-                                    vm.installThaiTranslation(mod: mod)
-                                }) {
-                                    Text(mod.isInstalled ? vm.localizedString(for: "ติดตั้งซ้ำ") : vm.localizedString(for: "ติดตั้ง"))
+                                Button(action: { vm.installThaiTranslation(mod: mod) }) {
+                                    Text(vm.L(mod.isInstalled ? L10n.ThaiHub.reinstall : L10n.ThaiHub.install))
                                         .font(.system(size: 12))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 4)
@@ -220,14 +218,14 @@ struct ThaiModDetailView: View {
                     
                     // Thai Translation Mod Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(vm.localizedString(for: "ม็อดแปลภาษาไทย"))
+                        Text(vm.L(L10n.ThaiHub.thaiTranslationMod))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
                         
                         VStack(spacing: 0) {
                             HStack {
-                                Text(vm.localizedString(for: "ผู้แปล"))
+                                Text(vm.L(L10n.ThaiHub.translator))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Text("AppleBoiy & Contributors")
@@ -240,7 +238,7 @@ struct ThaiModDetailView: View {
                             Divider().padding(.leading, 16)
                             
                             HStack {
-                                Text(vm.localizedString(for: "เวอร์ชันแปล"))
+                                Text(vm.L(L10n.ThaiHub.version))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Text("v\(mod.version)")
@@ -253,7 +251,7 @@ struct ThaiModDetailView: View {
                             Divider().padding(.leading, 16)
                             
                             HStack {
-                                Text(vm.localizedString(for: "โฟลเดอร์ปลายทาง"))
+                                Text(vm.L(L10n.ThaiHub.destinationFolder))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Text("Mods/")
@@ -269,14 +267,14 @@ struct ThaiModDetailView: View {
                     
                     // Original Mod Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(vm.localizedString(for: "ม็อดต้นฉบับ"))
+                        Text(vm.L(L10n.ThaiHub.originalMod))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
                         
                         VStack(spacing: 0) {
                             HStack {
-                                Text(vm.localizedString(for: "ผู้สร้าง"))
+                                Text(vm.L(L10n.ThaiHub.author))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Text(mod.author)
@@ -289,16 +287,14 @@ struct ThaiModDetailView: View {
                             Divider().padding(.leading, 16)
                             
                             HStack {
-                                Text(vm.localizedString(for: "เว็บไซต์"))
+                                Text(vm.L(L10n.ThaiHub.website))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Button(action: {
                                     let targetUrl = mod.nexusUrl.isEmpty ? mod.url : mod.nexusUrl
-                                    if let url = URL(string: targetUrl) {
-                                        NSWorkspace.shared.open(url)
-                                    }
+                                    if let url = URL(string: targetUrl) { NSWorkspace.shared.open(url) }
                                 }) {
-                                    Text(vm.localizedString(for: "ดูบน Nexus Mods"))
+                                    Text(vm.L(L10n.ThaiHub.viewOnNexus))
                                         .font(.system(size: 13))
                                         .foregroundColor(.blue)
                                 }

@@ -153,7 +153,7 @@
 "ศูนย์รวมม็อดแปลไทย" = "Thai Translation Hub";
 "ติดตั้งม็อดภาษาไทยที่รองรับได้ด้วยการคลิกเพียงครั้งเดียว สนับสนุนโดย AppleBoiy" = "Install supported Thai translation mods with a single click. Powered by AppleBoiy.";
 "กำลังโหลดข้อมูลม็อดแปลไทย..." = "Loading Thai translation mods...";
-"สถานะ:" = "Status:";
+"สถานะ" = "Status";
 "ติดตั้งซ้ำ" = "Reinstall";
 "ติดตั้ง" = "Install";
 "การติดตั้ง" = "Installation";
@@ -230,3 +230,37 @@
 "Optional" = "Optional";
 "เลือกทั้งหมด" = "Select All";
 "เอาออกทั้งหมด" = "Deselect All";
+
+/* ViewModel / Operations */
+"ชาวไร่" = "Farmer";
+"กำลังเริ่มเปิดเกม Stardew Valley (Vanilla)..." = "Launching Stardew Valley (Vanilla)...";
+"เปิดเกมเซสชัน Vanilla สำเร็จ" = "Vanilla game session launched successfully";
+"ไม่สามารถเปิดไฟล์ตัวเกมหลักโดยตรงได้: %@" = "Could not open main game executable: %@";
+"ไม่สามารถเริ่มเกมแบบ Vanilla ได้" = "Failed to start Vanilla game";
+"กำลังเริ่มเปิดเกม Stardew Valley (SMAPI)..." = "Launching Stardew Valley (SMAPI)...";
+"เปิดเกมผ่าน Steam สำเร็จ" = "Launched via Steam successfully";
+"เปิดไฟล์แอปตัวเกมโดยตรงสำเร็จ" = "Launched game app directly successfully";
+"ไม่สามารถเปิดเกมได้ โปรดตรวจสอบโฟลเดอร์เกมของคุณ" = "Could not start game, please verify your game folder";
+"ไม่สามารถเริ่มเกมได้โดยตรง" = "Failed to start game directly";
+"บันทึกเซฟและสำรองไฟล์เรียบร้อยแล้ว!" = "Save saved and backup created successfully!";
+"เกิดข้อผิดพลาดในการบันทึกเซฟ" = "An error occurred while saving the save";
+"ย้ายเซฟลงถังขยะเรียบร้อยแล้ว" = "Moved save to trash successfully";
+"ไม่สามารถลบเซฟได้" = "Failed to delete save";
+"ทำสำเนาเซฟเรียบร้อยแล้ว" = "Duplicated save successfully";
+"ไม่สามารถทำสำเนาเซฟได้ (อาจมีซ้ำอยู่แล้ว)" = "Failed to duplicate save (it might already exist)";
+"สำรองไฟล์เซฟทั้งหมดไปที่ Desktop เรียบร้อยแล้ว\n(%@)" = "Backed up all saves to Desktop successfully\n(%@)";
+"เกิดข้อผิดพลาดในการ Zip ไฟล์เซฟ" = "An error occurred while zipping saves";
+"ไม่สามารถสั่งรันคำสั่ง Zip ได้" = "Failed to run zip command";
+"สำรองโฟลเดอร์ม็อดไปที่ Desktop เรียบร้อยแล้ว\n(%@)" = "Backed up mods folder to Desktop successfully\n(%@)";
+"เกิดข้อผิดพลาดในการ Zip โโฟลเดอร์ม็อด" = "An error occurred while zipping mods";
+"ลบโฟลเดอร์ Mods_disabled เรียบร้อยแล้ว" = "Deleted Mods_disabled folder successfully";
+"ไม่พบโฟลเดอร์ Mods_disabled" = "Mods_disabled folder not found";
+"ลบโฟลเดอร์ Mods_disabled ไม่สำเร็จ: %@" = "Failed to delete Mods_disabled folder: %@";
+"เกิดข้อผิดพลาดในการสร้าง URL ดาวน์โหลด" = "An error occurred while creating download URL";
+"กำลังดาวน์โหลดไฟล์แปลภาษา: %@..." = "Downloading translation: %@...";
+"ดาวน์โหลดล้มเหลว: %@" = "Download failed: %@";
+"ติดตั้งภาษาไทยสำหรับ %@ สำเร็จ!" = "Thai translation installed successfully for %@!";
+"เกิดข้อผิดพลาดในการแตกไฟล์ Zip ลงโฟลเดอร์ Mods" = "An error occurred while extracting Zip into Mods folder";
+"ไม่สามารถรันคำสั่ง Unzip ได้: %@" = "Failed to run unzip command: %@";
+"สลับโปรไฟล์ม็อดเป็น: %@" = "Switched mod profile to: %@";
+

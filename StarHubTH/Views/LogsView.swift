@@ -9,15 +9,15 @@ struct LogsView: View {
                 
                 // ── Logs Section ──
                 StandardSection(
-                    title: vm.localizedString(for: "ประวัติการทำงาน"),
-                    footer: vm.localizedString(for: "ประวัติสถานะและคำแนะนำสิทธิ์การเปิดใช้แอปในเซสชันปัจจุบัน")
+                    title: vm.L(L10n.Logs.history),
+                    footer: vm.L(L10n.Logs.historySubtitle)
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text(vm.localizedString(for: "บันทึกการทำงานของระบบ"))
+                            Text(vm.L(L10n.Logs.systemLogs))
                                 .font(.system(size: 13))
                             Spacer()
-                            Button(vm.localizedString(for: "ล้างประวัติ")) {
+                            Button(vm.L(L10n.Logs.clearLogs)) {
                                 vm.logOutput = ""
                             }
                         }
@@ -29,7 +29,7 @@ struct LogsView: View {
                             ScrollView {
                                 VStack(alignment: .leading) {
                                     if vm.logOutput.isEmpty {
-                                        Text(vm.localizedString(for: "ไม่มีประวัติการบันทึกในเซสชันนี้"))
+                                        Text(vm.L(L10n.Logs.noLogs))
                                             .font(.system(size: 12))
                                             .foregroundColor(.secondary)
                                             .italic()
@@ -57,8 +57,8 @@ struct LogsView: View {
                 }
                 
                 // ── Troubleshooting tip card ──
-                StandardSection(title: vm.localizedString(for: "คำแนะนำสำหรับระบบ macOS")) {
-                    Text(vm.localizedString(for: "คำแนะนำสำหรับผู้ใช้ macOS"))
+                StandardSection(title: vm.L(L10n.Logs.macOSTips)) {
+                    Text(vm.L(L10n.Logs.macOSTipsContent))
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                         .lineSpacing(4)

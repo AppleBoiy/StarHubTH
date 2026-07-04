@@ -53,20 +53,20 @@ struct ThaiTranslationMod: Identifiable, Equatable {
     
     func translatedStatus(vm: StarHubTHViewModel) -> String {
         if status.contains("เสร็จสมบูรณ์") {
-            return "✅ " + vm.localizedString(for: "เสร็จสมบูรณ์")
+            return "✅ " + vm.L(L10n.ThaiHub.completed)
         } else if status.contains("รอแปล") {
-            return "⏳ " + vm.localizedString(for: "รอแปล")
+            return "⏳ " + vm.L(L10n.ThaiHub.waitingTranslation)
         }
         return status
     }
     
     func installationStatusText(vm: StarHubTHViewModel) -> String {
         if isInstalled {
-            return vm.localizedString(for: "ติดตั้งแล้ว")
+            return vm.L(L10n.ThaiHub.installed)
         } else if isOriginalModInstalled {
-            return vm.localizedString(for: "พร้อมให้ดาวน์โหลด")
+            return vm.L(L10n.ThaiHub.availableDownload)
         } else {
-            return vm.localizedString(for: "ขาดม็อดต้นฉบับ")
+            return vm.L(L10n.ThaiHub.missingOriginal)
         }
     }
 }
@@ -83,7 +83,7 @@ class StarHubTHViewModel: ObservableObject {
     @Published var smapiErrors: [String] = []
     @Published var showSmapiAlerts: Bool = false
     
-    @Published var smapiInstalledVersion: String = "ยังไม่ได้ติดตั้ง"
+    @Published var smapiInstalledVersion: String? = nil   // nil = not installed
     @Published var mods: [ModItem] = []
     
     // Thai Translation Hub State
@@ -98,7 +98,7 @@ class StarHubTHViewModel: ObservableObject {
     @Published var saves: [SaveGameInfo] = []
     @Published var editingSave: SaveGameInfo? = nil
     
-    @Published var steamUsername: String = "ชาวไร่"
+    @Published var steamUsername: String = ""
     @Published var steamAvatarPath: String? = nil
     
     @Published var currentLanguage: String = UserDefaults.standard.string(forKey: "currentLanguage") ?? "en" {
@@ -129,6 +129,9 @@ class StarHubTHViewModel: ObservableObject {
         }
         self.refresh()
         self.loadProfiles()
+        if self.steamUsername.isEmpty {
+            self.steamUsername = L(L10n.VM.defaultFarmerName)
+        }
     }
     
     func detectDefaultGameDir() -> String {
@@ -167,6 +170,12 @@ class StarHubTHViewModel: ObservableObject {
         }
         return NSLocalizedString(key, tableName: nil, bundle: bundle, value: "", comment: "")
     }
+
+    /// Typed-key shorthand. Prefer this over localizedString(for:) with raw strings.
+    /// Example: vm.L(L10n.Mods.enabled)
+    func L(_ key: String) -> String {
+        localizedString(for: key)
+    }
     
     func refresh() {
         self.checkSmapiVersion()
@@ -202,7 +211,8 @@ class StarHubTHViewModel: ObservableObject {
         if !personaName.isEmpty {
             self.steamUsername = personaName
         } else {
-            self.steamUsername = NSFullUserName().components(separatedBy: " ").first ?? "ชาวไร่"
+            let defaultName = NSFullUserName().components(separatedBy: " ").first ?? ""
+            self.steamUsername = defaultName.isEmpty ? L(L10n.VM.defaultFarmerName) : defaultName
         }
         
         if !currentSteamID.isEmpty {
@@ -218,14 +228,10 @@ class StarHubTHViewModel: ObservableObject {
     
     func checkSmapiVersion() {
         guard !gameDir.isEmpty else {
-            self.smapiInstalledVersion = "ไม่ได้ระบุโฟลเดอร์เกม"
+            self.smapiInstalledVersion = nil
             return
         }
-        if let version = SmapiInstaller.getInstalledVersion(gameDir: gameDir) {
-            self.smapiInstalledVersion = version
-        } else {
-            self.smapiInstalledVersion = "ยังไม่ได้ติดตั้ง"
-        }
+        self.smapiInstalledVersion = SmapiInstaller.getInstalledVersion(gameDir: gameDir)
     }
     
     func scanMods() {
@@ -390,8 +396,8 @@ class StarHubTHViewModel: ObservableObject {
                 self.selectedMod = first
             }
             self.isThaiTranslationInstalled = scannedMods.contains {
-                $0.folderName.lowercased() == "stardew valley - thai" ||
-                $0.name.localizedCaseInsensitiveContains("thai")
+                ($0.folderName.lowercased() == "stardew valley - thai" ||
+                $0.name.localizedCaseInsensitiveContains("thai")) && $0.isEnabled
             }
         }
     }
@@ -623,7 +629,7 @@ class StarHubTHViewModel: ObservableObject {
         }
         
         if anyMoved {
-            log("\(targetState ? "เปิดใช้งาน" : "ปิดใช้งาน")ม็อด: \(mod.name)\(foldersToToggle.count > 1 ? " และ Dependencies" : "")")
+            log("\(targetState ? L(L10n.Mods.enabled) : L(L10n.Mods.disabled)): \(mod.name)\(foldersToToggle.count > 1 ? " + Dependencies" : "")")
             self.scanMods()
         }
     }
@@ -632,8 +638,8 @@ class StarHubTHViewModel: ObservableObject {
     func installSmapi() {
         smapiInstaller.install(gameDir: gameDir) { success, msg in
             self.checkSmapiVersion()
-            self.showModal(message: msg)
-            self.log("\(msg)")
+            self.showModal(message: self.L(msg))
+            self.log(self.L(msg))
         }
     }
     
@@ -641,8 +647,8 @@ class StarHubTHViewModel: ObservableObject {
     func uninstallSmapi() {
         smapiInstaller.uninstall(gameDir: gameDir) { success, msg in
             self.checkSmapiVersion()
-            self.showModal(message: msg)
-            self.log("\(msg)")
+            self.showModal(message: self.L(msg))
+            self.log(self.L(msg))
         }
     }
     
@@ -666,7 +672,7 @@ class StarHubTHViewModel: ObservableObject {
     // Launch Stardew Valley (with selected profile)
     func launchGame() {
         guard !gameDir.isEmpty else {
-            showModal(message: "กรุณาระบุโฟลเดอร์เกมก่อน")
+            showModal(message: L(L10n.Settings.gameDirNotSet))
             return
         }
         
@@ -678,24 +684,24 @@ class StarHubTHViewModel: ObservableObject {
         let originalPath = (gameDir as NSString).appendingPathComponent("StardewValley-original")
         
         if profile == "Vanilla" && FileManager.default.fileExists(atPath: originalPath) {
-            log("กำลังเริ่มเปิดเกม Stardew Valley (Vanilla)...")
+            log(L(L10n.VM.launchingVanilla))
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/bash")
             process.arguments = [originalPath]
             process.currentDirectoryURL = URL(fileURLWithPath: gameDir)
             do {
                 try process.run()
-                log("เปิดเกมเซสชัน Vanilla สำเร็จ")
+                log(L(L10n.VM.launchVanillaSuccess))
                 if closeAfter { NSApplication.shared.terminate(nil) }
             } catch {
-                log("ไม่สามารถเปิดไฟล์ตัวเกมหลักโดยตรงได้: \(error.localizedDescription)")
-                showModal(message: "ไม่สามารถเริ่มเกมแบบ Vanilla ได้")
+                log(String(format: L(L10n.VM.launchVanillaError), error.localizedDescription))
+                showModal(message: L(L10n.VM.cannotStartVanilla))
             }
         } else {
-            log("กำลังเริ่มเปิดเกม Stardew Valley (SMAPI)...")
+            log(L(L10n.VM.launchingSmapi))
             if let steamURL = URL(string: "steam://run/413150") {
                 if NSWorkspace.shared.open(steamURL) {
-                    log("เปิดเกมผ่าน Steam สำเร็จ")
+                    log(L(L10n.VM.launchSteamSuccess))
                     if closeAfter { NSApplication.shared.terminate(nil) }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
                         self.isPlayingGame = false
@@ -719,11 +725,11 @@ class StarHubTHViewModel: ObservableObject {
         // Fallback: Open app directly
         let appURL = URL(fileURLWithPath: appPath)
             if NSWorkspace.shared.open(appURL) {
-                log("เปิดไฟล์แอปตัวเกมโดยตรงสำเร็จ")
+                log(L(L10n.VM.launchDirectSuccess))
                 if closeAfter { NSApplication.shared.terminate(nil) }
             } else {
-                log("ไม่สามารถเปิดเกมได้ โปรดตรวจสอบโฟลเดอร์เกมของคุณ")
-                showModal(message: "ไม่สามารถเริ่มเกมได้โดยตรง")
+                log(L(L10n.VM.cannotStartDirect))
+                showModal(message: L(L10n.VM.cannotStartGame))
             }
         }
         
@@ -753,27 +759,27 @@ class StarHubTHViewModel: ObservableObject {
         let success = SaveManager.shared.updateSave(info: info, newName: newName, newFarm: newFarm, newFav: newFav, newMoney: newMoney, newMaxHealth: newMaxHealth, newMaxStamina: newMaxStamina, newGoldenWalnuts: newGoldenWalnuts, newQiGems: newQiGems, newClubCoins: newClubCoins)
         if success {
             reloadSaves()
-            showModal(message: "บันทึกเซฟและสำรองไฟล์เรียบร้อยแล้ว!")
+            showModal(message: L(L10n.VM.saveSuccess))
         } else {
-            showModal(message: "เกิดข้อผิดพลาดในการบันทึกเซฟ")
+            showModal(message: L(L10n.VM.saveError))
         }
     }
     
     func deleteSave(info: SaveGameInfo) {
         if SaveManager.shared.deleteSave(info: info) {
             reloadSaves()
-            showModal(message: "ย้ายเซฟลงถังขยะเรียบร้อยแล้ว")
+            showModal(message: L(L10n.VM.deleteSaveSuccess))
         } else {
-            showModal(message: "ไม่สามารถลบเซฟได้")
+            showModal(message: L(L10n.VM.deleteSaveError))
         }
     }
     
     func duplicateSave(info: SaveGameInfo) {
         if SaveManager.shared.duplicateSave(info: info) {
             reloadSaves()
-            showModal(message: "ทำสำเนาเซฟเรียบร้อยแล้ว")
+            showModal(message: L(L10n.VM.duplicateSaveSuccess))
         } else {
-            showModal(message: "ไม่สามารถทำสำเนาเซฟได้ (อาจมีซ้ำอยู่แล้ว)")
+            showModal(message: L(L10n.VM.duplicateSaveError))
         }
     }
     
@@ -798,18 +804,18 @@ class StarHubTHViewModel: ObservableObject {
             try process.run()
             process.waitUntilExit()
             if process.terminationStatus == 0 {
-                showModal(message: "สำรองไฟล์เซฟทั้งหมดไปที่ Desktop เรียบร้อยแล้ว\n(\(zipPath))")
+                showModal(message: String(format: L(L10n.VM.backupSavesSuccess), zipPath))
             } else {
-                showModal(message: "เกิดข้อผิดพลาดในการ Zip ไฟล์เซฟ")
+                showModal(message: L(L10n.VM.zipSavesError))
             }
         } catch {
-            showModal(message: "ไม่สามารถสั่งรันคำสั่ง Zip ได้")
+            showModal(message: L(L10n.VM.cannotRunZip))
         }
     }
     
     func backupAllMods() {
         guard !gameDir.isEmpty else {
-            showModal(message: "กรุณาระบุโฟลเดอร์เกมก่อน")
+            showModal(message: L(L10n.Settings.gameDirNotSet))
             return
         }
         let modsDir = (gameDir as NSString).appendingPathComponent("Mods")
@@ -827,12 +833,12 @@ class StarHubTHViewModel: ObservableObject {
             try process.run()
             process.waitUntilExit()
             if process.terminationStatus == 0 {
-                showModal(message: "สำรองโฟลเดอร์ม็อดไปที่ Desktop เรียบร้อยแล้ว\n(\(zipPath))")
+                showModal(message: String(format: L(L10n.VM.backupModsSuccess), zipPath))
             } else {
-                showModal(message: "เกิดข้อผิดพลาดในการ Zip โฟลเดอร์ม็อด")
+                showModal(message: L(L10n.VM.zipModsError))
             }
         } catch {
-            showModal(message: "ไม่สามารถสั่งรันคำสั่ง Zip ได้")
+            showModal(message: L(L10n.VM.cannotRunZip))
         }
     }
     
@@ -842,13 +848,13 @@ class StarHubTHViewModel: ObservableObject {
         do {
             if FileManager.default.fileExists(atPath: disabledModsPath) {
                 try FileManager.default.removeItem(atPath: disabledModsPath)
-                showModal(message: "ลบโฟลเดอร์ Mods_disabled เรียบร้อยแล้ว")
+                showModal(message: L(L10n.VM.cleanModsSuccess))
                 self.scanMods()
             } else {
-                showModal(message: "ไม่พบโฟลเดอร์ Mods_disabled")
+                showModal(message: L(L10n.VM.cleanModsNotFound))
             }
         } catch {
-            showModal(message: "ลบโฟลเดอร์ Mods_disabled ไม่สำเร็จ: \(error.localizedDescription)")
+            showModal(message: String(format: L(L10n.VM.cleanModsError), error.localizedDescription))
         }
     }
     
@@ -967,16 +973,16 @@ class StarHubTHViewModel: ObservableObject {
         let downloadUrlStr = "https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/bundles/\(encodedZipName)"
         
         guard let downloadUrl = URL(string: downloadUrlStr) else {
-            showModal(message: "เกิดข้อผิดพลาดในการสร้าง URL ดาวน์โหลด")
+            showModal(message: L(L10n.VM.urlError))
             return
         }
         
-        showModal(message: "กำลังดาวน์โหลดไฟล์แปลภาษา: \(mod.name)...")
+        showModal(message: String(format: L(L10n.VM.downloadingTranslation), mod.name))
         
         let task = URLSession.shared.downloadTask(with: downloadUrl) { localUrl, response, error in
             if let error = error {
                 DispatchQueue.main.async {
-                    self.showModal(message: "ดาวน์โหลดล้มเหลว: \(error.localizedDescription)")
+                    self.showModal(message: String(format: self.L(L10n.VM.downloadFailed), error.localizedDescription))
                 }
                 return
             }
@@ -992,15 +998,15 @@ class StarHubTHViewModel: ObservableObject {
                 
                 DispatchQueue.main.async {
                     if process.terminationStatus == 0 {
-                        self.showModal(message: "ติดตั้งภาษาไทยสำหรับ \(mod.name) สำเร็จ!")
+                        self.showModal(message: String(format: self.L(L10n.VM.installThaiSuccess), mod.name))
                         self.evaluateThaiTranslationStatus()
                     } else {
-                        self.showModal(message: "เกิดข้อผิดพลาดในการแตกไฟล์ Zip ลงโฟลเดอร์ Mods")
+                        self.showModal(message: self.L(L10n.VM.unzipError))
                     }
                 }
             } catch {
                 DispatchQueue.main.async {
-                    self.showModal(message: "ไม่สามารถรันคำสั่ง Unzip ได้: \(error.localizedDescription)")
+                    self.showModal(message: String(format: self.L(L10n.VM.unzipFailed), error.localizedDescription))
                 }
             }
         }
@@ -1108,6 +1114,6 @@ class StarHubTHViewModel: ObservableObject {
         
         // 3. Refresh mods list
         self.scanMods()
-        self.log("สลับโปรไฟล์ม็อดเป็น: \(profile.name)")
+        self.log(String(format: L(L10n.VM.switchProfile), profile.name))
     }
 }

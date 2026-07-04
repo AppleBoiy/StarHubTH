@@ -23,12 +23,12 @@ struct ModListView: View {
                                 .font(.system(size: 48))
                                 .foregroundColor(.secondary.opacity(0.5))
                             if vm.mods.isEmpty {
-                                Text("ไม่พบส่วนเสริมที่ติดตั้ง\nโปรดตรวจสอบโฟลเดอร์เกม")
+                                Text(vm.L(L10n.Mods.noModsInstalled))
                                     .multilineTextAlignment(.center)
                                     .font(.system(size: 14))
                                     .foregroundColor(.secondary)
                             } else {
-                                Text(LocalizedStringKey("ไม่พบส่วนเสริม \"\(searchText)\""))
+                                Text(String(format: vm.L(L10n.Mods.noModFound), searchText))
                                     .multilineTextAlignment(.center)
                                     .font(.system(size: 14))
                                     .foregroundColor(.secondary)
@@ -38,10 +38,10 @@ struct ModListView: View {
                         .padding(.top, 40)
                     } else {
                         if !activeMods.isEmpty {
-                            ModSectionGroup(title: "เปิดใช้งานแล้ว", mods: activeMods, vm: vm)
+                            ModSectionGroup(title: vm.L(L10n.Mods.enabled), mods: activeMods, vm: vm)
                         }
                         if !inactiveMods.isEmpty {
-                            ModSectionGroup(title: "ปิดการใช้งาน", mods: inactiveMods, vm: vm)
+                            ModSectionGroup(title: vm.L(L10n.Mods.disabled), mods: inactiveMods, vm: vm)
                         }
                     }
                 }
@@ -49,7 +49,7 @@ struct ModListView: View {
             .padding(24)
         }
         .background(Color(nsColor: .controlBackgroundColor))
-        .searchable(text: $searchText, prompt: Text(vm.localizedString(for: "ค้นหาส่วนเสริม...")))
+        .searchable(text: $searchText, prompt: Text(vm.L(L10n.Mods.searchMods)))
     }
 }
 
@@ -206,7 +206,7 @@ struct ModListRow: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(PlainButtonStyle())
-                .help("เปิดโฟลเดอร์")
+                .help(vm.L(L10n.Mods.openFolder))
                 .pointingHandCursor()
                 
                 if !mod.nexusUrl.isEmpty || !mod.dependencies.isEmpty {
@@ -218,7 +218,7 @@ struct ModListRow: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .help("ข้อมูล (Information)")
+                    .help(vm.L(L10n.Mods.viewOnNexus))
                     .pointingHandCursor()
                     .popover(isPresented: $isShowingDependencies, arrowEdge: .bottom) {
                         VStack(alignment: .leading, spacing: 12) {
@@ -231,7 +231,7 @@ struct ModListRow: View {
                                     } label: {
                                         HStack {
                                             Image(systemName: "link")
-                                            Text("ดูบน Nexus Mods")
+                                            Text(vm.L(L10n.Mods.viewOnNexus))
                                         }
                                         .foregroundColor(.accentColor)
                                     }
@@ -245,7 +245,7 @@ struct ModListRow: View {
                                     Divider()
                                 }
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("Dependencies (ม็อดที่ต้องการ)")
+                                    Text(vm.L(L10n.Profiles.dependencies))
                                         .font(.headline)
                                     
                                     ScrollView {
@@ -275,7 +275,7 @@ struct ModListRow: View {
                                                         .foregroundColor(isEnabled ? .primary : .secondary)
                                                     Spacer()
                                                     if dep.isRequired {
-                                                        Text("Required")
+                                                        Text(vm.L(L10n.Profiles.required))
                                                             .font(.system(size: 10, weight: .bold))
                                                             .foregroundColor(.red)
                                                             .padding(.horizontal, 6)
@@ -283,7 +283,7 @@ struct ModListRow: View {
                                                             .background(Color.red.opacity(0.1))
                                                             .cornerRadius(4)
                                                     } else {
-                                                        Text("Optional")
+                                                        Text(vm.L(L10n.Profiles.optional))
                                                             .font(.system(size: 10))
                                                             .foregroundColor(.secondary)
                                                             .padding(.horizontal, 6)
@@ -338,7 +338,7 @@ struct ModListRow: View {
         .animation(.easeInOut(duration: 0.1), value: isHovered)
         .onHover { isHovered = $0 }
         .contextMenu {
-            Button("เปิดใน Finder") {
+            Button(vm.L(L10n.Mods.openInFinder)) {
                 let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
                 let url = URL(fileURLWithPath: vm.gameDir)
                     .appendingPathComponent(baseFolder)
@@ -346,7 +346,7 @@ struct ModListRow: View {
                 NSWorkspace.shared.open(url)
             }
             if !mod.nexusUrl.isEmpty {
-                Button("ดูรายละเอียดบน Nexus Mods") {
+                Button(vm.L(L10n.Mods.viewDetailsOnNexus)) {
                     if let url = URL(string: mod.nexusUrl) { NSWorkspace.shared.open(url) }
                 }
             }

@@ -8,7 +8,10 @@ struct SavesView: View {
         if searchText.isEmpty {
             return vm.saves
         } else {
-            return vm.saves.filter { $0.playerName.localizedCaseInsensitiveContains(searchText) || $0.farmName.localizedCaseInsensitiveContains(searchText) }
+            return vm.saves.filter {
+                $0.playerName.localizedCaseInsensitiveContains(searchText) ||
+                $0.farmName.localizedCaseInsensitiveContains(searchText)
+            }
         }
     }
 
@@ -20,7 +23,7 @@ struct SavesView: View {
                         Image(systemName: "cloud.bolt")
                             .font(.system(size: 40))
                             .foregroundColor(.secondary.opacity(0.5))
-                        Text("ไม่พบไฟล์เซฟในเครื่อง\nลองเริ่มเล่นเกมสักครั้งก่อนนะ")
+                        Text(vm.L(L10n.Saves.noSaves))
                             .multilineTextAlignment(.center)
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
@@ -37,22 +40,21 @@ struct SavesView: View {
                 }
             } header: {
                 HStack {
-                    Text("เซฟเกมทั้งหมด (\(filteredSaves.count))")
+                    Text(String(format: vm.L(L10n.Saves.allSaves), Int64(filteredSaves.count)))
                     Spacer()
                     Button(action: { vm.reloadSaves() }) {
                         Image(systemName: "arrow.clockwise")
                     }
                     .buttonStyle(.borderless)
-                    .help("รีเฟรชข้อมูล")
                 }
             } footer: {
-                Text("ระบบจะดึงข้อมูลเซฟเกมจากโฟลเดอร์เกมของคุณโดยอัตโนมัติ")
+                Text(vm.L(L10n.Saves.autoFetch))
             }
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
         .background(Color(nsColor: .controlBackgroundColor))
-        .searchable(text: $searchText, prompt: Text(vm.localizedString(for: "ค้นหา")))
+        .searchable(text: $searchText, prompt: Text(vm.L(L10n.Main.search)))
     }
 }
 
@@ -64,7 +66,6 @@ struct SaveRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Circular Avatar/Icon
             ZStack {
                 Circle()
                     .fill(Color(nsColor: .controlBackgroundColor))
@@ -76,14 +77,13 @@ struct SaveRow: View {
             }
             .frame(width: 32, height: 32)
             
-            // Text
             VStack(alignment: .leading, spacing: 2) {
                 Text(save.playerName)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.primary)
-                let format = vm.localizedString(for: "%@ Farm • ปีที่ %lld %@ วันที่ %lld • %@ G")
+                let format = vm.L(L10n.Saves.farmFormat)
                 let moneyStr = NumberFormatter.localizedString(from: NSNumber(value: save.money), number: .decimal)
-                let formattedStr = String(format: format, save.farmName, save.year, vm.localizedString(for: save.seasonName), save.day, moneyStr)
+                let formattedStr = String(format: format, save.farmName, save.year, vm.L(save.seasonName), save.day, moneyStr)
                 Text(formattedStr)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
@@ -91,7 +91,6 @@ struct SaveRow: View {
             
             Spacer()
             
-            // Info Icon
             Image(systemName: "info.circle")
                 .foregroundColor(.secondary)
                 .font(.system(size: 16))
@@ -152,30 +151,30 @@ struct SaveEditorView: View {
 
             // Form
             Form {
-                Section("ข้อมูลตัวละคร") {
-                    TextField("ชื่อตัวละคร", text: $name)
-                    TextField("ชื่อฟาร์ม", text: $farm)
-                    TextField("สิ่งที่ชอบ", text: $fav)
+                Section(vm.L(L10n.Saves.characterInfo)) {
+                    TextField(vm.L(L10n.Saves.characterName), text: $name)
+                    TextField(vm.L(L10n.Saves.farmName), text: $farm)
+                    TextField(vm.L(L10n.Saves.favoriteThing), text: $fav)
                 }
                 
-                Section("ทรัพยากร") {
-                    TextField("จำนวนเงิน (G)", text: $moneyStr)
-                    TextField("เหรียญกาสิโน", text: $clubCoinsStr)
-                    TextField("วอลนัททองคำ", text: $goldenWalnutsStr)
-                    TextField("เพชรฉี (Qi Gems)", text: $qiGemsStr)
+                Section(vm.L(L10n.Saves.resources)) {
+                    TextField(vm.L(L10n.Saves.money), text: $moneyStr)
+                    TextField(vm.L(L10n.Saves.casinoCoins), text: $clubCoinsStr)
+                    TextField(vm.L(L10n.Saves.goldenWalnuts), text: $goldenWalnutsStr)
+                    TextField(vm.L(L10n.Saves.qiGems), text: $qiGemsStr)
                 }
                 
-                Section("สถานะตัวละคร") {
-                    TextField("พลังชีวิตสูงสุด", text: $maxHealthStr)
-                    TextField("พลังงานสูงสุด", text: $maxStaminaStr)
+                Section(vm.L(L10n.Saves.characterStats)) {
+                    TextField(vm.L(L10n.Saves.maxHealth), text: $maxHealthStr)
+                    TextField(vm.L(L10n.Saves.maxStamina), text: $maxStaminaStr)
                 }
                 
-                Section("การจัดการไฟล์เซฟ") {
+                Section(vm.L(L10n.Saves.saveManagement)) {
                     HStack {
-                        Button("เปิดโฟลเดอร์") { vm.openSaveInFinder(info: save) }
-                        Button("ทำสำเนา") { vm.duplicateSave(info: save); vm.editingSave = nil }
+                        Button(vm.L(L10n.Saves.openFolder)) { vm.openSaveInFinder(info: save) }
+                        Button(vm.L(L10n.Saves.duplicate)) { vm.duplicateSave(info: save); vm.editingSave = nil }
                         Spacer()
-                        Button("ลบเซฟ") { vm.deleteSave(info: save); vm.editingSave = nil }
+                        Button(vm.L(L10n.Saves.deleteSave)) { vm.deleteSave(info: save); vm.editingSave = nil }
                             .foregroundColor(.red)
                     }
                 }
@@ -187,12 +186,12 @@ struct SaveEditorView: View {
             
             // Footer
             HStack {
-                Text("ระบบจะทำการสร้างโฟลเดอร์แบ็คอัพไว้ข้างๆ ไฟล์เดิมอัตโนมัติ")
+                Text(vm.L(L10n.Saves.backupNote))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 Spacer()
                 
-                Button("บันทึกการเปลี่ยนแปลง") {
+                Button(vm.L(L10n.Saves.saveChanges)) {
                     let newMoney = Int(moneyStr) ?? save.money
                     let newHealth = Int(maxHealthStr) ?? save.maxHealth
                     let newStam = Int(maxStaminaStr) ?? save.maxStamina

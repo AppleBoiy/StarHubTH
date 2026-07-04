@@ -46,17 +46,27 @@ struct HomeView: View {
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.primary)
                         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
-                        Text("Stardew Valley v1.6 • StarHubTH v\(appVersion)")
+                        Text(String(format: vm.L(L10n.Home.versionString), appVersion))
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
                     }
                 }
                 
                 // ── GAME INFO BLOCK ──
-                StandardSection(title: "ข้อมูลแอป") {
-                    StandardRow(title: "ผู้พัฒนา", detail: "AppleBoiy", showDivider: true)
-                    StandardRow(title: "ตัวจัดการม็อด", detail: vm.smapiInstalledVersion == "ยังไม่ได้ติดตั้ง" ? "ไม่ได้ติดตั้ง" : "SMAPI \(vm.smapiInstalledVersion)", showDivider: true)
-                    StandardRow(title: "ม็อดที่ติดตั้ง", detail: "\(vm.mods.count) รายการ", showDivider: false)
+                StandardSection(title: vm.L(L10n.Home.appInfo)) {
+                    StandardRow(title: LocalizedStringKey(vm.L(L10n.Home.developer)), detail: "AppleBoiy", showDivider: true)
+                    StandardRow(
+                        title: LocalizedStringKey(vm.L(L10n.Home.modManager)),
+                        detail: LocalizedStringKey(vm.smapiInstalledVersion == nil
+                            ? vm.L(L10n.Home.notInstalled)
+                            : "SMAPI \(vm.smapiInstalledVersion!)"),
+                        showDivider: true
+                    )
+                    StandardRow(
+                        title: LocalizedStringKey(vm.L(L10n.Home.installedMods)),
+                        detail: LocalizedStringKey(String(format: vm.L(L10n.Home.itemCount), Int64(vm.mods.count))),
+                        showDivider: false
+                    )
                 }
                 .padding(.horizontal, 40)
                 
@@ -64,49 +74,54 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     
                     // Folder Settings
-                    StandardSection(title: "โฟลเดอร์เกม") {
+                    StandardSection(title: vm.L(L10n.Home.gameFolder)) {
                         HStack {
-                            
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("ที่ตั้งไฟล์เกม")
+                                Text(vm.L(L10n.Home.gamePath))
                                     .font(.system(size: 13))
-                            if vm.gameDir.isEmpty {
-                                Text("ยังไม่ได้กำหนด")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            } else {
-                                Text(vm.gameDir)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                            }
+                                if vm.gameDir.isEmpty {
+                                    Text(vm.L(L10n.Home.notSet))
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                } else {
+                                    Text(vm.gameDir)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                }
                             }
                             Spacer()
-                            Button("เลือกโฟลเดอร์...") { vm.selectGameDir() }
+                            Button(vm.L(L10n.Home.selectFolder)) { vm.selectGameDir() }
                         }
                     }
                     
                     // SMAPI Settings
-                    StandardSection(title: "ระบบจัดการม็อด (SMAPI)") {
+                    StandardSection(title: vm.L(L10n.Home.smapiManager)) {
                         VStack(spacing: 0) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("สถานะ SMAPI")
+                                    Text(vm.L(L10n.Home.smapiStatus))
                                         .font(.system(size: 13))
-                                    Text(vm.smapiInstalledVersion == "ยังไม่ได้ติดตั้ง" ? LocalizedStringKey("ยังไม่ได้ติดตั้ง") : LocalizedStringKey("ติดตั้งแล้ว (v\(vm.smapiInstalledVersion))"))
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
+                                    if let version = vm.smapiInstalledVersion {
+                                        Text(String(format: vm.L(L10n.Home.smapiInstalled), version))
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                    } else {
+                                        Text(vm.L(L10n.Home.smapiNotInstalled))
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                    }
                                 }
                                 Spacer()
                                 if smapiInstaller.isInstalling {
                                     ProgressView()
                                         .controlSize(.small)
                                         .padding(.trailing, 4)
-                                } else if vm.smapiInstalledVersion == "ยังไม่ได้ติดตั้ง" {
-                                    Button("ติดตั้ง SMAPI") { vm.installSmapi() }
+                                } else if vm.smapiInstalledVersion == nil {
+                                    Button(vm.L(L10n.Home.installSmapi)) { vm.installSmapi() }
                                 } else {
-                                    Button("ถอนการติดตั้ง") { vm.uninstallSmapi() }
+                                    Button(vm.L(L10n.Home.uninstall)) { vm.uninstallSmapi() }
                                 }
                             }
                             
@@ -116,7 +131,7 @@ struct HomeView: View {
                                         .progressViewStyle(.linear)
                                         .tint(.blue)
                                         .animation(.easeInOut, value: smapiInstaller.progress)
-                                    Text(LocalizedStringKey(smapiInstaller.statusMessage))
+                                    Text(vm.L(smapiInstaller.statusMessage))
                                         .font(.system(size: 11))
                                         .foregroundColor(.secondary)
                                 }
@@ -128,21 +143,24 @@ struct HomeView: View {
                 .padding(.horizontal, 40)
                 
                 // ── CORE EXTENSIONS SECTION ──
-                StandardSection(title: "ส่วนเสริมหลัก (Core Extensions)") {
+                StandardSection(title: vm.L(L10n.Home.coreExtensions)) {
                     VStack(spacing: 0) {
                         CoreModRow(
+                            vm: vm,
                             title: "Content Patcher",
                             isInstalled: vm.mods.contains { $0.name.lowercased().contains("content patcher") && $0.isEnabled }
                         )
                         Rectangle().fill(Color.primary.opacity(0.05)).frame(height: 1).padding(.leading, 12).padding(.vertical, 2)
                         
                         CoreModRow(
+                            vm: vm,
                             title: "SpaceCore",
                             isInstalled: vm.mods.contains { $0.name.lowercased().contains("spacecore") && $0.isEnabled }
                         )
                         Rectangle().fill(Color.primary.opacity(0.05)).frame(height: 1).padding(.leading, 12).padding(.vertical, 2)
                         
                         CoreModRow(
+                            vm: vm,
                             title: "Stardew Valley Thai",
                             isInstalled: vm.isThaiTranslationInstalled
                         )
@@ -161,6 +179,7 @@ struct HomeView: View {
 
 // Helper for core mod status rows
 struct CoreModRow: View {
+    @ObservedObject var vm: StarHubTHViewModel
     let title: String
     let isInstalled: Bool
     
@@ -169,7 +188,7 @@ struct CoreModRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 13))
-                Text(LocalizedStringKey(isInstalled ? "ติดตั้งและเปิดใช้งานแล้ว" : "ไม่ได้ติดตั้ง หรือปิดใช้งานอยู่"))
+                Text(vm.L(isInstalled ? L10n.Home.installedAndEnabled : L10n.Home.notInstalledOrDisabled))
                     .font(.system(size: 12))
                     .foregroundColor(isInstalled ? .secondary : .red)
             }

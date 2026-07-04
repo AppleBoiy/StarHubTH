@@ -10,7 +10,7 @@ struct ModProfilesView: View {
         VStack(alignment: .leading, spacing: 20) {
             
             // Header
-            Text(vm.localizedString(for: "โปรไฟล์ม็อด (Mod Profiles)"))
+            Text(vm.L(L10n.Profiles.titleFull))
                 .font(.title2)
                 .fontWeight(.semibold)
                 .padding(.top, 10)
@@ -22,7 +22,7 @@ struct ModProfilesView: View {
                         Image(systemName: "person.2.slash")
                             .font(.system(size: 40))
                             .foregroundColor(.secondary.opacity(0.5))
-                        Text(vm.localizedString(for: "ยังไม่มีโปรไฟล์ม็อด"))
+                        Text(vm.L(L10n.Profiles.noProfiles))
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
@@ -52,7 +52,7 @@ struct ModProfilesView: View {
                 Button(action: {
                     isShowingNewProfileAlert = true
                 }) {
-                    Text(vm.localizedString(for: "เพิ่มโปรไฟล์..."))
+                    Text(vm.L(L10n.Profiles.addProfile))
                 }
             }
             
@@ -66,19 +66,19 @@ struct ModProfilesView: View {
                 set: { if !$0 { selectedProfileForDetail = nil } }
             ))
         }
-        .alert(vm.localizedString(for: "สร้างโปรไฟล์ม็อดใหม่"), isPresented: $isShowingNewProfileAlert) {
-            TextField(vm.localizedString(for: "ชื่อโปรไฟล์..."), text: $newProfileName)
-            Button(vm.localizedString(for: "บันทึก")) {
+        .alert(vm.L(L10n.Profiles.createNewProfile), isPresented: $isShowingNewProfileAlert) {
+            TextField(vm.L(L10n.Profiles.profileNamePlaceholder), text: $newProfileName)
+            Button(vm.L(L10n.Profiles.save)) {
                 if !newProfileName.isEmpty {
                     vm.createProfile(name: newProfileName)
                     newProfileName = ""
                 }
             }
-            Button(vm.localizedString(for: "ยกเลิก"), role: .cancel) {
+            Button(vm.L(L10n.Profiles.cancel), role: .cancel) {
                 newProfileName = ""
             }
         } message: {
-            Text(vm.localizedString(for: "โปรไฟล์ใหม่จะเริ่มต้นโดยไม่มีม็อดใดๆ เปิดใช้งาน คุณสามารถตั้งค่าม็อดได้ในภายหลัง"))
+            Text(vm.L(L10n.Profiles.newProfileNote))
         }
     }
 }
@@ -108,7 +108,7 @@ struct ProfileRow: View {
                 Text(profile.name)
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.primary)
-                Text(vm.localizedString(for: isActive ? "กำลังใช้งาน" : "ไม่ได้ใช้งาน"))
+                Text(vm.L(isActive ? L10n.Profiles.inUse : L10n.Profiles.inactive))
                     .font(.system(size: 12))
                     .foregroundColor(isActive ? .secondary : .secondary)
             }
@@ -124,7 +124,7 @@ struct ProfileRow: View {
                     .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
-            .help(vm.localizedString(for: "ดูรายละเอียดโปรไฟล์นี้"))
+            .help(vm.L(L10n.Profiles.viewDetails))
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
@@ -167,7 +167,7 @@ struct ProfileDetailSheet: View {
             VStack(spacing: 0) {
                 // Name Row
                 HStack {
-                    Text(vm.localizedString(for: "ชื่อโปรไฟล์"))
+                    Text(vm.L(L10n.Profiles.profileName))
                         .font(.system(size: 13))
                     Spacer()
                     TextField("", text: $editName)
@@ -184,23 +184,23 @@ struct ProfileDetailSheet: View {
                 // Manage Mods Row
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(String(format: vm.localizedString(for: "ม็อดในโปรไฟล์นี้ (%d ม็อด)"), editedEnabledMods.count))
+                        Text(String(format: vm.L(L10n.Profiles.modsInProfile), editedEnabledMods.count))
                             .font(.system(size: 13))
-                        Text(vm.localizedString(for: "เลือกม็อดที่คุณต้องการให้เปิดใช้งานในโปรไฟล์นี้"))
+                        Text(vm.L(L10n.Profiles.selectMods))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(vm.localizedString(for: "จัดการ...")) {
+                    Button(vm.L(L10n.Profiles.manage)) {
                         isShowingModsPopover = true
                     }
                     .popover(isPresented: $isShowingModsPopover, arrowEdge: .trailing) {
                         VStack(spacing: 0) {
                             HStack {
-                                Text(vm.localizedString(for: "จัดการม็อดในโปรไฟล์"))
+                                Text(vm.L(L10n.Profiles.manageMods))
                                     .font(.headline)
                                 Spacer()
-                                Button(vm.localizedString(for: "เลือกทั้งหมด")) {
+                                Button(vm.L(L10n.Profiles.selectAll)) {
                                     editedEnabledMods = Set(vm.mods.map { $0.uniqueId })
                                 }
                                 .buttonStyle(.plain)
@@ -208,7 +208,7 @@ struct ProfileDetailSheet: View {
                                 .font(.system(size: 11))
                                 .pointingHandCursor()
                                 
-                                Button(vm.localizedString(for: "เอาออกทั้งหมด")) {
+                                Button(vm.L(L10n.Profiles.deselectAll)) {
                                     editedEnabledMods.removeAll()
                                 }
                                 .buttonStyle(.plain)
@@ -249,14 +249,14 @@ struct ProfileDetailSheet: View {
                 // Delete Row
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(vm.localizedString(for: "ลบโปรไฟล์ม็อดนี้"))
+                        Text(vm.L(L10n.Profiles.deleteProfile))
                             .font(.system(size: 13))
-                        Text(vm.localizedString(for: "การลบโปรไฟล์จะไม่ลบไฟล์ม็อดในเครื่องของคุณ"))
+                        Text(vm.L(L10n.Profiles.deleteNote))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(vm.localizedString(for: "ลบ...")) {
+                    Button(vm.L(L10n.Profiles.delete)) {
                         vm.deleteProfile(id: profile.id)
                         isPresented = false
                     }
@@ -284,16 +284,16 @@ struct ProfileDetailSheet: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.secondary)
-                .help(vm.localizedString(for: "ความช่วยเหลือ"))
+                .help(vm.L(L10n.Profiles.help))
                 
                 Spacer()
                 
-                Button(vm.localizedString(for: "ยกเลิก")) {
+                Button(vm.L(L10n.Profiles.cancel)) {
                     isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
                 
-                Button(vm.localizedString(for: "ตกลง")) {
+                Button(vm.L(L10n.Profiles.ok)) {
                     let finalMods = Array(editedEnabledMods)
                     vm.updateProfile(id: profile.id, newName: editName, enabledModIds: finalMods)
                     isPresented = false

@@ -13,11 +13,9 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 32) {
                 
                 // ── Language ──
-                StandardSection(
-                    title: "ภาษาของแอป"
-                ) {
+                StandardSection(title: vm.L(L10n.Settings.appLanguage)) {
                     HStack {
-                        Text("เลือกภาษา")
+                        Text(vm.L(L10n.Settings.selectLanguage))
                             .font(.system(size: 13))
                         Spacer()
                         Picker("", selection: $vm.currentLanguage) {
@@ -28,34 +26,34 @@ struct SettingsView: View {
                         .pickerStyle(MenuPickerStyle())
                         .fixedSize()
                         
-                        InfoPopoverButton(text: vm.localizedString(for: "เปลี่ยนภาษาของแอปพลิเคชัน"))
+                        InfoPopoverButton(text: vm.L(L10n.Settings.selectLanguage))
                     }
                 }
                 
                 // ── Launch Options ──
                 StandardSection(
-                    title: "การเปิดเกม",
-                    footer: "หากเปิดเกมไม่สำเร็จ ลองเลือกเป็นตัวเกมดั้งเดิม (Vanilla) ดูนะ สำหรับข้อมูลเพิ่มเติม โปรดดูที่: [wiki.stardewvalley.net/Modding](https://stardewvalleywiki.com/Modding)"
+                    title: vm.L(L10n.Settings.launchOptions),
+                    footer: vm.L(L10n.Settings.footerLaunch)
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text("โหมดเข้าเกมเริ่มต้น")
+                            Text(vm.L(L10n.Settings.defaultLaunchMode))
                                 .font(.system(size: 13))
                             Spacer()
                             Picker("", selection: $launchProfile) {
-                                Text(vm.localizedString(for: "เล่นผ่าน SMAPI (ใช้ม็อด)")).tag("SMAPI")
-                                Text(vm.localizedString(for: "ตัวเกมดั้งเดิม")).tag("Vanilla")
+                                Text(vm.L(L10n.Settings.playSMAPI)).tag("SMAPI")
+                                Text(vm.L(L10n.Settings.vanillaGame)).tag("Vanilla")
                             }
                             .pickerStyle(MenuPickerStyle())
                             .fixedSize()
                             
-                            InfoPopoverButton(text: "โหมดการเปิดเกมครั้งถัดไป")
+                            InfoPopoverButton(text: vm.L(L10n.Settings.hintNextLaunchMode))
                         }
                         
                         Divider().padding(.leading, 0)
                         
                         HStack {
-                            Text("ปิด Launcher อัตโนมัติหลังจากเกมเปิดขึ้นมา")
+                            Text(vm.L(L10n.Settings.closeLauncher))
                                 .font(.system(size: 13))
                             Spacer()
                             Toggle("", isOn: $closeAfterLaunch)
@@ -63,73 +61,66 @@ struct SettingsView: View {
                                 .controlSize(.small)
                                 .labelsHidden()
                             
-                            InfoPopoverButton(text: "ประหยัดทรัพยากรเครื่อง")
+                            InfoPopoverButton(text: vm.L(L10n.Settings.hintSaveResources))
                         }
                     }
                 }
                 
-                // ── Directory Config ──
+                // ── Backup ──
                 StandardSection(
-                    title: "สำรองข้อมูล",
-                    footer: "สร้างไฟล์ Zip สำหรับข้อมูลสำคัญไปไว้ที่ Desktop ของคุณ การสำรองข้อมูลจะช่วยป้องกันไฟล์เสียหายระหว่างการอัปเดต"
+                    title: vm.L(L10n.Settings.backup),
+                    footer: vm.L(L10n.Settings.footerBackup)
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text("สำรองไฟล์เซฟเกม")
+                            Text(vm.L(L10n.Settings.backupSaves))
                                 .font(.system(size: 13))
                             Spacer()
-                            Button(action: {
-                                vm.backupAllSaves()
-                            }) {
-                                Text(vm.localizedString(for: "Backup เซฟเกม"))
+                            Button(action: { vm.backupAllSaves() }) {
+                                Text(vm.L(L10n.Settings.backupSavesButton))
                             }
-                            
-                            InfoPopoverButton(text: "บีบอัดโฟลเดอร์ Saves เป็นไฟล์ Zip")
+                            InfoPopoverButton(text: vm.L(L10n.Settings.hintCompressSaves))
                         }
                         
                         Divider().padding(.leading, 0)
                         
                         HStack {
-                            Text("สำรองโฟลเดอร์ม็อด")
+                            Text(vm.L(L10n.Settings.backupMods))
                                 .font(.system(size: 13))
                             Spacer()
-                            Button(action: {
-                                vm.backupAllMods()
-                            }) {
-                                Text(vm.localizedString(for: "Backup ม็อด"))
+                            Button(action: { vm.backupAllMods() }) {
+                                Text(vm.L(L10n.Settings.backupModsButton))
                             }
-                            
-                            InfoPopoverButton(text: "บีบอัดโฟลเดอร์ Mods เป็นไฟล์ Zip")
+                            InfoPopoverButton(text: vm.L(L10n.Settings.hintCompressMods))
                         }
                     }
                 }
                 
                 // ── Appearance ──
                 StandardSection(
-                    title: "การแสดงผล",
-                    footer: "หน้าต่างนักพัฒนา (Developer Logs) มีไว้สำหรับตรวจสอบการทำงานของ SMAPI เวลามีม็อดเกิดปัญหาสามารถคัดลอกข้อความไปสอบถามผู้พัฒนาได้"
+                    title: vm.L(L10n.Settings.appearance),
+                    footer: vm.L(L10n.Settings.footerAppearance)
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
-
                         HStack {
-                            Text("ธีมของแอป")
+                            Text(vm.L(L10n.Settings.appTheme))
                                 .font(.system(size: 13))
                             Spacer()
                             Picker("", selection: $appColorScheme) {
-                                Text(vm.localizedString(for: "ตามระบบ")).tag("System")
-                                Text(vm.localizedString(for: "สว่าง")).tag("Light")
-                                Text(vm.localizedString(for: "มืด")).tag("Dark")
+                                Text(vm.L(L10n.Settings.themeSystem)).tag("System")
+                                Text(vm.L(L10n.Settings.themeLight)).tag("Light")
+                                Text(vm.L(L10n.Settings.themeDark)).tag("Dark")
                             }
                             .pickerStyle(SegmentedPickerStyle())
                             .fixedSize()
                             
-                            InfoPopoverButton(text: vm.localizedString(for: "เลือกธีมการแสดงผลของแอป"))
+                            InfoPopoverButton(text: vm.L(L10n.Settings.selectLanguage))
                         }
                         
                         Divider().padding(.leading, 0)
                         
                         HStack {
-                            Text("แสดงหน้าต่างนักพัฒนา")
+                            Text(vm.L(L10n.Settings.showDevLogs))
                                 .font(.system(size: 13))
                             Spacer()
                             Toggle("", isOn: $showDeveloperLogs)
@@ -137,44 +128,39 @@ struct SettingsView: View {
                                 .controlSize(.small)
                                 .labelsHidden()
                             
-                            InfoPopoverButton(text: "เครื่องมือแก้ไขปัญหา สำหรับดู Error Log")
+                            InfoPopoverButton(text: vm.L(L10n.Settings.hintDevLogs))
                         }
                     }
                 }
                 
                 // ── Management ──
                 StandardSection(
-                    title: "การจัดการ",
-                    footer: "ลบโฟลเดอร์ Mods_disabled เพื่อคืนพื้นที่จัดเก็บ หากคุณไม่ต้องการไฟล์ม็อดที่ปิดการใช้งานแล้ว"
+                    title: vm.L(L10n.Settings.management),
+                    footer: vm.L(L10n.Settings.footerManagement)
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text("โฟลเดอร์เซฟเกม")
+                            Text(vm.L(L10n.Settings.savesFolder))
                                 .font(.system(size: 13))
                             Spacer()
-                            Button(action: {
-                                vm.openSavesFolder()
-                            }) {
-                                Text(vm.localizedString(for: "เปิดโฟลเดอร์"))
+                            Button(action: { vm.openSavesFolder() }) {
+                                Text(vm.L(L10n.Settings.openFolder))
                             }
-                            
-                            InfoPopoverButton(text: "เปิดโฟลเดอร์ใน Finder")
+                            InfoPopoverButton(text: vm.L(L10n.Settings.openFolder))
                         }
                         
                         Divider().padding(.leading, 0)
                         
                         HStack {
-                            Text("ล้างไฟล์ม็อดที่ถูกปิดใช้งาน")
+                            Text(vm.L(L10n.Settings.clearDisabledMods))
                                 .font(.system(size: 13))
                             Spacer()
-                            Button(action: {
-                                vm.cleanDisabledMods()
-                            }) {
-                                Text(vm.localizedString(for: "ลบไฟล์ขยะม็อด"))
+                            Button(action: { vm.cleanDisabledMods() }) {
+                                Text(vm.L(L10n.Settings.deleteJunkMods))
                             }
                             .foregroundColor(.red)
                             
-                            InfoPopoverButton(text: "ลบโฟลเดอร์ Mods_disabled ถาวร", color: .red.opacity(0.8))
+                            InfoPopoverButton(text: vm.L(L10n.Settings.clearDisabledMods), color: .red.opacity(0.8))
                         }
                     }
                 }
