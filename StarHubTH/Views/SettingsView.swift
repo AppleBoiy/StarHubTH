@@ -133,6 +133,27 @@ struct SettingsView: View {
                     }
                 }
                 
+                // ── Mod Behavior ──
+                StandardSection(
+                    title: vm.L(L10n.Settings.modBehavior),
+                    footer: vm.L(L10n.Settings.chainToggleHint)
+                ) {
+                    HStack {
+                        Text(vm.L(L10n.Settings.chainToggle))
+                            .font(.system(size: 13))
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { vm.chainToggleDependencies },
+                            set: { vm.chainToggleDependencies = $0 }
+                        ))
+                        .toggleStyle(SwitchToggleStyle(tint: .blue))
+                        .controlSize(.small)
+                        .labelsHidden()
+                        
+                        InfoPopoverButton(text: vm.L(L10n.Settings.chainToggleHint))
+                    }
+                }
+
                 // ── Management ──
                 StandardSection(
                     title: vm.L(L10n.Settings.management),

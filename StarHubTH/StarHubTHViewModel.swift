@@ -112,6 +112,13 @@ class StarHubTHViewModel: ObservableObject {
     
     @Published var modProfiles: [ModProfile] = []
     @Published var activeProfileId: UUID? = nil
+
+    /// When true, toggling a mod also cascades to its dependencies / dependents.
+    /// Persisted in UserDefaults so SettingsView @AppStorage stays in sync.
+    var chainToggleDependencies: Bool {
+        get { UserDefaults.standard.object(forKey: "chainToggleDependencies") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "chainToggleDependencies") }
+    }
     
     let smapiInstaller = SmapiInstaller()
     
@@ -555,50 +562,53 @@ class StarHubTHViewModel: ObservableObject {
         var foldersToToggle: Set<String> = [mod.folderName]
         let targetState = !mod.isEnabled // True if we are enabling, false if disabling
         
-        if targetState == true {
-            // Enabling: recursively enable all REQUIRED dependencies
-            var queue = [mod.folderName]
-            while !queue.isEmpty {
-                let currentFolder = queue.removeFirst()
-                let deps = getDependencies(for: currentFolder)
-                
-                for dep in deps where dep.isRequired {
-                    if let depFolder = getTopLevelFolder(for: dep.uniqueId) {
-                        let isDepFolderEnabled = self.mods.first(where: { $0.folderName == depFolder })?.isEnabled ?? false
-                        if !isDepFolderEnabled && !foldersToToggle.contains(depFolder) {
-                            foldersToToggle.insert(depFolder)
-                            queue.append(depFolder)
+        if chainToggleDependencies {
+            if targetState == true {
+                // Enabling: recursively enable all REQUIRED dependencies
+                var queue = [mod.folderName]
+                while !queue.isEmpty {
+                    let currentFolder = queue.removeFirst()
+                    let deps = getDependencies(for: currentFolder)
+                    
+                    for dep in deps where dep.isRequired {
+                        if let depFolder = getTopLevelFolder(for: dep.uniqueId) {
+                            let isDepFolderEnabled = self.mods.first(where: { $0.folderName == depFolder })?.isEnabled ?? false
+                            if !isDepFolderEnabled && !foldersToToggle.contains(depFolder) {
+                                foldersToToggle.insert(depFolder)
+                                queue.append(depFolder)
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Disabling: recursively disable all enabled mods that REQUIRE this mod
+                var queue = [mod.folderName]
+                while !queue.isEmpty {
+                    let currentFolder = queue.removeFirst()
+                    
+                    var providedUniqueIds: [String] = []
+                    if let m = self.mods.first(where: { $0.folderName == currentFolder }) {
+                        if m.isGroup, let children = m.children {
+                            providedUniqueIds = children.map { $0.uniqueId }
+                        } else {
+                            providedUniqueIds = [m.uniqueId]
+                        }
+                    }
+                    
+                    for otherMod in self.mods where otherMod.isEnabled && !foldersToToggle.contains(otherMod.folderName) {
+                        let otherDeps = getDependencies(for: otherMod.folderName)
+                        let requiresCurrent = otherDeps.contains { dep in
+                            dep.isRequired && providedUniqueIds.contains { $0.caseInsensitiveCompare(dep.uniqueId) == .orderedSame }
+                        }
+                        if requiresCurrent {
+                            foldersToToggle.insert(otherMod.folderName)
+                            queue.append(otherMod.folderName)
                         }
                     }
                 }
             }
-        } else {
-            // Disabling: recursively disable all enabled mods that REQUIRE this mod
-            var queue = [mod.folderName]
-            while !queue.isEmpty {
-                let currentFolder = queue.removeFirst()
-                
-                var providedUniqueIds: [String] = []
-                if let m = self.mods.first(where: { $0.folderName == currentFolder }) {
-                    if m.isGroup, let children = m.children {
-                        providedUniqueIds = children.map { $0.uniqueId }
-                    } else {
-                        providedUniqueIds = [m.uniqueId]
-                    }
-                }
-                
-                for otherMod in self.mods where otherMod.isEnabled && !foldersToToggle.contains(otherMod.folderName) {
-                    let otherDeps = getDependencies(for: otherMod.folderName)
-                    let requiresCurrent = otherDeps.contains { dep in 
-                        dep.isRequired && providedUniqueIds.contains { $0.caseInsensitiveCompare(dep.uniqueId) == .orderedSame }
-                    }
-                    if requiresCurrent {
-                        foldersToToggle.insert(otherMod.folderName)
-                        queue.append(otherMod.folderName)
-                    }
-                }
-            }
         }
+        // else: chainToggleDependencies == false → only toggle the single mod itself
         
         let fm = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")

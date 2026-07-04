@@ -136,6 +136,11 @@ enum L10n {
         static let settings             = "ตั้งค่าระบบ"
         static let gameDirNotSet        = "กรุณาระบุโฟลเดอร์เกมก่อน"
 
+        // Mod behavior
+        static let modBehavior          = "การจัดการม็อด"
+        static let chainToggle          = "ปิด/เปิดม็อดที่เกี่ยวข้องอัตโนมัติ"
+        static let chainToggleHint      = "เมื่อเปิดม็อด จะเปิด Dependencies พร้อมกันอัตโนมัติ และเมื่อปิดม็อด จะปิดม็อดที่อาศัยม็อดนี้ด้วย"
+
         // Info popover hints
         static let hintNextLaunchMode   = "โหมดการเปิดเกมครั้งถัดไป"
         static let hintSaveResources    = "ประหยัดทรัพยากรเครื่อง"
