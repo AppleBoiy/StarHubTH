@@ -42,6 +42,7 @@ enum L10n {
         static let coreExtensions       = "ส่วนเสริมหลัก"
         static let installedAndEnabled  = "ติดตั้งและเปิดใช้งานแล้ว"
         static let notInstalledOrDisabled = "ไม่ได้ติดตั้ง หรือปิดใช้งานอยู่"
+        static let installedButDisabled = "ติดตั้งแล้ว แต่ปิดใช้งานอยู่"
         static let itemCount            = "%lld รายการ"
         static let versionString        = "Stardew Valley v1.6 • StarHubTH v%@"
         static let smapiNotInstalled    = "ยังไม่ได้ติดตั้ง"

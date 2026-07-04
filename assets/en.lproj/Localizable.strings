@@ -269,3 +269,6 @@
 "การจัดการม็อด" = "Mod Behavior";
 "ปิด/เปิดม็อดที่เกี่ยวข้องอัตโนมัติ" = "Auto-toggle related mods";
 "เมื่อเปิดม็อด จะเปิด Dependencies พร้อมกันอัตโนมัติ และเมื่อปิดม็อด จะปิดม็อดที่อาศัยม็อดนี้ด้วย" = "When enabling a mod, required dependencies are enabled automatically. When disabling, mods that depend on it are disabled too.";
+
+/* Core Mod Status */
+"ติดตั้งแล้ว แต่ปิดใช้งานอยู่" = "Installed but disabled";

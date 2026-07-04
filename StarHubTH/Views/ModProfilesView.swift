@@ -147,6 +147,34 @@ struct ProfileDetailSheet: View {
     @State private var editName: String = ""
     @State private var editedEnabledMods: Set<String> = []
     @State private var isShowingModsPopover = false
+
+    /// Mods for the checklist — top-level groups and standalone mods only.
+    /// Groups show as a single row; toggling a group toggles all its children.
+    private var flatMods: [ModItem] {
+        vm.mods
+            .filter { !$0.uniqueId.isEmpty || $0.isGroup }
+            .sorted { $0.name.lowercased() < $1.name.lowercased() }
+    }
+
+    /// All uniqueIds covered by a ModItem (group = all children's ids, single mod = its own id).
+    private func idsFor(_ mod: ModItem) -> [String] {
+        if mod.isGroup, let children = mod.children {
+            return children.map { $0.uniqueId }.filter { !$0.isEmpty }
+        }
+        return mod.uniqueId.isEmpty ? [] : [mod.uniqueId]
+    }
+
+    /// Whether a mod (or group) is fully checked in the current selection.
+    private func isChecked(_ mod: ModItem) -> Bool {
+        let ids = idsFor(mod)
+        return !ids.isEmpty && ids.allSatisfy { editedEnabledMods.contains($0) }
+    }
+
+    /// Apply chain-toggle logic on the in-memory editedEnabledMods set
+    /// by delegating to the ViewModel's shared logic.
+    private func applyChain(mod: ModItem, enable: Bool) {
+        editedEnabledMods = vm.applyChainToSet(mod: mod, enable: enable, currentEnabled: editedEnabledMods)
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -201,7 +229,7 @@ struct ProfileDetailSheet: View {
                                     .font(.headline)
                                 Spacer()
                                 Button(vm.L(L10n.Profiles.selectAll)) {
-                                    editedEnabledMods = Set(vm.mods.map { $0.uniqueId })
+                                    editedEnabledMods = Set(flatMods.flatMap { idsFor($0) })
                                 }
                                 .buttonStyle(.plain)
                                 .foregroundColor(.accentColor)
@@ -221,14 +249,23 @@ struct ProfileDetailSheet: View {
                             
                             ScrollView {
                                 VStack(spacing: 8) {
-                                    ForEach(vm.mods) { mod in
+                                    ForEach(flatMods) { mod in
                                         Toggle(mod.name, isOn: Binding(
-                                            get: { editedEnabledMods.contains(mod.uniqueId) },
+                                            get: { isChecked(mod) },
                                             set: { isOn in
-                                                if isOn {
-                                                    editedEnabledMods.insert(mod.uniqueId)
+                                                if vm.chainToggleDependencies {
+                                                    // For groups, chain-apply each child
+                                                    if mod.isGroup, let children = mod.children {
+                                                        for child in children where !child.uniqueId.isEmpty {
+                                                            applyChain(mod: child, enable: isOn)
+                                                        }
+                                                    } else {
+                                                        applyChain(mod: mod, enable: isOn)
+                                                    }
                                                 } else {
-                                                    editedEnabledMods.remove(mod.uniqueId)
+                                                    let ids = idsFor(mod)
+                                                    if isOn { ids.forEach { editedEnabledMods.insert($0) } }
+                                                    else    { ids.forEach { editedEnabledMods.remove($0) } }
                                                 }
                                             }
                                         ))
@@ -308,7 +345,18 @@ struct ProfileDetailSheet: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             editName = profile.name
-            editedEnabledMods = Set(profile.enabledModIds)
-        }
-    }
+            // If this is the active profile, reflect actual filesystem state
+            if vm.activeProfileId == profile.id {
+                editedEnabledMods = Set(
+                    vm.mods.flatMap { mod -> [String] in
+                        if mod.isGroup, let children = mod.children {
+                            return children.filter { $0.isEnabled }.map { $0.uniqueId }
+                        }
+                        return mod.isEnabled ? [mod.uniqueId] : []
+                    }.filter { !$0.isEmpty }
+                )
+            } else {
+                editedEnabledMods = Set(profile.enabledModIds)
+            }
+        }    }
 }

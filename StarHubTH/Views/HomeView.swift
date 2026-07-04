@@ -145,25 +145,20 @@ struct HomeView: View {
                 // ── CORE EXTENSIONS SECTION ──
                 StandardSection(title: vm.L(L10n.Home.coreExtensions)) {
                     VStack(spacing: 0) {
-                        CoreModRow(
-                            vm: vm,
-                            title: "Content Patcher",
-                            isInstalled: vm.mods.contains { $0.name.lowercased().contains("content patcher") && $0.isEnabled }
-                        )
+                        let (cpStatus, cpMod) = coreModStatus(matching: "content patcher")
+                        CoreModRow(vm: vm, title: "Content Patcher", status: cpStatus, mod: cpMod)
                         Rectangle().fill(Color.primary.opacity(0.05)).frame(height: 1).padding(.leading, 12).padding(.vertical, 2)
-                        
-                        CoreModRow(
-                            vm: vm,
-                            title: "SpaceCore",
-                            isInstalled: vm.mods.contains { $0.name.lowercased().contains("spacecore") && $0.isEnabled }
-                        )
+
+                        let (scStatus, scMod) = coreModStatus(matching: "spacecore")
+                        CoreModRow(vm: vm, title: "SpaceCore", status: scStatus, mod: scMod)
                         Rectangle().fill(Color.primary.opacity(0.05)).frame(height: 1).padding(.leading, 12).padding(.vertical, 2)
-                        
-                        CoreModRow(
-                            vm: vm,
-                            title: "Stardew Valley Thai",
-                            isInstalled: vm.isThaiTranslationInstalled
-                        )
+
+                        let (thStatus, thMod) = coreModStatusThai()
+                        CoreModRow(vm: vm, title: "Stardew Valley Thai", status: thStatus, mod: thMod)
+                        Rectangle().fill(Color.primary.opacity(0.05)).frame(height: 1).padding(.leading, 12).padding(.vertical, 2)
+
+                        let (sveStatus, sveMod) = coreModStatus(matching: "stardew valley expanded")
+                        CoreModRow(vm: vm, title: "Stardew Valley Expanded", status: sveStatus, mod: sveMod)
                     }
                     .padding(.vertical, -8)
                 }
@@ -177,26 +172,101 @@ struct HomeView: View {
 }
 
 
+// MARK: - Core Mod Status
+
+enum CoreModStatus {
+    case enabledAndInstalled
+    case installedButDisabled
+    case notInstalled
+}
+
+extension HomeView {
+    func coreModStatus(matching keyword: String) -> (CoreModStatus, ModItem?) {
+        let allMods = vm.mods.flatMap { mod -> [ModItem] in
+            if mod.isGroup, let children = mod.children { return children }
+            return [mod]
+        }
+        guard let mod = allMods.first(where: { $0.name.lowercased().contains(keyword) }) else {
+            return (.notInstalled, nil)
+        }
+        return (mod.isEnabled ? .enabledAndInstalled : .installedButDisabled, mod)
+    }
+
+    func coreModStatusThai() -> (CoreModStatus, ModItem?) {
+        let allMods = vm.mods.flatMap { mod -> [ModItem] in
+            if mod.isGroup, let children = mod.children { return children }
+            return [mod]
+        }
+        guard let mod = allMods.first(where: {
+            $0.folderName.lowercased() == "stardew valley - thai" ||
+            $0.name.localizedCaseInsensitiveContains("thai")
+        }) else {
+            return (.notInstalled, nil)
+        }
+        return (mod.isEnabled ? .enabledAndInstalled : .installedButDisabled, mod)
+    }
+}
+
 // Helper for core mod status rows
 struct CoreModRow: View {
     @ObservedObject var vm: StarHubTHViewModel
     let title: String
-    let isInstalled: Bool
-    
+    let status: CoreModStatus
+    let mod: ModItem?
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 13))
-                Text(vm.L(isInstalled ? L10n.Home.installedAndEnabled : L10n.Home.notInstalledOrDisabled))
-                    .font(.system(size: 12))
-                    .foregroundColor(isInstalled ? .secondary : .red)
+
+                // Author + version when installed, otherwise status text
+                if let mod = mod {
+                    HStack(spacing: 4) {
+                        if !mod.author.isEmpty {
+                            Text(mod.author)
+                                .foregroundColor(.secondary)
+                        }
+                        if !mod.author.isEmpty && !mod.version.isEmpty {
+                            Text("•").foregroundColor(.secondary.opacity(0.5))
+                        }
+                        if !mod.version.isEmpty {
+                            Text("v\(mod.version)")
+                                .foregroundColor(.secondary)
+                                .fontDesign(.monospaced)
+                        }
+                    }
+                    .font(.system(size: 11))
+
+                    // Status label below author/version
+                    Group {
+                        switch status {
+                        case .enabledAndInstalled:
+                            Text(vm.L(L10n.Home.installedAndEnabled))
+                                .foregroundColor(.secondary)
+                        case .installedButDisabled:
+                            Text(vm.L(L10n.Home.installedButDisabled))
+                                .foregroundColor(.orange)
+                        case .notInstalled:
+                            EmptyView()
+                        }
+                    }
+                    .font(.system(size: 11))
+                } else {
+                    Text(vm.L(L10n.Home.notInstalledOrDisabled))
+                        .font(.system(size: 12))
+                        .foregroundColor(.red)
+                }
             }
             Spacer()
-            if isInstalled {
+            switch status {
+            case .enabledAndInstalled:
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
-            } else {
+            case .installedButDisabled:
+                Image(systemName: "minus.circle.fill")
+                    .foregroundColor(.orange)
+            case .notInstalled:
                 Image(systemName: "xmark.circle.fill")
                     .foregroundColor(.red)
             }

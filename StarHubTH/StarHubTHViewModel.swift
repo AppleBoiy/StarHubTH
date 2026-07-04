@@ -641,6 +641,7 @@ class StarHubTHViewModel: ObservableObject {
         if anyMoved {
             log("\(targetState ? L(L10n.Mods.enabled) : L(L10n.Mods.disabled)): \(mod.name)\(foldersToToggle.count > 1 ? " + Dependencies" : "")")
             self.scanMods()
+            self.syncActiveProfileIds()
         }
     }
     
@@ -1056,10 +1057,22 @@ class StarHubTHViewModel: ObservableObject {
     }
     
     func createProfile(name: String) {
-        let newProfile = ModProfile(name: name, enabledModIds: [])
+        // Snapshot the currently enabled mods into the new profile
+        let currentEnabledIds = mods
+            .flatMap { mod -> [String] in
+                if mod.isGroup, let children = mod.children {
+                    return children.filter { $0.isEnabled }.map { $0.uniqueId }
+                }
+                return mod.isEnabled ? [mod.uniqueId] : []
+            }
+            .filter { !$0.isEmpty }
+
+        let newProfile = ModProfile(name: name, enabledModIds: currentEnabledIds)
         modProfiles.append(newProfile)
         saveProfiles()
-        applyProfile(id: newProfile.id)
+        // Do NOT applyProfile here — just save so the user can edit it first
+        activeProfileId = newProfile.id
+        saveProfiles()
     }
     
     func deleteProfile(id: UUID) {
@@ -1075,55 +1088,171 @@ class StarHubTHViewModel: ObservableObject {
             modProfiles[index].name = newName
             modProfiles[index].enabledModIds = enabledModIds
             saveProfiles()
-            
-            // If the active profile is updated, we should probably re-apply it to sync mods?
-            // Wait, the user might just be editing a background profile. If it's active, maybe apply it?
+
+            // If this is the active profile, apply the new mod selection to the filesystem
             if activeProfileId == id {
-                applyProfile(id: id)
+                applyProfileToFilesystem(profile: modProfiles[index])
             }
         }
     }
-    
+
     func applyProfile(id: UUID?) {
         guard let id = id, let profile = modProfiles.first(where: { $0.id == id }) else {
             activeProfileId = nil
             saveProfiles()
             return
         }
-        
+
+        // If already active, just sync stored list from current filesystem (no file moves)
+        if activeProfileId == id {
+            syncActiveProfileIds()
+            return
+        }
+
         activeProfileId = id
         saveProfiles()
-        
+        applyProfileToFilesystem(profile: profile)
+        self.log(String(format: L(L10n.VM.switchProfile), profile.name))
+    }
+
+    /// Actually move mod files to match the given profile's enabledModIds.
+    private func applyProfileToFilesystem(profile: ModProfile) {
         let fm = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
         let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
-        
-        // 1. First, move all currently enabled mods to disabled (except those that need to stay enabled)
-        let currentlyEnabled = mods.filter { $0.isEnabled }
-        for mod in currentlyEnabled {
-            if !profile.enabledModIds.contains(mod.uniqueId) {
-                let srcPath = (modsPath as NSString).appendingPathComponent(mod.folderName)
-                let destPath = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
-                let destParent = (destPath as NSString).deletingLastPathComponent
-                try? fm.createDirectory(atPath: destParent, withIntermediateDirectories: true, attributes: nil)
-                try? fm.moveItem(atPath: srcPath, toPath: destPath)
+
+        // Check whether a mod (or any of its children) is covered by the profile's enabled list
+        func isCoveredByProfile(_ mod: ModItem) -> Bool {
+            if mod.isGroup, let children = mod.children {
+                return children.contains { profile.enabledModIds.contains($0.uniqueId) }
+            }
+            return profile.enabledModIds.contains(mod.uniqueId)
+        }
+
+        // Disable mods not in profile
+        for mod in mods.filter({ $0.isEnabled }) {
+            if !isCoveredByProfile(mod) {
+                let src = (modsPath as NSString).appendingPathComponent(mod.folderName)
+                let dst = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
+                try? fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
+                                        withIntermediateDirectories: true, attributes: nil)
+                try? fm.moveItem(atPath: src, toPath: dst)
             }
         }
-        
-        // 2. Next, move all required disabled mods to enabled
-        let currentlyDisabled = mods.filter { !$0.isEnabled }
-        for mod in currentlyDisabled {
-            if profile.enabledModIds.contains(mod.uniqueId) {
-                let srcPath = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
-                let destPath = (modsPath as NSString).appendingPathComponent(mod.folderName)
-                let destParent = (destPath as NSString).deletingLastPathComponent
-                try? fm.createDirectory(atPath: destParent, withIntermediateDirectories: true, attributes: nil)
-                try? fm.moveItem(atPath: srcPath, toPath: destPath)
+
+        // Enable mods in profile
+        for mod in mods.filter({ !$0.isEnabled }) {
+            if isCoveredByProfile(mod) {
+                let src = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
+                let dst = (modsPath as NSString).appendingPathComponent(mod.folderName)
+                try? fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
+                                        withIntermediateDirectories: true, attributes: nil)
+                try? fm.moveItem(atPath: src, toPath: dst)
             }
         }
-        
-        // 3. Refresh mods list
+
         self.scanMods()
-        self.log(String(format: L(L10n.VM.switchProfile), profile.name))
+        self.syncActiveProfileIds()
+    }
+
+    /// Compute which uniqueIds should be added/removed when toggling a mod in a profile,
+    /// using the same chain logic as toggleMod. Works on an in-memory set (no file I/O).
+    /// - Parameters:
+    ///   - mod: The mod being toggled (can be a group or single mod)
+    ///   - enable: true = enabling, false = disabling
+    ///   - currentEnabled: the current set of enabled uniqueIds in the profile
+    /// - Returns: A new set with the chain applied
+    func applyChainToSet(mod: ModItem, enable: Bool, currentEnabled: Set<String>) -> Set<String> {
+        var result = currentEnabled
+
+        // Build helpers identical to toggleMod
+        func getTopLevelMod(for uniqueId: String) -> ModItem? {
+            for m in mods {
+                if !m.isGroup && m.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame { return m }
+                if m.isGroup, let children = m.children,
+                   children.contains(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) { return m }
+            }
+            return nil
+        }
+
+        func getDependencies(for topMod: ModItem) -> [ModDependency] {
+            if topMod.isGroup, let children = topMod.children { return children.flatMap { $0.dependencies } }
+            return topMod.dependencies
+        }
+
+        // Collect all uniqueIds provided by the target mod (single or group)
+        func providedIds(for topMod: ModItem) -> [String] {
+            if topMod.isGroup, let children = topMod.children { return children.map { $0.uniqueId } }
+            return [topMod.uniqueId]
+        }
+
+        // All top-level mods to process — for a group, start with the group itself
+        let startingMod = mod.isGroup ? mod : (getTopLevelMod(for: mod.uniqueId) ?? mod)
+        let startingIds = providedIds(for: startingMod)
+
+        if enable {
+            // Enable starting mod's ids
+            startingIds.forEach { result.insert($0) }
+
+            if chainToggleDependencies {
+                // BFS: enable all required dependencies
+                var queue = [startingMod]
+                var visited = Set<String>([startingMod.folderName])
+                while !queue.isEmpty {
+                    let current = queue.removeFirst()
+                    for dep in getDependencies(for: current) where dep.isRequired {
+                        if let depMod = getTopLevelMod(for: dep.uniqueId), !visited.contains(depMod.folderName) {
+                            visited.insert(depMod.folderName)
+                            providedIds(for: depMod).forEach { result.insert($0) }
+                            queue.append(depMod)
+                        }
+                    }
+                }
+            }
+        } else {
+            // Disable starting mod's ids
+            startingIds.forEach { result.remove($0) }
+
+            if chainToggleDependencies {
+                // BFS: disable any mod that requires the now-disabled mod
+                var queue = [startingMod]
+                var visited = Set<String>([startingMod.folderName])
+                while !queue.isEmpty {
+                    let current = queue.removeFirst()
+                    let currentIds = providedIds(for: current)
+                    for candidate in mods {
+                        guard !visited.contains(candidate.folderName) else { continue }
+                        let candidateDeps = getDependencies(for: candidate)
+                        let requiresCurrent = candidateDeps.contains { dep in
+                            dep.isRequired && currentIds.contains { $0.caseInsensitiveCompare(dep.uniqueId) == .orderedSame }
+                        }
+                        if requiresCurrent {
+                            visited.insert(candidate.folderName)
+                            providedIds(for: candidate).forEach { result.remove($0) }
+                            queue.append(candidate)
+                        }
+                    }
+                }
+            }
+        }
+
+        return result
+    }
+    /// Call this after any toggleMod so the profile stays up to date.
+    func syncActiveProfileIds() {
+        guard let id = activeProfileId,
+              let index = modProfiles.firstIndex(where: { $0.id == id }) else { return }
+
+        let actualEnabledIds = mods
+            .flatMap { mod -> [String] in
+                if mod.isGroup, let children = mod.children {
+                    return children.filter { $0.isEnabled }.map { $0.uniqueId }
+                }
+                return mod.isEnabled ? [mod.uniqueId] : []
+            }
+            .filter { !$0.isEmpty }
+
+        modProfiles[index].enabledModIds = actualEnabledIds
+        saveProfiles()
     }
 }
