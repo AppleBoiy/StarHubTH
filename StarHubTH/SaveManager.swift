@@ -91,6 +91,7 @@ struct SaveGameInfo: Identifiable, Equatable, Hashable {
     var goldenWalnuts: Int
     var qiGems: Int
     var clubCoins: Int
+    var totalMoneyEarned: Int
     
     var year: Int
     var season: Int
@@ -190,6 +191,7 @@ class SaveManager {
         let goldenWalnuts = Int(extractTag(tag: "goldenWalnuts", from: content) ?? "0") ?? 0
         let qiGems = Int(extractTag(tag: "qiGems", from: content) ?? "0") ?? 0
         let clubCoins = Int(extractTag(tag: "clubCoins", from: content) ?? "0") ?? 0
+        let totalMoneyEarned = Int(extractTag(tag: "totalMoneyEarned", from: content) ?? "0") ?? 0
         
         let attr = try? FileManager.default.attributesOfItem(atPath: url.path)
         let lastModified = attr?[.modificationDate] as? Date ?? Date()
@@ -207,6 +209,7 @@ class SaveManager {
             goldenWalnuts: goldenWalnuts,
             qiGems: qiGems,
             clubCoins: clubCoins,
+            totalMoneyEarned: totalMoneyEarned,
             year: year,
             season: season,
             day: day,
@@ -251,7 +254,7 @@ class SaveManager {
         }
     }
     
-    func updateSave(info: SaveGameInfo, newName: String, newFarm: String, newFav: String, newMoney: Int, newMaxHealth: Int, newMaxStamina: Int, newGoldenWalnuts: Int, newQiGems: Int, newClubCoins: Int) -> Bool {
+    func updateSave(info: SaveGameInfo, newName: String, newFarm: String, newFav: String, newMoney: Int, newTotalMoneyEarned: Int, newMaxHealth: Int, newMaxStamina: Int, newGoldenWalnuts: Int, newQiGems: Int, newClubCoins: Int) -> Bool {
         guard backupSave(info: info) else { return false }
         
         guard var content = try? String(contentsOf: info.fileURL, encoding: .utf8) else { return false }
@@ -261,6 +264,7 @@ class SaveManager {
         content = replaceFirstTag(tag: "farmName", with: newFarm, in: content)
         content = replaceFirstTag(tag: "favoriteThing", with: newFav, in: content)
         content = replaceFirstTag(tag: "money", with: "\(newMoney)", in: content)
+        content = replaceFirstTag(tag: "totalMoneyEarned", with: "\(newTotalMoneyEarned)", in: content)
         
         content = replaceFirstTag(tag: "maxHealth", with: "\(newMaxHealth)", in: content)
         content = replaceFirstTag(tag: "maxStamina", with: "\(newMaxStamina)", in: content)
@@ -486,6 +490,103 @@ class SaveManager {
             return true
         } catch {
             print("Failed to delete backup: \(error)")
+            return false
+        }
+    }
+    // MARK: - Inventory Editing
+    
+    func fetchInventory(for info: SaveGameInfo) -> [InventoryItem]? {
+        guard let data = try? Data(contentsOf: info.fileURL),
+              let document = try? XMLDocument(data: data, options: .documentTidyXML),
+              let root = document.rootElement() else {
+            return nil
+        }
+        
+        var inventory: [InventoryItem] = []
+        
+        // Find /SaveGame/player/items
+        let player = root.elements(forName: "player").first
+        let itemsElement = player?.elements(forName: "items").first
+        
+        guard let itemsNode = itemsElement else { return nil }
+        
+        let itemNodes = itemsNode.elements(forName: "Item")
+        
+        for (index, itemNode) in itemNodes.enumerated() {
+            let xsiType = itemNode.attribute(forName: "xsi:type")?.stringValue ?? ""
+            
+            if xsiType == "Object" {
+                let name = itemNode.elements(forName: "name").first?.stringValue ?? "Unknown"
+                let itemId = itemNode.elements(forName: "itemId").first?.stringValue ?? "Unknown"
+                let stack = Int(itemNode.elements(forName: "stack").first?.stringValue ?? "1") ?? 1
+                
+                inventory.append(InventoryItem(slotIndex: index, itemId: itemId, name: name, stack: stack, isObject: true))
+            } else if itemNode.attribute(forName: "xsi:nil")?.stringValue == "true" {
+                // Empty slot
+                inventory.append(InventoryItem.empty(slot: index))
+            } else {
+                // Other items like weapons, rings, etc.
+                let name = itemNode.elements(forName: "name").first?.stringValue ?? xsiType
+                let itemId = itemNode.elements(forName: "itemId").first?.stringValue ?? ""
+                let displayName = name.isEmpty ? (xsiType.isEmpty ? "Unknown Item" : xsiType) : name
+                inventory.append(InventoryItem(slotIndex: index, itemId: itemId, name: displayName, stack: 1, isObject: false))
+            }
+        }
+        
+        return inventory
+    }
+    
+    func updateInventory(info: SaveGameInfo, items: [InventoryItem]) -> Bool {
+        // Backup first
+        guard backupSave(info: info) else { return false }
+        
+        guard let data = try? Data(contentsOf: info.fileURL),
+              let document = try? XMLDocument(data: data, options: .documentTidyXML),
+              let root = document.rootElement() else {
+            return false
+        }
+        
+        // Find /SaveGame/player/items
+        guard let player = root.elements(forName: "player").first,
+              let itemsElement = player.elements(forName: "items").first else {
+            return false
+        }
+        
+        let itemNodes = itemsElement.elements(forName: "Item")
+        
+        for updatedItem in items {
+            guard updatedItem.slotIndex >= 0 && updatedItem.slotIndex < itemNodes.count else { continue }
+            let nodeToUpdate = itemNodes[updatedItem.slotIndex]
+            
+            // Only update if it's an Object
+            if updatedItem.isObject {
+                // Stack
+                if let stackNode = nodeToUpdate.elements(forName: "stack").first {
+                    stackNode.stringValue = "\(updatedItem.stack)"
+                } else {
+                    let newStack = XMLElement(name: "stack", stringValue: "\(updatedItem.stack)")
+                    nodeToUpdate.addChild(newStack)
+                }
+                
+                // Item ID (if needed, but usually we just update stack for safety)
+                if let idNode = nodeToUpdate.elements(forName: "itemId").first {
+                    idNode.stringValue = updatedItem.itemId
+                }
+            } else if updatedItem.name.isEmpty {
+                // Delete the item (make it an empty slot)
+                nodeToUpdate.setChildren(nil)
+                if let nilAttr = XMLNode.attribute(withName: "xsi:nil", stringValue: "true") as? XMLNode {
+                    nodeToUpdate.attributes = [nilAttr]
+                }
+            }
+        }
+        
+        do {
+            let updatedXMLData = document.xmlData(options: .nodePrettyPrint)
+            try updatedXMLData.write(to: info.fileURL, options: .atomic)
+            return true
+        } catch {
+            print("Failed to save updated inventory XML: \(error)")
             return false
         }
     }

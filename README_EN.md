@@ -18,21 +18,14 @@
   <img src="https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/screenshots_banner.png" alt="Screenshots" width="300">
 </p>
 
-| Home / Profile | Settings |
+|   |   |
 | :---: | :---: |
-| <img src="screenshots/profile_en.png" width="400"> | <img src="screenshots/settings_en.png" width="400"> |
-
-| Save Manager | Save Editor |
-| :---: | :---: |
-| <img src="screenshots/save_en.png" width="400"> | <img src="screenshots/save_edit_en.png" width="400"> |
-
-| Mod Manager | Mod Profiles |
-| :---: | :---: |
-| <img src="screenshots/mods_en.png" width="400"> | <img src="screenshots/mod_profile_en.png" width="400"> |
-
-| Thai Translation Hub |
-| :---: |
-| <img src="screenshots/th_translation_hub.png" width="400"> |
+| <img src="screenshots/1.png" width="400"> | <img src="screenshots/2.png" width="400"> |
+| <img src="screenshots/3.png" width="400"> | <img src="screenshots/4.png" width="400"> |
+| <img src="screenshots/5.png" width="400"> | <img src="screenshots/6.png" width="400"> |
+| <img src="screenshots/7.png" width="400"> | <img src="screenshots/8.png" width="400"> |
+| <img src="screenshots/9.png" width="400"> | <img src="screenshots/10.png" width="400"> |
+| <img src="screenshots/11.png" width="400"> | <img src="screenshots/12.png" width="400"> |
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/install_banner.png" alt="Installation" width="300">

@@ -22,8 +22,8 @@ struct StandardSection<Content: View>: View {
             
             VStack(spacing: 0) {
                 content
-                    .padding(16)
             }
+            .padding(16)
             .background(Color.clear)
             .cornerRadius(10)
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.1), lineWidth: 1))

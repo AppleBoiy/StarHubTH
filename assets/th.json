@@ -49,6 +49,7 @@
   "saves_favorite_thing": "สิ่งที่ชอบ",
   "saves_resources": "ทรัพยากร",
   "saves_money": "จำนวนเงิน (G)",
+  "saves_total_money_earned": "เงินที่ได้รับทั้งหมด",
   "saves_casino_coins": "เหรียญกาสิโน",
   "saves_golden_walnuts": "วอลนัททองคำ",
   "saves_qi_gems": "เพชรฉี (Qi Gems)",
@@ -281,5 +282,14 @@
   "vm_install_thai_success": "ติดตั้งภาษาไทยสำหรับ %@ สำเร็จ!",
   "vm_unzip_error": "เกิดข้อผิดพลาดในการแตกไฟล์ Zip ลงโฟลเดอร์ Mods",
   "vm_unzip_failed": "ไม่สามารถรันคำสั่ง Unzip ได้: %@",
-  "vm_switch_profile": "สลับโปรไฟล์ม็อดเป็น: %@"
+  "vm_switch_profile": "สลับโปรไฟล์ม็อดเป็น: %@",
+  "saves_inventory_editor": "แก้ไขไอเทมในตัว",
+  "saves_item_name": "ชื่อไอเทม",
+  "saves_item_quantity": "จำนวน",
+  "saves_item_id": "รหัสไอเทม",
+  "saves_save_inventory": "บันทึกไอเทม",
+  "saves_empty_slot": "ช่องว่าง",
+  "saves_non_object": "(ไม่สามารถแก้ไขได้)",
+  "saves_inventory_success": "บันทึกไอเทมสำเร็จ!",
+  "saves_inventory_error": "เกิดข้อผิดพลาดในการบันทึกไอเทม"
 }

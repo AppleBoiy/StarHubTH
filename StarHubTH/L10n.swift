@@ -64,6 +64,7 @@ enum L10n {
         static let favoriteThing        = "saves_favorite_thing"
         static let resources            = "saves_resources"
         static let money                = "saves_money"
+        static let totalMoneyEarned     = "saves_total_money_earned"
         static let casinoCoins          = "saves_casino_coins"
         static let goldenWalnuts        = "saves_golden_walnuts"
         static let qiGems               = "saves_qi_gems"
@@ -113,6 +114,16 @@ enum L10n {
         static let relativeMinutesAgo   = "saves_relative_minutes_ago"
         static let relativeHoursAgo     = "saves_relative_hours_ago"
         static let relativeDaysAgo      = "saves_relative_days_ago"
+        
+        static let inventoryEditor      = "saves_inventory_editor"
+        static let itemName             = "saves_item_name"
+        static let itemQuantity         = "saves_item_quantity"
+        static let itemId               = "saves_item_id"
+        static let saveInventory        = "saves_save_inventory"
+        static let emptySlot            = "saves_empty_slot"
+        static let nonObject            = "saves_non_object"
+        static let inventorySuccess     = "saves_inventory_success"
+        static let inventoryError       = "saves_inventory_error"
     }
 
     // MARK: - Mods

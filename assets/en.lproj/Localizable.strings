@@ -49,6 +49,7 @@
 "saves_favorite_thing" = "Favorite Thing";
 "saves_resources" = "Resources";
 "saves_money" = "Money (G)";
+"saves_total_money_earned" = "Total Money Earned";
 "saves_casino_coins" = "Casino Coins";
 "saves_golden_walnuts" = "Golden Walnuts";
 "saves_qi_gems" = "Qi Gems";
@@ -282,3 +283,12 @@
 "vm_unzip_error" = "An error occurred while extracting Zip into Mods folder";
 "vm_unzip_failed" = "Failed to run unzip command: %@";
 "vm_switch_profile" = "Switched mod profile to: %@";
+"saves_inventory_editor" = "Inventory Editor";
+"saves_item_name" = "Item Name";
+"saves_item_quantity" = "Quantity";
+"saves_item_id" = "Item ID";
+"saves_save_inventory" = "Save Inventory";
+"saves_empty_slot" = "Empty Slot";
+"saves_non_object" = "(Cannot edit this item)";
+"saves_inventory_success" = "Inventory saved successfully!";
+"saves_inventory_error" = "Error saving inventory";

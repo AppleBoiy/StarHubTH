@@ -442,6 +442,10 @@ struct SaveRow: View {
                 Text(formattedStr)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
+                let earnedStr = NumberFormatter.localizedString(from: NSNumber(value: save.totalMoneyEarned), number: .decimal)
+                Text("\(vm.L(L10n.Saves.totalMoneyEarned)): \(earnedStr)")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary.opacity(0.8))
             }
             
             Spacer()
@@ -493,6 +497,7 @@ struct SaveEditorView: View {
     @State private var goldenWalnutsStr: String
     @State private var qiGemsStr: String
     @State private var clubCoinsStr: String
+    @State private var totalMoneyEarnedStr: String
     
     @State private var noteTag: String
     @State private var noteText: String
@@ -523,6 +528,7 @@ struct SaveEditorView: View {
         _goldenWalnutsStr = State(initialValue: "\(save.goldenWalnuts)")
         _qiGemsStr = State(initialValue: "\(save.qiGems)")
         _clubCoinsStr = State(initialValue: "\(save.clubCoins)")
+        _totalMoneyEarnedStr = State(initialValue: "\(save.totalMoneyEarned)")
         
         let note = vm.getNote(for: save.folderName)
         _noteTag = State(initialValue: note.tag)
@@ -639,6 +645,7 @@ struct SaveEditorView: View {
                 
                 Section(vm.L(L10n.Saves.resources)) {
                     TextField(vm.L(L10n.Saves.money), text: $moneyStr)
+                    TextField(vm.L(L10n.Saves.totalMoneyEarned), text: $totalMoneyEarnedStr)
                     TextField(vm.L(L10n.Saves.casinoCoins), text: $clubCoinsStr)
                     TextField(vm.L(L10n.Saves.goldenWalnuts), text: $goldenWalnutsStr)
                     TextField(vm.L(L10n.Saves.qiGems), text: $qiGemsStr)
@@ -647,6 +654,61 @@ struct SaveEditorView: View {
                 Section(vm.L(L10n.Saves.characterStats)) {
                     TextField(vm.L(L10n.Saves.maxHealth), text: $maxHealthStr)
                     TextField(vm.L(L10n.Saves.maxStamina), text: $maxStaminaStr)
+                }
+                
+                Section(vm.L(L10n.Saves.inventoryEditor)) {
+                    ForEach(vm.inventoryToEdit.indices, id: \.self) { index in
+                        let item = vm.inventoryToEdit[index]
+                        if item.isObject {
+                            HStack {
+                                Text("\(item.name)")
+                                    .frame(width: 150, alignment: .leading)
+                                Text("ID: \(item.itemId)")
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text(vm.L(L10n.Saves.itemQuantity))
+                                TextField("", value: $vm.inventoryToEdit[index].stack, formatter: NumberFormatter())
+                                    .frame(width: 60)
+                                    .textFieldStyle(.roundedBorder)
+                                
+                                Button(action: {
+                                    vm.inventoryToEdit[index] = InventoryItem.empty(slot: index)
+                                }) {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.leading, 8)
+                            }
+                        } else if !item.name.isEmpty {
+                            HStack {
+                                Text("\(item.name)")
+                                    .frame(width: 150, alignment: .leading)
+                                if !item.itemId.isEmpty {
+                                    Text("ID: \(item.itemId)")
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Text(vm.L(L10n.Saves.nonObject))
+                                    .foregroundColor(.secondary)
+                                    
+                                Button(action: {
+                                    vm.inventoryToEdit[index] = InventoryItem.empty(slot: index)
+                                }) {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.leading, 8)
+                            }
+                        }
+                    }
+                    
+                    Button(vm.L(L10n.Saves.saveInventory)) {
+                        vm.saveInventory()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.top, 8)
                 }
                 
                 Section(vm.L(L10n.Saves.saveManagement)) {
@@ -673,6 +735,7 @@ struct SaveEditorView: View {
                 
                 Button(vm.L(L10n.Saves.saveChanges)) {
                     let newMoney = Int(moneyStr) ?? save.money
+                    let newTotalMoneyEarned = Int(totalMoneyEarnedStr) ?? save.totalMoneyEarned
                     let newHealth = Int(maxHealthStr) ?? save.maxHealth
                     let newStam = Int(maxStaminaStr) ?? save.maxStamina
                     let newWalnuts = Int(goldenWalnutsStr) ?? save.goldenWalnuts
@@ -680,7 +743,7 @@ struct SaveEditorView: View {
                     let newClub = Int(clubCoinsStr) ?? save.clubCoins
                     
                     vm.setNote(for: save.folderName, tag: noteTag, note: noteText)
-                    vm.editSave(info: save, newName: name, newFarm: farm, newFav: fav, newMoney: newMoney, newMaxHealth: newHealth, newMaxStamina: newStam, newGoldenWalnuts: newWalnuts, newQiGems: newQi, newClubCoins: newClub)
+                    vm.editSave(info: save, newName: name, newFarm: farm, newFav: fav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newHealth, newMaxStamina: newStam, newGoldenWalnuts: newWalnuts, newQiGems: newQi, newClubCoins: newClub)
                     vm.editingSave = nil
                 }
                 .keyboardShortcut(.defaultAction)

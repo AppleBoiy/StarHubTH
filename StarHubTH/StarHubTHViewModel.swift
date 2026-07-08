@@ -154,7 +154,20 @@ class StarHubTHViewModel: ObservableObject {
     @Published var isThaiTranslationInstalled: Bool = false
     
     @Published var saves: [SaveGameInfo] = []
-    @Published var editingSave: SaveGameInfo? = nil
+    @Published var editingSave: SaveGameInfo? = nil {
+        didSet {
+            if let save = editingSave {
+                if let items = SaveManager.shared.fetchInventory(for: save) {
+                    inventoryToEdit = items
+                } else {
+                    inventoryToEdit = []
+                }
+            } else {
+                inventoryToEdit = []
+            }
+        }
+    }
+    @Published var inventoryToEdit: [InventoryItem] = []
     @Published var viewingSaveTimeline: SaveGameInfo? = nil
     
     @Published var saveToDuplicate: SaveGameInfo? = nil
@@ -960,8 +973,8 @@ class StarHubTHViewModel: ObservableObject {
         self.saves = SaveManager.shared.fetchSaves()
     }
     
-    func editSave(info: SaveGameInfo, newName: String, newFarm: String, newFav: String, newMoney: Int, newMaxHealth: Int, newMaxStamina: Int, newGoldenWalnuts: Int, newQiGems: Int, newClubCoins: Int) {
-        let success = SaveManager.shared.updateSave(info: info, newName: newName, newFarm: newFarm, newFav: newFav, newMoney: newMoney, newMaxHealth: newMaxHealth, newMaxStamina: newMaxStamina, newGoldenWalnuts: newGoldenWalnuts, newQiGems: newQiGems, newClubCoins: newClubCoins)
+    func editSave(info: SaveGameInfo, newName: String, newFarm: String, newFav: String, newMoney: Int, newTotalMoneyEarned: Int, newMaxHealth: Int, newMaxStamina: Int, newGoldenWalnuts: Int, newQiGems: Int, newClubCoins: Int) {
+        let success = SaveManager.shared.updateSave(info: info, newName: newName, newFarm: newFarm, newFav: newFav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newMaxHealth, newMaxStamina: newMaxStamina, newGoldenWalnuts: newGoldenWalnuts, newQiGems: newQiGems, newClubCoins: newClubCoins)
         if success {
             reloadSaves()
             showModal(message: L(L10n.VM.saveSuccess))
@@ -970,6 +983,17 @@ class StarHubTHViewModel: ObservableObject {
         }
     }
     
+    func saveInventory() {
+        guard let save = editingSave else { return }
+        if SaveManager.shared.updateInventory(info: save, items: inventoryToEdit) {
+            showModal(message: L(L10n.Saves.inventorySuccess))
+            if let items = SaveManager.shared.fetchInventory(for: save) {
+                inventoryToEdit = items
+            }
+        } else {
+            showModal(message: L(L10n.Saves.inventoryError))
+        }
+    }
     func deleteSave(info: SaveGameInfo) {
         if SaveManager.shared.deleteSave(info: info) {
             reloadSaves()

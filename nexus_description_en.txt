@@ -21,26 +21,18 @@
 [center][img width=300]https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/screenshots_banner.png[/img][/center]
 
 [center]
-[b]Home / Profile[/b]
-[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/profile_en.png[/img]
-
-[b]Settings[/b]
-[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/settings_en.png[/img]
-
-[b]Save Manager[/b]
-[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/save_en.png[/img]
-
-[b]Save Editor[/b]
-[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/save_edit_en.png[/img]
-
-[b]Mod Manager[/b]
-[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/mods_en.png[/img]
-
-[b]Mod Profiles[/b]
-[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/mod_profile_en.png[/img]
-
-[b]Thai Translation Hub[/b]
-[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/th_translation_hub.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/1.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/2.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/3.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/4.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/5.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/6.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/7.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/8.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/9.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/10.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/11.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/12.png[/img]
 [/center]
 
 [center][img width=300]https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/install_banner.png[/img][/center]

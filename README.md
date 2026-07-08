@@ -19,21 +19,14 @@
   <img src="https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/screenshots_banner.png" alt="ภาพตัวอย่างการใช้งาน" width="300">
 </p>
 
-| หน้าแรก (Home / Profile) | การตั้งค่าแอปพลิเคชัน (Settings) |
+|   |   |
 | :---: | :---: |
-| <img src="screenshots/profile.png" width="400"> | <img src="screenshots/settings.png" width="400"> |
-
-| การจัดการเซฟเกม (Saves) | การแก้ไขข้อมูลเซฟ (Save Editor) |
-| :---: | :---: |
-| <img src="screenshots/save.png" width="400"> | <img src="screenshots/save_edit.png" width="400"> |
-
-| การจัดการส่วนเสริม (Mods Manager) | โปรไฟล์ม็อด (Mod Profiles) |
-| :---: | :---: |
-| <img src="screenshots/mods.png" width="400"> | <img src="screenshots/mod_profile.png" width="400"> |
-
-| ศูนย์รวมม็อดแปลไทย (Thai Translation Hub) |
-| :---: |
-| <img src="screenshots/th_translation_hub.png" width="400"> |
+| <img src="screenshots/1.png" width="400"> | <img src="screenshots/2.png" width="400"> |
+| <img src="screenshots/3.png" width="400"> | <img src="screenshots/4.png" width="400"> |
+| <img src="screenshots/5.png" width="400"> | <img src="screenshots/6.png" width="400"> |
+| <img src="screenshots/7.png" width="400"> | <img src="screenshots/8.png" width="400"> |
+| <img src="screenshots/9.png" width="400"> | <img src="screenshots/10.png" width="400"> |
+| <img src="screenshots/11.png" width="400"> | <img src="screenshots/12.png" width="400"> |
 
 
 <p align="center">
