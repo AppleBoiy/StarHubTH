@@ -115,6 +115,11 @@ enum L10n {
         static let relativeHoursAgo     = "saves_relative_hours_ago"
         static let relativeDaysAgo      = "saves_relative_days_ago"
         
+        static let relationshipSection  = "saves_relationship_section"
+        static let spouseLabel          = "saves_spouse_label"
+        static let spouseNone           = "saves_spouse_none"
+        static let spouseWarning        = "saves_spouse_warning"
+        
         static let inventoryEditor      = "saves_inventory_editor"
         static let itemName             = "saves_item_name"
         static let itemQuantity         = "saves_item_quantity"

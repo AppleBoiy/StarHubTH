@@ -99,6 +99,10 @@
 "saves_relative_minutes_ago" = "%lld นาทีที่แล้ว";
 "saves_relative_hours_ago" = "%lld ชั่วโมงที่แล้ว";
 "saves_relative_days_ago" = "%lld วันที่แล้ว";
+"saves_relationship_section" = "ความสัมพันธ์";
+"saves_spouse_label" = "คู่สมรส";
+"saves_spouse_none" = "โสด";
+"saves_spouse_warning" = "⚠️ หมายเหตุ: ลูกๆ จะยังคงอยู่ในฟาร์มตามปกติ (เช่นเดียวกับการหย่าในเกม) ระบบจะสำรองข้อมูลให้อัตโนมัติก่อนบันทึก";
 "mods_api_offline" = "API ออฟไลน์";
 "mods_api_normal" = "API ทำงานปกติ";
 "mods_no_mods_installed" = "ไม่พบส่วนเสริมที่ติดตั้ง\nโปรดตรวจสอบโฟลเดอร์เกม";

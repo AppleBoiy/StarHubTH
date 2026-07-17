@@ -498,6 +498,14 @@ struct SaveEditorView: View {
     @State private var qiGemsStr: String
     @State private var clubCoinsStr: String
     @State private var totalMoneyEarnedStr: String
+    @State private var spouse: String   // empty = single
+    
+    /// All NPC names that can be married in Stardew Valley (vanilla)
+    static let marriableNPCs: [String] = [
+        "Abigail", "Alex", "Elliott", "Emily", "Harvey",
+        "Haley", "Leah", "Maru", "Penny", "Sam",
+        "Sebastian", "Shane"
+    ]
     
     @State private var noteTag: String
     @State private var noteText: String
@@ -529,6 +537,7 @@ struct SaveEditorView: View {
         _qiGemsStr = State(initialValue: "\(save.qiGems)")
         _clubCoinsStr = State(initialValue: "\(save.clubCoins)")
         _totalMoneyEarnedStr = State(initialValue: "\(save.totalMoneyEarned)")
+        _spouse = State(initialValue: save.spouse)
         
         let note = vm.getNote(for: save.folderName)
         _noteTag = State(initialValue: note.tag)
@@ -643,6 +652,24 @@ struct SaveEditorView: View {
                     TextField(vm.L(L10n.Saves.favoriteThing), text: $fav)
                 }
                 
+                // MARK: Relationship Section
+                Section(vm.L(L10n.Saves.relationshipSection)) {
+                    Picker(vm.L(L10n.Saves.spouseLabel), selection: $spouse) {
+                        Text(vm.L(L10n.Saves.spouseNone)).tag("")
+                        ForEach(SaveEditorView.marriableNPCs, id: \.self) { npc in
+                            Text(npc).tag(npc)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    
+                    // Show warning only when changing away from existing spouse
+                    if !save.spouse.isEmpty && spouse != save.spouse {
+                        Text(vm.L(L10n.Saves.spouseWarning))
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                }
+                
                 Section(vm.L(L10n.Saves.resources)) {
                     TextField(vm.L(L10n.Saves.money), text: $moneyStr)
                     TextField(vm.L(L10n.Saves.totalMoneyEarned), text: $totalMoneyEarnedStr)
@@ -743,7 +770,7 @@ struct SaveEditorView: View {
                     let newClub = Int(clubCoinsStr) ?? save.clubCoins
                     
                     vm.setNote(for: save.folderName, tag: noteTag, note: noteText)
-                    vm.editSave(info: save, newName: name, newFarm: farm, newFav: fav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newHealth, newMaxStamina: newStam, newGoldenWalnuts: newWalnuts, newQiGems: newQi, newClubCoins: newClub)
+                    vm.editSave(info: save, newName: name, newFarm: farm, newFav: fav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newHealth, newMaxStamina: newStam, newGoldenWalnuts: newWalnuts, newQiGems: newQi, newClubCoins: newClub, newSpouse: spouse)
                     vm.editingSave = nil
                 }
                 .keyboardShortcut(.defaultAction)

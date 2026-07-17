@@ -973,8 +973,8 @@ class StarHubTHViewModel: ObservableObject {
         self.saves = SaveManager.shared.fetchSaves()
     }
     
-    func editSave(info: SaveGameInfo, newName: String, newFarm: String, newFav: String, newMoney: Int, newTotalMoneyEarned: Int, newMaxHealth: Int, newMaxStamina: Int, newGoldenWalnuts: Int, newQiGems: Int, newClubCoins: Int) {
-        let success = SaveManager.shared.updateSave(info: info, newName: newName, newFarm: newFarm, newFav: newFav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newMaxHealth, newMaxStamina: newMaxStamina, newGoldenWalnuts: newGoldenWalnuts, newQiGems: newQiGems, newClubCoins: newClubCoins)
+    func editSave(info: SaveGameInfo, newName: String, newFarm: String, newFav: String, newMoney: Int, newTotalMoneyEarned: Int, newMaxHealth: Int, newMaxStamina: Int, newGoldenWalnuts: Int, newQiGems: Int, newClubCoins: Int, newSpouse: String) {
+        let success = SaveManager.shared.updateSave(info: info, newName: newName, newFarm: newFarm, newFav: newFav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newMaxHealth, newMaxStamina: newMaxStamina, newGoldenWalnuts: newGoldenWalnuts, newQiGems: newQiGems, newClubCoins: newClubCoins, newSpouse: newSpouse)
         if success {
             reloadSaves()
             showModal(message: L(L10n.VM.saveSuccess))
@@ -1338,48 +1338,84 @@ class StarHubTHViewModel: ObservableObject {
         
         let modsDir = (gameDir as NSString).appendingPathComponent("Mods")
         let zipName = "\(mod.name.replacingOccurrences(of: "[CP] ", with: "")) - Thai Translation.zip"
-        let encodedZipName = zipName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? zipName
-        let downloadUrlStr = "https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/bundles/\(encodedZipName)"
-        
-        guard let downloadUrl = URL(string: downloadUrlStr) else {
-            showModal(message: L(L10n.VM.urlError))
-            return
-        }
         
         showModal(message: String(format: L(L10n.VM.downloadingTranslation), mod.name))
         
-        let task = URLSession.shared.downloadTask(with: downloadUrl) { localUrl, response, error in
+        let apiUrl = URL(string: "https://api.github.com/repos/AppleBoiy/stardew-thai-translations/releases?per_page=100")!
+        var request = URLRequest(url: apiUrl)
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
             if let error = error {
-                DispatchQueue.main.async {
-                    self.showModal(message: String(format: self.L(L10n.VM.downloadFailed), error.localizedDescription))
-                }
+                DispatchQueue.main.async { self.showModal(message: String(format: self.L(L10n.VM.downloadFailed), error.localizedDescription)) }
                 return
             }
             
-            guard let localUrl = localUrl else { return }
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-            process.arguments = ["-o", localUrl.path, "-d", modsDir]
+            guard let data = data,
+                  let releases = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                DispatchQueue.main.async { self.showModal(message: self.L(L10n.VM.downloadFailed) + " (Invalid API Response)") }
+                return
+            }
             
-            do {
-                try process.run()
-                process.waitUntilExit()
-                
-                DispatchQueue.main.async {
-                    if process.terminationStatus == 0 {
-                        self.showModal(message: String(format: self.L(L10n.VM.installThaiSuccess), mod.name))
-                        self.evaluateThaiTranslationStatus()
-                    } else {
-                        self.showModal(message: self.L(L10n.VM.unzipError))
+            var targetDownloadUrl: URL? = nil
+            
+            for release in releases {
+                if let assets = release["assets"] as? [[String: Any]] {
+                    for asset in assets {
+                        if let name = asset["name"] as? String, name == zipName,
+                           let browserDownloadUrl = asset["browser_download_url"] as? String,
+                           let url = URL(string: browserDownloadUrl) {
+                            targetDownloadUrl = url
+                            break
+                        }
                     }
                 }
-            } catch {
-                DispatchQueue.main.async {
-                    self.showModal(message: String(format: self.L(L10n.VM.unzipFailed), error.localizedDescription))
+                if targetDownloadUrl != nil { break }
+            }
+            
+            guard let downloadUrl = targetDownloadUrl else {
+                DispatchQueue.main.async { self.showModal(message: self.L(L10n.VM.downloadFailed) + " (Zip not found in releases)") }
+                return
+            }
+            
+            let task = URLSession.shared.downloadTask(with: downloadUrl) { localUrl, response, error in
+                if let error = error {
+                    DispatchQueue.main.async { self.showModal(message: String(format: self.L(L10n.VM.downloadFailed), error.localizedDescription)) }
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                    DispatchQueue.main.async { self.showModal(message: self.L(L10n.VM.downloadFailed) + " (HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0))") }
+                    return
+                }
+                
+                guard let localUrl = localUrl else { return }
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+                process.arguments = ["-o", localUrl.path, "-d", modsDir]
+                
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    
+                    DispatchQueue.main.async {
+                        if process.terminationStatus == 0 {
+                            self.showModal(message: String(format: self.L(L10n.VM.installThaiSuccess), mod.name))
+                            self.evaluateThaiTranslationStatus()
+                        } else {
+                            self.showModal(message: self.L(L10n.VM.unzipError))
+                        }
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        self.showModal(message: String(format: self.L(L10n.VM.unzipFailed), error.localizedDescription))
+                    }
                 }
             }
-        }
-        task.resume()
+            task.resume()
+        }.resume()
     }
     
     func openSavesFolder() {

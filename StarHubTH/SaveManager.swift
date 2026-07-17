@@ -84,6 +84,7 @@ struct SaveGameInfo: Identifiable, Equatable, Hashable {
     var farmName: String
     var favoriteThing: String
     var money: Int
+    var spouse: String   // empty string = single (no <spouse> tag)
     
     // Advanced Stats
     var maxHealth: Int
@@ -179,6 +180,7 @@ class SaveManager {
         let farmName = extractTag(tag: "farmName", from: content) ?? "Unknown"
         let favoriteThing = extractTag(tag: "favoriteThing", from: content) ?? "Unknown"
         let money = Int(extractTag(tag: "money", from: content) ?? "0") ?? 0
+        let spouse = extractSpouseFromPlayer(from: content) ?? ""
         
         let year = Int(extractTag(tag: "yearForSaveGame", from: content) ?? "1") ?? 1
         let season = Int(extractTag(tag: "seasonForSaveGame", from: content) ?? "0") ?? 0
@@ -204,6 +206,7 @@ class SaveManager {
             farmName: farmName,
             favoriteThing: favoriteThing,
             money: money,
+            spouse: spouse,
             maxHealth: maxHealth,
             maxStamina: maxStamina,
             goldenWalnuts: goldenWalnuts,
@@ -235,6 +238,68 @@ class SaveManager {
         return nil
     }
     
+    /// Extract spouse from inside the <player>...</player> block only,
+    /// to avoid picking up NPC <spouse> tags in other parts of the save.
+    private func extractSpouseFromPlayer(from xml: String) -> String? {
+        // Find the <player> block
+        guard let playerStart = xml.range(of: "<player>"),
+              let playerEnd = xml.range(of: "</player>", range: playerStart.upperBound..<xml.endIndex) else {
+            return extractTag(tag: "spouse", from: xml)  // fallback
+        }
+        let playerBlock = String(xml[playerStart.lowerBound..<playerEnd.upperBound])
+        return extractTag(tag: "spouse", from: playerBlock)
+    }
+    
+    /// Update or remove the <spouse> tag inside the <player> block.
+    /// - If newSpouse is non-empty: sets <spouse>newSpouse</spouse>
+    /// - If newSpouse is empty: removes the <spouse>...</spouse> tag
+    private func updateSpouseInPlayer(newSpouse: String, in xml: String) -> String {
+        let spousePattern = "<spouse>[^<]*</spouse>"
+        guard let regex = try? NSRegularExpression(pattern: spousePattern, options: []) else { return xml }
+        
+        // Find <player> block range
+        guard let playerStartRange = xml.range(of: "<player>"),
+              let playerEndRange = xml.range(of: "</player>", range: playerStartRange.upperBound..<xml.endIndex) else {
+            // Fallback: operate on whole file
+            return replaceOrRemoveSpouseTag(newSpouse: newSpouse, in: xml, using: regex)
+        }
+        
+        let beforePlayer = String(xml[..<playerStartRange.lowerBound])
+        let playerBlock  = String(xml[playerStartRange.lowerBound..<playerEndRange.upperBound])
+        let afterPlayer  = String(xml[playerEndRange.upperBound...])
+        
+        let updatedPlayer = replaceOrRemoveSpouseTag(newSpouse: newSpouse, in: playerBlock, using: regex)
+        return beforePlayer + updatedPlayer + afterPlayer
+    }
+    
+    private func replaceOrRemoveSpouseTag(newSpouse: String, in block: String, using regex: NSRegularExpression) -> String {
+        let nsBlock = block as NSString
+        let fullRange = NSRange(location: 0, length: nsBlock.length)
+        
+        if newSpouse.isEmpty {
+            // Remove the <spouse>...</spouse> tag entirely
+            return regex.stringByReplacingMatches(in: block, options: [], range: fullRange, withTemplate: "")
+        } else {
+            let replacement = "<spouse>\(newSpouse)</spouse>"
+            let firstMatch = regex.firstMatch(in: block, options: [], range: fullRange)
+            if firstMatch != nil {
+                // Tag exists — replace it
+                return regex.stringByReplacingMatches(in: block, options: [], range: firstMatch!.range, withTemplate: replacement)
+            } else {
+                // Tag doesn't exist — insert after <name>...</name>
+                let namePattern = "(<name>[^<]*</name>)"
+                guard let nameRegex = try? NSRegularExpression(pattern: namePattern, options: []),
+                      let nameMatch = nameRegex.firstMatch(in: block, options: [], range: fullRange),
+                      let nameRange = Range(nameMatch.range, in: block) else {
+                    return block  // cannot insert safely
+                }
+                var modified = block
+                modified.insert(contentsOf: "<spouse>\(newSpouse)</spouse>", at: nameRange.upperBound)
+                return modified
+            }
+        }
+    }
+    
     func backupSave(info: SaveGameInfo) -> Bool {
         let fm = FileManager.default
         let formatter = DateFormatter()
@@ -254,7 +319,7 @@ class SaveManager {
         }
     }
     
-    func updateSave(info: SaveGameInfo, newName: String, newFarm: String, newFav: String, newMoney: Int, newTotalMoneyEarned: Int, newMaxHealth: Int, newMaxStamina: Int, newGoldenWalnuts: Int, newQiGems: Int, newClubCoins: Int) -> Bool {
+    func updateSave(info: SaveGameInfo, newName: String, newFarm: String, newFav: String, newMoney: Int, newTotalMoneyEarned: Int, newMaxHealth: Int, newMaxStamina: Int, newGoldenWalnuts: Int, newQiGems: Int, newClubCoins: Int, newSpouse: String) -> Bool {
         guard backupSave(info: info) else { return false }
         
         guard var content = try? String(contentsOf: info.fileURL, encoding: .utf8) else { return false }
@@ -272,6 +337,17 @@ class SaveManager {
         content = replaceFirstTag(tag: "qiGems", with: "\(newQiGems)", in: content)
         content = replaceFirstTag(tag: "clubCoins", with: "\(newClubCoins)", in: content)
         
+        let oldSpouse = info.spouse   // NPC name before the edit
+        
+        // Spouse: update or remove tag inside <player> block
+        content = updateSpouseInPlayer(newSpouse: newSpouse, in: content)
+        
+        // If removing or changing a spouse, also fix the NPC's friendship entry
+        // so they return to their original home/schedule without glitching.
+        if !oldSpouse.isEmpty && newSpouse != oldSpouse {
+            content = cleanDivorceNPCFriendship(npcName: oldSpouse, in: content)
+        }
+        
         do {
             try content.write(to: info.fileURL, atomically: true, encoding: .utf8)
             return true
@@ -281,6 +357,58 @@ class SaveManager {
         }
     }
     
+    /// Cleans up a previously married NPC's friendship entry so they return
+    /// to their normal home and schedule without bugging out.
+    ///
+    /// Changes inside the NPC's `<Friendship>` block (inside a `<key><string>NpcName</string></key>` item):
+    ///   - `<Status>Married</Status>`  →  `<Status>Friendly</Status>`
+    ///   - `<WeddingDate>...</WeddingDate>` block is removed entirely
+    private func cleanDivorceNPCFriendship(npcName: String, in xml: String) -> String {
+        // We locate the <item> block that belongs to this NPC.
+        // Structure: <item><key><string>NpcName</string></key><value><Friendship>...</Friendship></value></item>
+        let keyMarker = "<string>\(npcName)</string>"
+        guard let keyRange = xml.range(of: keyMarker) else {
+            print("[Divorce] Could not find friendship entry for \(npcName)")
+            return xml
+        }
+        
+        // Find the enclosing <item>...</item> that contains this key
+        let beforeKey = String(xml[..<keyRange.lowerBound])
+        guard let itemStart = beforeKey.range(of: "<item>", options: .backwards) else {
+            print("[Divorce] Could not find <item> before key for \(npcName)")
+            return xml
+        }
+        
+        let itemStartIdx = itemStart.lowerBound
+        guard let itemEnd = xml.range(of: "</item>", range: keyRange.upperBound..<xml.endIndex) else {
+            print("[Divorce] Could not find </item> after key for \(npcName)")
+            return xml
+        }
+        
+        let itemEndIdx = itemEnd.upperBound
+        
+        let beforeItem = String(xml[..<itemStartIdx])
+        var itemBlock  = String(xml[itemStartIdx..<itemEndIdx])
+        let afterItem  = String(xml[itemEndIdx...])
+        
+        // 1. Change <Status>Married</Status> → <Status>Friendly</Status>
+        itemBlock = itemBlock.replacingOccurrences(of: "<Status>Married</Status>", with: "<Status>Friendly</Status>")
+        
+        // 2. Remove <WeddingDate>...</WeddingDate> (multiline/nested block)
+        //    Pattern matches <WeddingDate> followed by any content up to </WeddingDate>
+        if let wdRegex = try? NSRegularExpression(pattern: "<WeddingDate>.*?</WeddingDate>", options: .dotMatchesLineSeparators) {
+            let nsBlock = itemBlock as NSString
+            itemBlock = wdRegex.stringByReplacingMatches(
+                in: itemBlock, options: [],
+                range: NSRange(location: 0, length: nsBlock.length),
+                withTemplate: ""
+            )
+        }
+        
+        return beforeItem + itemBlock + afterItem
+    }
+
+
     private func replaceFirstTag(tag: String, with value: String, in xml: String) -> String {
         let pattern = "(<\(tag)>)([^<]+)(</\(tag)>)"
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return xml }
