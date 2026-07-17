@@ -1364,11 +1364,16 @@ class StarHubTHViewModel: ObservableObject {
             for release in releases {
                 if let assets = release["assets"] as? [[String: Any]] {
                     for asset in assets {
-                        if let name = asset["name"] as? String, name == zipName,
-                           let browserDownloadUrl = asset["browser_download_url"] as? String,
-                           let url = URL(string: browserDownloadUrl) {
-                            targetDownloadUrl = url
-                            break
+                        if let name = asset["name"] as? String {
+                            let normalizedAssetName = name.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: " ", with: "")
+                            let normalizedZipName = zipName.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: " ", with: "")
+                            
+                            if normalizedAssetName == normalizedZipName,
+                               let browserDownloadUrl = asset["browser_download_url"] as? String,
+                               let url = URL(string: browserDownloadUrl) {
+                                targetDownloadUrl = url
+                                break
+                            }
                         }
                     }
                 }
