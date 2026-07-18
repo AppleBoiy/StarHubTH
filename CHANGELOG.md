@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-07-18
+
+### Fixed
+- **Thai Translation Hub**: Fixed a bug where Group Mods were not correctly evaluated as installed. The app now recursively checks sub-folders (children) of group mods for the `th.json` translation file.
+- **Thai Translation Hub**: Enhanced the UI by removing the confusing yellow warning triangle icon for installed translations, and updated the localized text to a positive confirmation message.
+
 ## [1.0.8] - 2026-07-08
 
 ### Added
