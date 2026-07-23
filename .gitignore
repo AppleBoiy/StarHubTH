@@ -37,3 +37,6 @@ bundles/
 StarHubTH.app/
 mods/*/README.md
 *.xnb
+check_translations.py
+.gitignore
+update_json.py

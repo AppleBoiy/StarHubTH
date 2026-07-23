@@ -400,5 +400,6 @@
   "vm_collection_imported_missing": "นำเข้าคอลเลกชันแล้ว แต่บางม็อดขาดหายไป",
   "mods_sort_update_asc": "อัปเดตเก่าสุด",
   "mods_sort_update_desc": "อัปเดตล่าสุด",
-  "tags_spoiler": "สปอยล์"
+  "tags_spoiler": "สปอยล์",
+  "vm_no_dependencies_found": "ไม่พบม็อดที่ต้องการ (Dependencies)"
 }

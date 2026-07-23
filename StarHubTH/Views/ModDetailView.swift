@@ -113,7 +113,7 @@ struct ModDetailView: View {
                         }
                     } else if selectedTab == 2 {
                         if mod.dependencies.isEmpty {
-                            Text("No dependencies found.")
+                            Text(vm.L(L10n.VM.noDependenciesFound))
                                 .foregroundColor(.secondary)
                                 .italic()
                         } else {
@@ -132,7 +132,7 @@ struct ModDetailView: View {
                 Picker("", selection: $selectedTab) {
                     Text(vm.L(L10n.Settings.nexusDescription)).tag(0)
                     Text(vm.L(L10n.Settings.nexusChangelog)).tag(1)
-                    Text("Dependencies").tag(2)
+                    Text(vm.L(L10n.Profiles.dependencies)).tag(2)
                 }
                 .pickerStyle(SegmentedPickerStyle())
             }

@@ -400,5 +400,6 @@
   "vm_collection_imported_missing": "Collection imported, but some mods are missing.",
   "mods_sort_update_asc": "Oldest Update",
   "mods_sort_update_desc": "Newest Update",
-  "tags_spoiler": "Spoiler"
+  "tags_spoiler": "Spoiler",
+  "vm_no_dependencies_found": "No dependencies found."
 }

@@ -457,6 +457,7 @@ enum L10n {
         static let collectionImportFailed = "vm_collection_import_failed"
         static let collectionImported     = "vm_collection_imported"
         static let collectionImportedMissing = "vm_collection_imported_missing"
+        static let noDependenciesFound    = "vm_no_dependencies_found"
         static let cleanModsNotFound    = "vm_clean_mods_not_found"
         static let cleanModsError       = "vm_clean_mods_error"
         static let urlError             = "vm_url_error"
