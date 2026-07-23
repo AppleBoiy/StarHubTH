@@ -40,81 +40,100 @@ struct ModDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            HStack(alignment: .top) {
+            HStack(alignment: .center) {
                 if let coverUrl = coverUrl {
                     AsyncImage(url: coverUrl) { image in
                         image.resizable()
                              .aspectRatio(contentMode: .fill)
-                             .frame(width: 80, height: 80)
-                             .clipShape(RoundedRectangle(cornerRadius: 8))
+                             .frame(width: 64, height: 64)
+                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     } placeholder: {
-                        ProgressView().frame(width: 80, height: 80)
+                        ProgressView().frame(width: 64, height: 64)
+                    }
+                } else {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.accentColor.opacity(0.15))
+                            .frame(width: 64, height: 64)
+                        Image(systemName: "puzzlepiece.extension.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.accentColor)
                     }
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(mod.name)
-                        .font(.title2)
-                        .fontWeight(.bold)
+                        .font(.system(size: 20, weight: .bold))
                     Text("v\(mod.version) • \(mod.author)")
-                        .font(.subheadline)
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
                     
                     if isLoading {
                         ProgressView().controlSize(.small)
-                            .padding(.top, 4)
+                            .padding(.top, 2)
                     }
-                    
-                    HStack(spacing: 8) {
-                        if nexusId != nil && !vm.nexusApiKey.isEmpty {
-                            Button {
-                                isLoading = true
-                                vm.syncTagFromNexus(for: mod) { success in
-                                    isLoading = false
-                                }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                    Text(vm.L(L10n.Tags.sync))
-                                }
-                                .font(.system(size: 11))
-                            }
-                        }
-                        
-                        if !mod.nexusUrl.isEmpty {
-                            Button {
-                                if let url = URL(string: mod.nexusUrl) {
-                                    NSWorkspace.shared.open(url)
-                                }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "link")
-                                    Text("Nexus Mods")
-                                }
-                                .font(.system(size: 11))
-                            }
-                        }
-                    }
-                    .padding(.top, 4)
                 }
-                .padding(.leading, coverUrl == nil ? 0 : 8)
+                .padding(.leading, 8)
                 
                 Spacer()
+                
+                // Action Buttons on Right
+                HStack(spacing: 10) {
+                    if nexusId != nil && !vm.nexusApiKey.isEmpty {
+                        Button {
+                            isLoading = true
+                            vm.syncTagFromNexus(for: mod) { success in
+                                isLoading = false
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text(vm.L(L10n.Tags.sync))
+                            }
+                            .font(.system(size: 12, weight: .medium))
+                        }
+                        .buttonStyle(.bordered)
+                        .pointingHandCursor()
+                    }
+                    
+                    if !mod.nexusUrl.isEmpty {
+                        Button {
+                            if let url = URL(string: mod.nexusUrl) {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "arrow.up.right.square")
+                                Text("Nexus Mods")
+                            }
+                            .font(.system(size: 12, weight: .medium))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                        .pointingHandCursor()
+                    }
+                }
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
             .background(Color(NSColor.windowBackgroundColor))
             
             Divider()
             
-            // Tab Picker
-            Picker("", selection: $selectedTab) {
-                Text(vm.L(L10n.Settings.nexusDescription)).tag(0)
-                Text(vm.L(L10n.Settings.nexusChangelog)).tag(1)
-                Text("Dependencies").tag(2)
+            // Tab Picker Bar
+            HStack {
+                Picker("", selection: $selectedTab) {
+                    Text(vm.L(L10n.Settings.nexusDescription)).tag(0)
+                    Text(vm.L(L10n.Settings.nexusChangelog)).tag(1)
+                    Text("Dependencies").tag(2)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .frame(maxWidth: 420)
+                
+                Spacer()
             }
-            .pickerStyle(SegmentedPickerStyle())
-            .frame(maxWidth: 400)
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
             
             // Content
             ScrollView {
