@@ -553,8 +553,6 @@ struct ModListRow: View {
     var isGroupHeader: Bool = false
     @Binding var isExpanded: Bool
     @State private var localIsOn: Bool?
-    @State private var isShowingDependencies = false
-    @State private var isShowingDetails = false
     
     private var hasConfigJson: Bool {
         guard !mod.isGroup else { return false }
@@ -574,6 +572,16 @@ struct ModListRow: View {
             $0.name.localizedCaseInsensitiveCompare(mod.name) == .orderedSame ||
             mod.name.lowercased().contains($0.name.lowercased())
         }
+    }
+    
+    private var hasMissingDependencies: Bool {
+        guard mod.isEnabled && !mod.isGroup else { return false }
+        for dep in mod.dependencies where dep.isRequired {
+            if vm.resolveDependencyStatus(for: dep.uniqueId) != .active {
+                return true
+            }
+        }
+        return false
     }
 
     var body: some View {
@@ -598,8 +606,14 @@ struct ModListRow: View {
                 HStack(spacing: 6) {
                     Text(mod.name)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.primary)
+                        .foregroundColor(!mod.isEnabled ? .secondary : .primary)
                         .lineLimit(1)
+                    
+                    if hasMissingDependencies {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                            .help(vm.L(L10n.Mods.missingDependencies))
+                    }
 
                     // Type tag badge
                     if !mod.modTag.isEmpty && !isChild {
@@ -733,101 +747,15 @@ struct ModListRow: View {
                 
                 if !mod.nexusUrl.isEmpty || !mod.dependencies.isEmpty {
                     Button {
-                        if !vm.nexusApiKey.isEmpty {
-                            isShowingDetails = true
-                        } else {
-                            isShowingDependencies = true
-                        }
+                        vm.viewingModDetails = mod
                     } label: {
                         Image(systemName: "info.circle")
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .help(!vm.nexusApiKey.isEmpty ? vm.L(L10n.Settings.nexusModDetails) : vm.L(L10n.Mods.viewOnNexus))
+                    .help(vm.L(L10n.Settings.nexusModDetails))
                     .pointingHandCursor()
-                    .popover(isPresented: $isShowingDependencies, arrowEdge: .bottom) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            if !mod.nexusUrl.isEmpty {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Nexus Mods")
-                                        .font(.headline)
-                                    Button {
-                                        if let url = URL(string: mod.nexusUrl) { NSWorkspace.shared.open(url) }
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "link")
-                                            Text(vm.L(L10n.Mods.viewOnNexus))
-                                        }
-                                        .foregroundColor(.accentColor)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    .pointingHandCursor()
-                                }
-                            }
-                            
-                            if !mod.dependencies.isEmpty {
-                                if !mod.nexusUrl.isEmpty {
-                                    Divider()
-                                }
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(vm.L(L10n.Profiles.dependencies))
-                                        .font(.headline)
-                                    
-                                    ScrollView {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            ForEach(mod.dependencies, id: \.uniqueId) { dep in
-                                                let targetMod = vm.mods.first(where: { $0.uniqueId.caseInsensitiveCompare(dep.uniqueId) == .orderedSame })
-                                                let isInstalled = targetMod != nil
-                                                let isEnabled = targetMod?.isEnabled ?? false
-                                                
-                                                HStack {
-                                                    if isEnabled {
-                                                        Image(systemName: "checkmark.circle.fill")
-                                                            .foregroundColor(.green)
-                                                            .font(.system(size: 10))
-                                                    } else if isInstalled {
-                                                        Image(systemName: "exclamationmark.circle.fill")
-                                                            .foregroundColor(.orange)
-                                                            .font(.system(size: 10))
-                                                    } else {
-                                                        Image(systemName: "xmark.circle.fill")
-                                                            .foregroundColor(.red.opacity(0.5))
-                                                            .font(.system(size: 10))
-                                                    }
-                                                    
-                                                    Text(dep.uniqueId)
-                                                        .font(.system(size: 12, design: .monospaced))
-                                                        .foregroundColor(isEnabled ? .primary : .secondary)
-                                                    Spacer()
-                                                    if dep.isRequired {
-                                                        Text(vm.L(L10n.Profiles.required))
-                                                            .font(.system(size: 10, weight: .bold))
-                                                            .foregroundColor(.red)
-                                                            .padding(.horizontal, 6)
-                                                            .padding(.vertical, 2)
-                                                            .background(Color.red.opacity(0.1))
-                                                            .cornerRadius(4)
-                                                    } else {
-                                                        Text(vm.L(L10n.Profiles.optional))
-                                                            .font(.system(size: 10))
-                                                            .foregroundColor(.secondary)
-                                                            .padding(.horizontal, 6)
-                                                            .padding(.vertical, 2)
-                                                            .background(Color.secondary.opacity(0.1))
-                                                            .cornerRadius(4)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding()
-                        .frame(width: 300)
-                        .frame(maxHeight: 300)
-                    }
                 }
             }
             .padding(.trailing, 8)
@@ -860,11 +788,6 @@ struct ModListRow: View {
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .background(isHovered ? Color.secondary.opacity(0.05) : Color.clear)
-        .background(
-            vm.selectedModID == mod.folderName
-                ? Color.accentColor.opacity(0.08)
-                : Color.clear
-        )
         .cornerRadius(6)
         .animation(.easeInOut(duration: 0.1), value: isHovered)
         .onHover { isHovered = $0 }
@@ -930,9 +853,6 @@ struct ModListRow: View {
                     if let url = URL(string: update.url) { NSWorkspace.shared.open(url) }
                 }
             }
-        }
-        .sheet(isPresented: $isShowingDetails) {
-            ModDetailView(vm: vm, mod: mod)
         }
     }
 }

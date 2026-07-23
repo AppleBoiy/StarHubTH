@@ -48,6 +48,40 @@ struct ModProfilesView: View {
             
             // Add buttons below list, right-aligned
             HStack {
+                Button(action: {
+                    let panel = NSOpenPanel()
+                    panel.allowsMultipleSelection = false
+                    panel.canChooseDirectories = false
+                    panel.canChooseFiles = true
+                    panel.allowedContentTypes = [.json]
+                    if panel.runModal() == .OK, let url = panel.url {
+                        do {
+                            let (collection, newProfile) = try ProfileManager.shared.importProfile(from: url)
+                            vm.modProfiles.append(newProfile)
+                            ProfileManager.shared.saveProfiles(vm.modProfiles, activeProfileId: vm.activeProfileId)
+                            // Queue installer
+                            CollectionInstaller.shared.install(collection: collection, currentMods: vm.mods, nexusApiKey: vm.nexusApiKey) { missingIds in
+                                if !missingIds.isEmpty {
+                                    DispatchQueue.main.async {
+                                        for id in missingIds {
+                                            if let url = URL(string: "https://www.nexusmods.com/stardewvalley/mods/\(id)") {
+                                                NSWorkspace.shared.open(url)
+                                            }
+                                        }
+                                        vm.showModal(message: "Collection Imported. Missing mods have been opened in your browser for download.")
+                                    }
+                                } else {
+                                    DispatchQueue.main.async { vm.showModal(message: "Collection Imported") }
+                                }
+                            }
+                        } catch {
+                            vm.showModal(message: "Failed to import collection: \(error.localizedDescription)")
+                        }
+                    }
+                }) {
+                    Text("Import Collection")
+                }
+                
                 Spacer()
                 Button(action: {
                     isShowingNewProfileAlert = true
@@ -276,6 +310,35 @@ struct ProfileDetailSheet: View {
                             }
                         }
                         .frame(width: 320, height: 400)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                
+                Divider().padding(.leading, 16)
+                
+                // Export Row
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Export Collection")
+                            .font(.system(size: 13))
+                        Text("Share your mod list as a JSON modpack.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button("Export") {
+                        let panel = NSSavePanel()
+                        panel.allowedContentTypes = [.json]
+                        panel.nameFieldStringValue = "\(profile.name.replacingOccurrences(of: " ", with: "_")).json"
+                        if panel.runModal() == .OK, let url = panel.url {
+                            do {
+                                try ProfileManager.shared.exportProfile(profile, mods: vm.mods, to: url)
+                                vm.showModal(message: "Collection Exported Successfully")
+                            } catch {
+                                vm.showModal(message: "Failed to export: \(error.localizedDescription)")
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 16)

@@ -192,13 +192,83 @@ class NexusAPIService {
         post(endpoint: endpoint, apiKey: apiKey, completion: completion)
     }
     
-    // Helper: strip HTML tags
-    static func stripHTML(_ str: String) -> String {
-        return str.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression, range: nil)
-                  .replacingOccurrences(of: "&nbsp;", with: " ")
-                  .replacingOccurrences(of: "&amp;", with: "&")
-                  .replacingOccurrences(of: "&lt;", with: "<")
-                  .replacingOccurrences(of: "&gt;", with: ">")
-                  .replacingOccurrences(of: "&quot;", with: "\"")
+    enum DescriptionBlock: Hashable {
+        case text(String)
+        case image(URL)
+    }
+    
+    // Helper: format HTML and BBCode into basic Markdown and extract images
+    static func parseBlocks(_ str: String) -> [DescriptionBlock] {
+        var formatted = str
+        
+        // 1. Basic HTML Entities
+        formatted = formatted.replacingOccurrences(of: "&nbsp;", with: " ")
+                             .replacingOccurrences(of: "&amp;", with: "&")
+                             .replacingOccurrences(of: "&lt;", with: "<")
+                             .replacingOccurrences(of: "&gt;", with: ">")
+                             .replacingOccurrences(of: "&quot;", with: "\"")
+        
+        // 2. Convert <br> and <br/> to newlines
+        formatted = formatted.replacingOccurrences(of: "<br\\s*/?>", with: "\n", options: .regularExpression)
+        
+        // 3. Strip all other HTML tags
+        formatted = formatted.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        
+        // 4. Convert BBCode to Markdown using (?s) to match across newlines
+        // Note: We use \s* inside the capture groups so that leading/trailing newlines don't break Markdown rendering (e.g. ** text ** is invalid Markdown)
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[b\\]\\s*(.*?)\\s*\\[/b\\]", with: "**$1**", options: [.regularExpression, .caseInsensitive])
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[i\\]\\s*(.*?)\\s*\\[/i\\]", with: "*$1*", options: [.regularExpression, .caseInsensitive])
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[s\\]\\s*(.*?)\\s*\\[/s\\]", with: "~~$1~~", options: [.regularExpression, .caseInsensitive])
+        
+        // Headers (Size tags are often used as headers) - SwiftUI Text Markdown doesn't support ###, so use Bold
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[size=[^\\]]+\\]\\s*(.*?)\\s*\\[/size\\]", with: "**$1**", options: [.regularExpression, .caseInsensitive])
+        
+        // Spoilers
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[spoiler\\]\\s*(.*?)\\s*\\[/spoiler\\]", with: "\n*--- Spoiler ---*\n$1\n*--- End Spoiler ---*\n", options: [.regularExpression, .caseInsensitive])
+        
+        // Lists
+        formatted = formatted.replacingOccurrences(of: "(?i)\\[/?list\\]", with: "\n", options: .regularExpression)
+        formatted = formatted.replacingOccurrences(of: "(?i)\\[\\*\\]", with: "- ", options: .regularExpression)
+        
+        // Links
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[url=(.*?)\\]\\s*(.*?)\\s*\\[/url\\]", with: "[$2]($1)", options: [.regularExpression, .caseInsensitive])
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[url\\]\\s*(.*?)\\s*\\[/url\\]", with: "[$1]($1)", options: [.regularExpression, .caseInsensitive])
+        
+        // 5. Strip remaining formatting BBCode tags (keeping their inner content)
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[/?(?:color|center|left|right|u|font|align|quote)(?:=[^\\]]+)?\\]", with: "", options: [.regularExpression, .caseInsensitive])
+        
+        // 6. Split by [img] tags
+        var blocks: [DescriptionBlock] = []
+        let pattern = "(?s)\\[img\\](.*?)\\[/img\\]"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            return [.text(formatted.trimmingCharacters(in: .whitespacesAndNewlines))]
+        }
+        
+        let nsString = formatted as NSString
+        let results = regex.matches(in: formatted, range: NSRange(location: 0, length: nsString.length))
+        
+        var lastEnd = 0
+        for match in results {
+            let textRange = NSRange(location: lastEnd, length: match.range.location - lastEnd)
+            let textStr = nsString.substring(with: textRange).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !textStr.isEmpty {
+                blocks.append(.text(textStr))
+            }
+            
+            let imgUrlRange = match.range(at: 1)
+            let imgUrlStr = nsString.substring(with: imgUrlRange).trimmingCharacters(in: .whitespacesAndNewlines)
+            if let url = URL(string: imgUrlStr) {
+                blocks.append(.image(url))
+            }
+            
+            lastEnd = match.range.location + match.range.length
+        }
+        
+        let finalText = nsString.substring(from: lastEnd).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !finalText.isEmpty {
+            blocks.append(.text(finalText))
+        }
+        
+        return blocks
     }
 }

@@ -116,4 +116,38 @@ class ProfileManager {
         
         return !hasError
     }
+    
+    func exportProfile(_ profile: ModProfile, mods: [ModItem], to url: URL) throws {
+        let allMods = mods.flatMap { $0.isGroup ? ($0.children ?? []) : [$0] }
+        let activeMods = allMods.filter { profile.enabledModIds.contains($0.uniqueId) }
+        
+        let collectionMods = activeMods.map { mod in
+            let nId: String? = {
+                if let u = URL(string: mod.nexusUrl), let id = u.pathComponents.last, Int(id) != nil {
+                    return id
+                }
+                return nil
+            }()
+            return CollectionModItem(uniqueID: mod.uniqueId, nexusID: nId, name: mod.name, version: mod.version)
+        }
+        
+        let collection = ModCollection(name: profile.name, author: NSUserName(), mods: collectionMods)
+        
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        let data = try encoder.encode(collection)
+        try data.write(to: url)
+    }
+    
+    func importProfile(from url: URL) throws -> (ModCollection, ModProfile) {
+        let data = try Data(contentsOf: url)
+        let collection = try JSONDecoder().decode(ModCollection.self, from: data)
+        
+        let newProfile = ModProfile(
+            id: UUID(),
+            name: "\(collection.name) (Imported)",
+            enabledModIds: collection.mods.map { $0.uniqueID }
+        )
+        return (collection, newProfile)
+    }
 }

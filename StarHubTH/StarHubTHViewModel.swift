@@ -18,6 +18,12 @@ struct ModDependency: Equatable {
     let isRequired: Bool
 }
 
+enum DependencyStatus: Equatable {
+    case active
+    case disabled(ModItem)
+    case missing
+}
+
 struct ModItem: Identifiable, Equatable {
     var id: String { folderName }
     let uniqueId: String
@@ -209,6 +215,15 @@ class StarHubTHViewModel: ObservableObject {
     @Published var modFilterTag: String = ""
     @Published var modSortOption: ModSortOption = .name
     
+    // Dependency Resolution Helper
+    func resolveDependencyStatus(for uniqueId: String) -> DependencyStatus {
+        let allMods = mods.flatMap { $0.isGroup ? ($0.children ?? []) : [$0] }
+        if let found = allMods.first(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
+            return found.isEnabled ? .active : .disabled(found)
+        }
+        return .missing
+    }
+    
     // Custom Tags
     var customModTags: [String: String] {
         get { UserDefaults.standard.dictionary(forKey: "customModTags") as? [String: String] ?? [:] }
@@ -301,6 +316,7 @@ class StarHubTHViewModel: ObservableObject {
     
     @Published var saves: [SaveGameInfo] = []
     @Published var editingModConfig: ModItem? = nil
+    @Published var viewingModDetails: ModItem? = nil
     @Published var editingSave: SaveGameInfo? = nil {
         didSet {
             if let save = editingSave {

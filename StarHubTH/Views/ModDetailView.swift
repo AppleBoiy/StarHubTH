@@ -6,8 +6,8 @@ struct ModDetailView: View {
     
     @State private var selectedTab: Int
     @State private var coverUrl: URL? = nil
-    @State private var nexusDescription: String? = nil
-    @State private var nexusChangelog: String? = nil
+    @State private var nexusDescription: [NexusAPIService.DescriptionBlock]? = nil
+    @State private var nexusChangelog: [NexusAPIService.DescriptionBlock]? = nil
     @State private var isLoading: Bool = false
     
     @Environment(\.presentationMode) var presentationMode
@@ -65,32 +65,41 @@ struct ModDetailView: View {
                             .padding(.top, 4)
                     }
                     
-                    if nexusId != nil && !vm.nexusApiKey.isEmpty {
-                        Button {
-                            isLoading = true
-                            vm.syncTagFromNexus(for: mod) { success in
-                                isLoading = false
+                    HStack(spacing: 8) {
+                        if nexusId != nil && !vm.nexusApiKey.isEmpty {
+                            Button {
+                                isLoading = true
+                                vm.syncTagFromNexus(for: mod) { success in
+                                    isLoading = false
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                    Text(vm.L(L10n.Tags.sync))
+                                }
+                                .font(.system(size: 11))
                             }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.triangle.2.circlepath")
-                                Text(vm.L(L10n.Tags.sync))
-                            }
-                            .font(.system(size: 11))
                         }
-                        .padding(.top, 4)
+                        
+                        if !mod.nexusUrl.isEmpty {
+                            Button {
+                                if let url = URL(string: mod.nexusUrl) {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "link")
+                                    Text("Nexus Mods")
+                                }
+                                .font(.system(size: 11))
+                            }
+                        }
                     }
+                    .padding(.top, 4)
                 }
                 .padding(.leading, coverUrl == nil ? 0 : 8)
                 
                 Spacer()
-                
-                Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
-                        .font(.title3)
-                }
-                .buttonStyle(PlainButtonStyle())
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor))
@@ -101,24 +110,28 @@ struct ModDetailView: View {
             Picker("", selection: $selectedTab) {
                 Text(vm.L(L10n.Settings.nexusDescription)).tag(0)
                 Text(vm.L(L10n.Settings.nexusChangelog)).tag(1)
+                Text("Dependencies").tag(2)
             }
             .pickerStyle(SegmentedPickerStyle())
+            .frame(maxWidth: 400)
             .padding()
             
             // Content
             ScrollView {
                 VStack(alignment: .leading) {
                     if selectedTab == 0 {
-                        Text(nexusDescription ?? mod.description)
-                            .font(.body)
-                            .textSelection(.enabled)
-                    } else if selectedTab == 1 {
-                        if let cLog = nexusChangelog {
-                            Text(cLog)
+                        if let blocks = nexusDescription {
+                            BBCodeView(blocks: blocks)
+                        } else {
+                            Text(.init(mod.description))
                                 .font(.body)
                                 .textSelection(.enabled)
+                        }
+                    } else if selectedTab == 1 {
+                        if let blocks = nexusChangelog {
+                            BBCodeView(blocks: blocks)
                         } else if let locLog = localChangelog {
-                            Text(locLog)
+                            Text(.init(locLog))
                                 .font(.system(.body, design: .monospaced))
                                 .textSelection(.enabled)
                         } else {
@@ -126,13 +139,21 @@ struct ModDetailView: View {
                                 .foregroundColor(.secondary)
                                 .italic()
                         }
+                    } else if selectedTab == 2 {
+                        if mod.dependencies.isEmpty {
+                            Text("No dependencies found.")
+                                .foregroundColor(.secondary)
+                                .italic()
+                        } else {
+                            DependencyGraphView(mod: mod, vm: vm)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
             }
         }
-        .frame(width: 600, height: 500)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear(perform: loadNexusInfo)
     }
     
@@ -151,7 +172,7 @@ struct ModDetailView: View {
                     if let pic = info.pictureUrl {
                         self.coverUrl = URL(string: pic)
                     }
-                    self.nexusDescription = NexusAPIService.stripHTML(info.description)
+                    self.nexusDescription = NexusAPIService.parseBlocks(info.description)
                 }
                 dispatchGroup.leave()
             }
@@ -163,7 +184,7 @@ struct ModDetailView: View {
                 if case .success(let files) = result {
                     // Combine changelogs from files, or just take the latest file's changelog
                     if let latestChangelog = files.files.first(where: { !($0.changelogHtml?.isEmpty ?? true) })?.changelogHtml {
-                        self.nexusChangelog = NexusAPIService.stripHTML(latestChangelog)
+                        self.nexusChangelog = NexusAPIService.parseBlocks(latestChangelog)
                     }
                 }
                 dispatchGroup.leave()
@@ -172,6 +193,109 @@ struct ModDetailView: View {
         
         dispatchGroup.notify(queue: .main) {
             self.isLoading = false
+        }
+    }
+}
+
+struct DependencyRow: View {
+    @ObservedObject var vm: StarHubTHViewModel
+    let dependency: ModDependency
+    
+    var body: some View {
+        let status = vm.resolveDependencyStatus(for: dependency.uniqueId)
+        
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(dependency.uniqueId)
+                    .font(.system(size: 13, weight: .bold))
+                if dependency.isRequired {
+                    Text("Required")
+                        .font(.system(size: 10, weight: .bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.red.opacity(0.2))
+                        .foregroundColor(.red)
+                        .cornerRadius(4)
+                } else {
+                    Text("Optional")
+                        .font(.system(size: 10, weight: .bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.secondary.opacity(0.2))
+                        .foregroundColor(.secondary)
+                        .cornerRadius(4)
+                }
+            }
+            
+            Spacer()
+            
+            switch status {
+            case .active:
+                Label("Installed & Enabled", systemImage: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 12, weight: .medium))
+            case .disabled(let mod):
+                Button {
+                    vm.toggleMod(mod)
+                } label: {
+                    Label("Enable Mod", systemImage: "power")
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.orange.opacity(0.2))
+                .foregroundColor(.orange)
+                .cornerRadius(6)
+            case .missing:
+                Button {
+                    // For now, redirect to Nexus search since we don't have UpdateKeys yet
+                    if let url = URL(string: "https://www.nexusmods.com/stardewvalley/search/?gsearch=\(dependency.uniqueId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                        NSWorkspace.shared.open(url)
+                    }
+                } label: {
+                    Label("Search Nexus", systemImage: "magnifyingglass")
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.red.opacity(0.1))
+                .foregroundColor(.red)
+                .cornerRadius(6)
+            }
+        }
+        .padding()
+        .background(Color(NSColor.controlBackgroundColor))
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+        )
+    }
+}
+
+struct BBCodeView: View {
+    let blocks: [NexusAPIService.DescriptionBlock]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                switch block {
+                case .text(let txt):
+                    Text(.init(txt))
+                        .font(.body)
+                        .textSelection(.enabled)
+                case .image(let url):
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFit().frame(maxHeight: 400).cornerRadius(8)
+                        } else if phase.error != nil {
+                            Text("Failed to load image").foregroundColor(.red).font(.caption)
+                        } else {
+                            ProgressView()
+                        }
+                    }
+                }
+            }
         }
     }
 }
