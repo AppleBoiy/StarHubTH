@@ -263,6 +263,16 @@ struct SavesView: View {
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .searchable(text: $searchText, prompt: Text(vm.L(L10n.Main.search)))
+        .toolbar {
+            ToolbarItem {
+                Button {
+                    vm.reloadSaves()
+                } label: {
+                    Label(vm.L(L10n.Tags.sync), systemImage: "arrow.triangle.2.circlepath")
+                }
+                .help(vm.L(L10n.Tags.sync))
+            }
+        }
         .sheet(item: $vm.saveToDuplicate) { save in
             DuplicateSaveSheet(vm: vm, save: save)
         }

@@ -217,35 +217,21 @@ struct ModListView: View {
         .toolbar {
             ToolbarItem {
                 Button {
-                    if vm.nexusApiKey.isEmpty {
-                        vm.showModal(message: vm.L(L10n.Settings.nexusApiKeyMissing))
-                    } else {
+                    vm.scanMods()
+                    if !vm.nexusApiKey.isEmpty {
                         vm.syncAllTagsFromNexus()
                     }
                 } label: {
-                    HStack(spacing: 4) {
-                        if vm.isSyncingAllTags {
+                    if vm.isSyncingAllTags {
+                        HStack(spacing: 4) {
                             ProgressView().controlSize(.small).scaleEffect(0.7)
                             Text("\(Int(vm.syncAllTagsProgress * 100))%")
-                                .font(.system(size: 12))
                                 .monospacedDigit()
-                        } else {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.system(size: 11))
-                            Text(vm.L(L10n.Tags.sync))
-                                .font(.system(size: 12))
                         }
+                    } else {
+                        Label(vm.L(L10n.Tags.sync), systemImage: "arrow.triangle.2.circlepath")
                     }
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.primary.opacity(0.06))
-                    )
                 }
-                .buttonStyle(PlainButtonStyle())
-                .pointingHandCursor()
                 .disabled(vm.isSyncingAllTags)
                 .help(vm.L(L10n.Tags.sync))
             }
@@ -295,7 +281,7 @@ struct ModControlsBar: View {
                 HStack(spacing: 4) {
                     Image(systemName: "tag")
                         .font(.system(size: 11))
-                    Text(vm.modFilterTag.isEmpty ? vm.L(L10n.Mods.filterTypeAll) : vm.modFilterTag)
+                    Text(vm.modFilterTag.isEmpty ? vm.L(L10n.Mods.filterTypeAll) : vm.localizedTag(vm.modFilterTag))
                         .font(.system(size: 12))
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9, weight: .semibold))

@@ -1027,7 +1027,8 @@ class StarHubTHViewModel: ObservableObject {
                     return
                 }
 
-                self.installExtractedContent(from: tempDir, cleanup: true)
+                let fallback = url.deletingPathExtension().lastPathComponent
+                self.installExtractedContent(from: tempDir, fallbackRootName: fallback, cleanup: true)
 
             } catch {
                 try? fm.removeItem(at: tempDir)
@@ -1042,13 +1043,12 @@ class StarHubTHViewModel: ObservableObject {
     /// Installs a mod from an already-extracted folder.
     /// Handles both a single mod folder (contains manifest.json directly)
     /// and a pack folder (contains multiple sub-mod folders each with manifest.json).
-    func installModFromFolder(url: URL) {
+        func installModFromFolder(url: URL) {
         DispatchQueue.global(qos: .userInitiated).async {
             DispatchQueue.main.async { self.isInstallingMod = true }
-            // Use the parent directory as the "root" so the folder itself
-            // is treated as the top-level candidate — same logic as post-unzip.
             self.installExtractedContent(from: url.deletingLastPathComponent(),
                                          specificRoot: url.lastPathComponent,
+                                         fallbackRootName: url.lastPathComponent,
                                          cleanup: false)
         }
     }
@@ -1061,6 +1061,7 @@ class StarHubTHViewModel: ObservableObject {
     ///   - cleanup: Whether to delete rootDir after the operation.
     private func installExtractedContent(from rootDir: URL,
                                          specificRoot: String? = nil,
+                                         fallbackRootName: String? = nil,
                                          cleanup: Bool) {
         let fm = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
@@ -1108,12 +1109,28 @@ class StarHubTHViewModel: ObservableObject {
             var movedRoots = Set<String>()
 
             for modDir in topLevelDirs {
-                let relative = Array(modDir.pathComponents.dropFirst(rootDir.pathComponents.count))
-                guard let rootName = relative.first else { continue }
+                let originalRelative = Array(modDir.pathComponents.dropFirst(rootDir.pathComponents.count))
+                var relative = originalRelative
+                
+                // Strip common generic wrapper folders from the root
+                while let first = relative.first, 
+                      first.lowercased() == "mods" || first.lowercased() == "stardew valley" || first.lowercased() == "stardewvalley" || first.lowercased() == "stardew_valley" {
+                    relative.removeFirst()
+                }
+                
+                let rootName = relative.first ?? fallbackRootName ?? "UnknownMod"
                 if movedRoots.contains(rootName) { continue }
                 movedRoots.insert(rootName)
+                
+                var srcRoot = rootDir
+                if let firstUnstripped = relative.first, let index = originalRelative.firstIndex(of: firstUnstripped) {
+                    for i in 0...index {
+                        srcRoot = srcRoot.appendingPathComponent(originalRelative[i])
+                    }
+                } else {
+                    srcRoot = modDir
+                }
 
-                let srcRoot = rootDir.appendingPathComponent(rootName)
                 let destRoot = URL(fileURLWithPath: modsPath).appendingPathComponent(rootName)
                 let destBackup = URL(fileURLWithPath: modsPath).appendingPathComponent("\(rootName)_backup_temp")
 
