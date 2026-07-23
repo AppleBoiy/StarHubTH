@@ -133,32 +133,28 @@ struct ModDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                if nexusId != nil && !vm.nexusApiKey.isEmpty {
+            if nexusId != nil && !vm.nexusApiKey.isEmpty {
+                ToolbarItem(placement: .automatic) {
                     Button {
                         isLoading = true
                         vm.syncTagFromNexus(for: mod) { success in
                             isLoading = false
                         }
                     } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                            Text(vm.L(L10n.Tags.sync))
-                        }
+                        Label(vm.L(L10n.Tags.sync), systemImage: "arrow.triangle.2.circlepath")
                     }
                     .help(vm.L(L10n.Tags.sync))
                 }
-                
-                if !mod.nexusUrl.isEmpty {
+            }
+            
+            if !mod.nexusUrl.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
                     Button {
                         if let url = URL(string: mod.nexusUrl) {
                             NSWorkspace.shared.open(url)
                         }
                     } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.up.right.square")
-                            Text("Nexus Mods")
-                        }
+                        Label("Nexus Mods", systemImage: "arrow.up.right.square")
                     }
                     .help("Open on Nexus Mods")
                 }
