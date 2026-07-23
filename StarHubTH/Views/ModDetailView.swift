@@ -40,87 +40,50 @@ struct ModDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            HStack(alignment: .top, spacing: 16) {
-                if let coverUrl = coverUrl {
-                    AsyncImage(url: coverUrl) { image in
-                        image.resizable()
-                             .aspectRatio(contentMode: .fill)
-                             .frame(width: 64, height: 64)
-                             .clipShape(RoundedRectangle(cornerRadius: 10))
-                    } placeholder: {
-                        ProgressView().frame(width: 64, height: 64)
+            VStack(spacing: 16) {
+                HStack(spacing: 16) {
+                    if let coverUrl = coverUrl {
+                        AsyncImage(url: coverUrl) { image in
+                            image.resizable()
+                                 .aspectRatio(contentMode: .fill)
+                                 .frame(width: 64, height: 64)
+                                 .clipShape(RoundedRectangle(cornerRadius: 10))
+                        } placeholder: {
+                            ProgressView().frame(width: 64, height: 64)
+                        }
+                    } else {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.accentColor.opacity(0.15))
+                                .frame(width: 64, height: 64)
+                            Image(systemName: "puzzlepiece.extension.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(.accentColor)
+                        }
                     }
-                } else {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.accentColor.opacity(0.15))
-                            .frame(width: 64, height: 64)
-                        Image(systemName: "puzzlepiece.extension.fill")
-                            .font(.system(size: 28))
-                            .foregroundColor(.accentColor)
-                    }
-                }
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(mod.name)
-                            .font(.system(size: 20, weight: .bold))
-                        
-                        Text("v\(mod.version) • \(mod.author)")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                        
-                        if isLoading {
-                            ProgressView().controlSize(.small)
-                                .padding(.leading, 4)
+                            .font(.system(size: 22, weight: .bold))
+                            
+                        HStack {
+                            Text("v\(mod.version) • \(mod.author)")
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                                
+                            if isLoading {
+                                ProgressView().controlSize(.small)
+                                    .padding(.leading, 4)
+                            }
                         }
                     }
                     
-                    // Tab Picker moved up below mod title
-                    Picker("", selection: $selectedTab) {
-                        Text(vm.L(L10n.Settings.nexusDescription)).tag(0)
-                        Text(vm.L(L10n.Settings.nexusChangelog)).tag(1)
-                        Text("Dependencies").tag(2)
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .frame(maxWidth: 420)
+                    Spacer()
                 }
                 
-                Spacer()
-                
-                HStack(spacing: 12) {
-                    if nexusId != nil && !vm.nexusApiKey.isEmpty {
-                        Button {
-                            isLoading = true
-                            vm.syncTagFromNexus(for: mod) { success in
-                                isLoading = false
-                            }
-                        } label: {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.system(size: 16))
-                                .foregroundColor(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .help(vm.L(L10n.Tags.sync))
-                    }
-                    
-                    if !mod.nexusUrl.isEmpty {
-                        Button {
-                            if let url = URL(string: mod.nexusUrl) {
-                                NSWorkspace.shared.open(url)
-                            }
-                        } label: {
-                            Image(systemName: "link")
-                                .font(.system(size: 16))
-                                .foregroundColor(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Open on Nexus Mods")
-                    }
-                }
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .padding(.vertical, 16)
             .background(Color(NSColor.windowBackgroundColor))
             
             Divider()
@@ -161,8 +124,49 @@ struct ModDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
             }
+            
+            Divider()
+            
+            // Footer
+            VStack {
+                Picker("", selection: $selectedTab) {
+                    Text(vm.L(L10n.Settings.nexusDescription)).tag(0)
+                    Text(vm.L(L10n.Settings.nexusChangelog)).tag(1)
+                    Text("Dependencies").tag(2)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color(NSColor.windowBackgroundColor))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if nexusId != nil && !vm.nexusApiKey.isEmpty {
+                    Button {
+                        isLoading = true
+                        vm.syncTagFromNexus(for: mod) { success in
+                            isLoading = false
+                        }
+                    } label: {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .help(vm.L(L10n.Tags.sync))
+                    }
+                }
+                
+                if !mod.nexusUrl.isEmpty {
+                    Button {
+                        if let url = URL(string: mod.nexusUrl) {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        Image(systemName: "link")
+                            .help("Open on Nexus Mods")
+                    }
+                }
+            }
+        }
         .onAppear(perform: loadNexusInfo)
     }
     
