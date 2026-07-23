@@ -219,23 +219,30 @@ class NexusAPIService {
         formatted = formatted.replacingOccurrences(of: "(?s)\\[b\\]\\s*(.*?)\\s*\\[/b\\]", with: "**$1**", options: [.regularExpression, .caseInsensitive])
         formatted = formatted.replacingOccurrences(of: "(?s)\\[i\\]\\s*(.*?)\\s*\\[/i\\]", with: "*$1*", options: [.regularExpression, .caseInsensitive])
         formatted = formatted.replacingOccurrences(of: "(?s)\\[s\\]\\s*(.*?)\\s*\\[/s\\]", with: "~~$1~~", options: [.regularExpression, .caseInsensitive])
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[u\\]\\s*(.*?)\\s*\\[/u\\]", with: "*$1*", options: [.regularExpression, .caseInsensitive])
         
-        // Headers (Size tags are often used as headers) - SwiftUI Text Markdown doesn't support ###, so use Bold
+        // Headers (Size tags and heading tags)
         formatted = formatted.replacingOccurrences(of: "(?s)\\[size=[^\\]]+\\]\\s*(.*?)\\s*\\[/size\\]", with: "**$1**", options: [.regularExpression, .caseInsensitive])
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[heading[=\\d]*\\]\\s*(.*?)\\s*\\[/heading\\]", with: "**$1**", options: [.regularExpression, .caseInsensitive])
         
         // Spoilers
         formatted = formatted.replacingOccurrences(of: "(?s)\\[spoiler\\]\\s*(.*?)\\s*\\[/spoiler\\]", with: "\n*--- Spoiler ---*\n$1\n*--- End Spoiler ---*\n", options: [.regularExpression, .caseInsensitive])
         
         // Lists
-        formatted = formatted.replacingOccurrences(of: "(?i)\\[/?list\\]", with: "\n", options: .regularExpression)
-        formatted = formatted.replacingOccurrences(of: "(?i)\\[\\*\\]", with: "- ", options: .regularExpression)
+        formatted = formatted.replacingOccurrences(of: "(?i)\\[/?list(?:=[^\\]]+)?\\]", with: "\n", options: .regularExpression)
+        formatted = formatted.replacingOccurrences(of: "(?i)\\[\\*\\]", with: "\n- ", options: .regularExpression)
+        formatted = formatted.replacingOccurrences(of: "(?i)\\[li\\]", with: "\n- ", options: .regularExpression)
+        formatted = formatted.replacingOccurrences(of: "(?i)\\[/li\\]", with: "", options: .regularExpression)
         
         // Links
         formatted = formatted.replacingOccurrences(of: "(?s)\\[url=(.*?)\\]\\s*(.*?)\\s*\\[/url\\]", with: "[$2]($1)", options: [.regularExpression, .caseInsensitive])
         formatted = formatted.replacingOccurrences(of: "(?s)\\[url\\]\\s*(.*?)\\s*\\[/url\\]", with: "[$1]($1)", options: [.regularExpression, .caseInsensitive])
         
+        // Horizontal Rules
+        formatted = formatted.replacingOccurrences(of: "(?i)\\[/?(?:line|hr)\\]", with: "\n---\n", options: .regularExpression)
+        
         // 5. Strip remaining formatting BBCode tags (keeping their inner content)
-        formatted = formatted.replacingOccurrences(of: "(?s)\\[/?(?:color|center|left|right|u|font|align|quote)(?:=[^\\]]+)?\\]", with: "", options: [.regularExpression, .caseInsensitive])
+        formatted = formatted.replacingOccurrences(of: "(?s)\\[/?(?:color|center|left|right|font|align|quote|sub|sup|code)(?:=[^\\]]+)?\\]", with: "", options: [.regularExpression, .caseInsensitive])
         
         // 6. Split by [img] tags
         var blocks: [DescriptionBlock] = []
