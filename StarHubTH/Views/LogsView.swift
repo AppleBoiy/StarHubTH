@@ -107,9 +107,9 @@ struct LogsView: View {
                 .buttonStyle(.plain)
                 .help(vm.L(L10n.Logs.refreshHint))
 
-                // Clear app logs
+                // Clear all logs
                 Button(vm.L(L10n.Logs.clearLogs)) {
-                    vm.logEntries.removeAll { $0.source == .app }
+                    vm.logEntries.removeAll()
                     vm.logOutput = ""
                 }
                 .font(.system(size: 12))
@@ -121,7 +121,16 @@ struct LogsView: View {
             Divider()
 
             // ── Entries ──────────────────────────────────────────────
-            if filteredEntries.isEmpty {
+            if vm.isReadingSMAPILog {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text(vm.L(L10n.Logs.readingSmapiLog))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if filteredEntries.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "text.badge.checkmark")
                         .font(.system(size: 32))
@@ -142,11 +151,11 @@ struct LogsView: View {
                     }
                     .listStyle(.plain)
                     .id(selectedSource.map { "\($0)" } ?? "all")
-                    .onChange(of: vm.logEntries.count) {
+                    .onChange(of: vm.logEntries.count, perform: { _ in
                         if autoScroll, let last = filteredEntries.last {
                             withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                         }
-                    }
+                    })
                 }
             }
 

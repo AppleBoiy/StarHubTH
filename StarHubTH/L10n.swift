@@ -146,6 +146,30 @@ enum L10n {
         static let viewOnNexus          = "mods_view_on_nexus"
         static let viewDetailsOnNexus   = "mods_view_details_on_nexus"
         static let mods                 = "mods_mods"
+        // Filter
+        static let filterAll            = "mods_filter_all"
+        static let filterEnabled        = "mods_filter_enabled"
+        static let filterDisabled       = "mods_filter_disabled"
+        static let filterType           = "mods_filter_type"
+        static let filterTypeAll        = "mods_filter_type_all"
+        // Sort
+        static let sortBy               = "mods_sort_by"
+        static let sortName             = "mods_sort_name"
+        static let sortNameDesc         = "mods_sort_name_desc"
+        static let sortAuthor           = "mods_sort_author"
+        static let sortVersion          = "mods_sort_version"
+        static let sortStatus           = "mods_sort_status"
+        // Update
+        static let updateAvailable      = "mods_update_available"
+        static let updateMod            = "mods_update_mod"
+        static let updateCount          = "mods_update_count"
+        // Install from ZIP
+        static let installMod           = "mods_install_mod"
+        static let installSuccess       = "mods_install_success"
+        static let installNoModFound    = "mods_install_no_mod_found"
+        static let installDropHint      = "mods_install_drop_hint"
+        static let installInvalidFile   = "mods_install_invalid_file"
+        static let installing           = "mods_installing"
     }
 
     // MARK: - Logs
@@ -164,6 +188,7 @@ enum L10n {
         static let copyAll              = "logs_copy_all"
         static let searchPlaceholder    = "logs_search_placeholder"
         static let entryCount           = "logs_entry_count"
+        static let readingSmapiLog      = "logs_reading_smapi_log"
         static let refreshHint          = "logs_refresh_hint"
         static let copyLine             = "logs_copy_line"
     }
@@ -209,6 +234,38 @@ enum L10n {
         static let footerBackup         = "settings_footer_backup"
         static let footerAppearance     = "settings_footer_appearance"
         static let footerManagement     = "settings_footer_management"
+        
+        // Nexus API
+        static let nexusApiKey          = "nexus_api_key"
+        static let nexusApiKeyHint      = "nexus_api_key_hint"
+        static let nexusConnected       = "nexus_connected"
+        static let nexusNotConnected    = "nexus_not_connected"
+        static let nexusApiKeyPlaceholder = "nexus_api_key_placeholder"
+        static let nexusGetApiKey       = "nexus_get_api_key"
+        static let nexusApiSectionFooter = "nexus_api_section_footer"
+        
+        // Mod Config
+        static let configEditor         = "config_editor"
+        static let configSave           = "config_save"
+        static let configReset          = "config_reset"
+        static let configInvalidJson    = "config_invalid_json"
+        static let configSaved          = "config_saved"
+        static let configTitle          = "config_title"
+        static let configVisualEditor   = "config_visual_editor"
+        static let configCodeEditor     = "config_code_editor"
+        static let configBackupMod      = "config_backup_mod"
+        static let configRestoreMod     = "config_restore_mod"
+        static let configRestoreConfig  = "config_restore_config"
+        
+        // Nexus features
+        static let nexusDownloadInstall = "nexus_download_install"
+        static let nexusDownloading     = "nexus_downloading"
+        static let nexusEndorse         = "nexus_endorse"
+        static let nexusEndorsed        = "nexus_endorsed"
+        static let nexusModDetails      = "nexus_mod_details"
+        static let nexusDescription     = "nexus_description"
+        static let nexusChangelog       = "nexus_changelog"
+        static let nexusNoChangelog     = "nexus_no_changelog"
     }
 
     // MARK: - Smapi

@@ -31,6 +31,40 @@ struct ModItem: Identifiable, Equatable {
     let dependencies: [ModDependency]
     var children: [ModItem]?
     var isGroup: Bool = false
+    var modTag: String = ""      // inferred type tag (e.g. "Framework", "Cosmetic", "UI", …)
+
+    /// Infer a display type tag from manifest metadata.
+    static func inferTag(name: String, uniqueId: String, description: String) -> String {
+        let haystack = "\(name) \(uniqueId) \(description)".lowercased()
+        if haystack.contains("content patcher") || uniqueId.lowercased().hasPrefix("pathoschild.contentpatcher") {
+            return "Content Patcher"
+        }
+        if haystack.contains("framework") || haystack.contains("smapi") || haystack.contains("spacechase") && haystack.contains("core") {
+            return "Framework"
+        }
+        if haystack.contains("cosmetic") || haystack.contains("portrait") || haystack.contains("sprite") || haystack.contains("retexture") || haystack.contains("skin") || haystack.contains("hair") || haystack.contains("fashion") {
+            return "Cosmetic"
+        }
+        if haystack.contains(" npc") || haystack.contains("marriage") || haystack.contains("bachelor") || haystack.contains("villager") {
+            return "NPC"
+        }
+        if haystack.contains("ui") || haystack.contains("interface") || haystack.contains("hud") || haystack.contains("menu") || haystack.contains("inventory") {
+            return "UI"
+        }
+        if haystack.contains("music") || haystack.contains("audio") || haystack.contains("sound") || haystack.contains("ambient") {
+            return "Audio"
+        }
+        if haystack.contains("cheat") || haystack.contains("time") || haystack.contains("speed") || haystack.contains("gameplay") || haystack.contains("harvest") || haystack.contains("farm") || haystack.contains("crop") || haystack.contains("fishing") {
+            return "Gameplay"
+        }
+        if haystack.contains("map") || haystack.contains("location") || haystack.contains("world") || haystack.contains("tile") {
+            return "Map"
+        }
+        if haystack.contains("translation") || haystack.contains("language") || haystack.contains("locale") || haystack.contains("thai") {
+            return "Translation"
+        }
+        return ""
+    }
 }
 
 struct ModUpdateInfo: Identifiable, Equatable {
@@ -122,6 +156,20 @@ enum SaveSortOption: String, Codable {
     case money
 }
 
+enum ModFilterStatus: String, CaseIterable {
+    case all
+    case enabled
+    case disabled
+}
+
+enum ModSortOption: String, CaseIterable {
+    case name
+    case nameDesc
+    case author
+    case version
+    case status
+}
+
 class StarHubTHViewModel: ObservableObject {
     @Published var saveViewMode: SaveViewMode = .list
     @Published var saveSortOption: SaveSortOption = .lastPlayed
@@ -141,12 +189,18 @@ class StarHubTHViewModel: ObservableObject {
     @Published var smapiInstalledVersion: String? = nil   // nil = not installed
     @Published var mods: [ModItem] = []
     
+    // Mod list filter / sort state
+    @Published var modFilterStatus: ModFilterStatus = .all
+    @Published var modFilterTag: String = ""        // "" = all types
+    @Published var modSortOption: ModSortOption = .name
+    
     // Thai Translation Hub State
     @Published var thaiTranslations: [ThaiTranslationMod] = []
     @Published var viewingThaiMod: ThaiTranslationMod? = nil
     
     @Published var logOutput: String = ""
     @Published var logEntries: [LogEntry] = []
+    @Published var isReadingSMAPILog: Bool = false
     private var smapiLogFileHandle: FileHandle? = nil
     @Published var smapiLogTimer: Timer? = nil
     @Published var alertMessage: String = ""
@@ -154,6 +208,7 @@ class StarHubTHViewModel: ObservableObject {
     @Published var isThaiTranslationInstalled: Bool = false
     
     @Published var saves: [SaveGameInfo] = []
+    @Published var editingModConfig: ModItem? = nil
     @Published var editingSave: SaveGameInfo? = nil {
         didSet {
             if let save = editingSave {
@@ -207,6 +262,12 @@ class StarHubTHViewModel: ObservableObject {
         get { UserDefaults.standard.object(forKey: "chainToggleDependencies") as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: "chainToggleDependencies") }
     }
+    
+    var nexusApiKey: String {
+        get { UserDefaults.standard.string(forKey: "nexusApiKey") ?? "" }
+    }
+    
+    @Published var downloadingMods: Set<String> = []
     
     let smapiInstaller = SmapiInstaller()
     
@@ -369,10 +430,7 @@ class StarHubTHViewModel: ObservableObject {
                 // Strip block comments (/* ... */) often added by ModManifestBuilder
                 let cleanString = rawString.replacingOccurrences(of: "/\\*[\\s\\S]*?\\*/", with: "", options: .regularExpression)
                 
-                var options: JSONSerialization.ReadingOptions = []
-                if #available(macOS 12.0, *) {
-                    options.insert(.json5Allowed)
-                }
+                let options: JSONSerialization.ReadingOptions = [.json5Allowed]
                 
                 if let data = cleanString.data(using: .utf8),
                    let json = try? JSONSerialization.jsonObject(with: data, options: options) as? [String: Any] {
@@ -414,6 +472,8 @@ class StarHubTHViewModel: ObservableObject {
             }
         }
             
+            let inferredTag = ModItem.inferTag(name: name, uniqueId: uniqueId, description: description)
+            
             return ModItem(
                 uniqueId: uniqueId,
                 name: name,
@@ -423,7 +483,8 @@ class StarHubTHViewModel: ObservableObject {
                 description: description,
                 nexusUrl: nexusUrl,
                 isEnabled: isEnabled,
-                dependencies: dependencies
+                dependencies: dependencies,
+                modTag: inferredTag
             )
         }
         
@@ -720,16 +781,31 @@ class StarHubTHViewModel: ObservableObject {
             let destFolder = m.isEnabled ? disabledModsPath : modsPath
             let destPath = ((destFolder as NSString).appendingPathComponent(m.folderName) as String)
             
+            let destBackup = "\(destPath)_toggle_backup_temp"
             do {
                 let destParent = (destPath as NSString).deletingLastPathComponent
                 if !fm.fileExists(atPath: destParent) {
                     try fm.createDirectory(atPath: destParent, withIntermediateDirectories: true, attributes: nil)
                 }
                 if fm.fileExists(atPath: destPath) {
-                    try fm.removeItem(atPath: destPath)
+                    if fm.fileExists(atPath: destBackup) {
+                        try? fm.removeItem(atPath: destBackup)
+                    }
+                    try fm.moveItem(atPath: destPath, toPath: destBackup)
                 }
-                try fm.moveItem(atPath: srcPath, toPath: destPath)
-                anyMoved = true
+                
+                do {
+                    try fm.moveItem(atPath: srcPath, toPath: destPath)
+                    if fm.fileExists(atPath: destBackup) {
+                        try? fm.trashItem(at: URL(fileURLWithPath: destBackup), resultingItemURL: nil)
+                    }
+                    anyMoved = true
+                } catch {
+                    if fm.fileExists(atPath: destBackup) && !fm.fileExists(atPath: destPath) {
+                        try? fm.moveItem(atPath: destBackup, toPath: destPath)
+                    }
+                    throw error
+                }
             } catch {
                 print("Failed to toggle \(m.name): \(error.localizedDescription)")
             }
@@ -742,6 +818,287 @@ class StarHubTHViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Install Mod (ZIP or Folder)
+
+    @Published var isInstallingMod: Bool = false
+
+    /// Opens an NSOpenPanel — accepts both .zip files AND already-extracted folders.
+    func openInstallModPanel() {
+        let panel = NSOpenPanel()
+        panel.title = L(L10n.Mods.installMod)
+        panel.allowedContentTypes = [.init(filenameExtension: "zip")!]
+        panel.allowsMultipleSelection = true
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true   // ← also accept extracted folders
+        if panel.runModal() == .OK {
+            for url in panel.urls {
+                installMod(url: url)
+            }
+        }
+    }
+
+    /// Entry point — detects whether the URL is a .zip or a folder and routes accordingly.
+    func installMod(url: URL) {
+        guard !gameDir.isEmpty else {
+            showModal(message: L(L10n.Settings.gameDirNotSet))
+            return
+        }
+        var isDir: ObjCBool = false
+        FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+
+        if isDir.boolValue {
+            installModFromFolder(url: url)
+        } else if url.pathExtension.lowercased() == "zip" {
+            installModFromZip(url: url)
+        } else {
+            showModal(message: L(L10n.Mods.installInvalidFile))
+        }
+    }
+
+    /// Installs a mod from a .zip file — unzips to a temp dir then delegates to installExtractedContent.
+    func installModFromZip(url: URL) {
+        let fm = FileManager.default
+        let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            DispatchQueue.main.async { self.isInstallingMod = true }
+
+            do {
+                try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+
+                let unzip = Process()
+                unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+                unzip.arguments = ["-o", "-q", url.path, "-d", tempDir.path]
+                try unzip.run()
+                unzip.waitUntilExit()
+
+                guard unzip.terminationStatus == 0 else {
+                    try? fm.removeItem(at: tempDir)
+                    DispatchQueue.main.async {
+                        self.isInstallingMod = false
+                        self.showModal(message: self.L(L10n.VM.unzipError))
+                    }
+                    return
+                }
+
+                self.installExtractedContent(from: tempDir, cleanup: true)
+
+            } catch {
+                try? fm.removeItem(at: tempDir)
+                DispatchQueue.main.async {
+                    self.isInstallingMod = false
+                    self.showModal(message: String(format: self.L(L10n.VM.unzipFailed), error.localizedDescription))
+                }
+            }
+        }
+    }
+
+    /// Installs a mod from an already-extracted folder.
+    /// Handles both a single mod folder (contains manifest.json directly)
+    /// and a pack folder (contains multiple sub-mod folders each with manifest.json).
+    func installModFromFolder(url: URL) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            DispatchQueue.main.async { self.isInstallingMod = true }
+            // Use the parent directory as the "root" so the folder itself
+            // is treated as the top-level candidate — same logic as post-unzip.
+            self.installExtractedContent(from: url.deletingLastPathComponent(),
+                                         specificRoot: url.lastPathComponent,
+                                         cleanup: false)
+        }
+    }
+
+    /// Shared worker: scans `rootDir` for sub-folders that directly contain manifest.json,
+    /// moves them into the game's Mods/ folder, then optionally removes `rootDir` (for temp dirs).
+    /// - Parameters:
+    ///   - rootDir: Directory to scan (either a temp unzip dir or the parent of a dropped folder).
+    ///   - specificRoot: If non-nil, only the item with this name inside rootDir is considered.
+    ///   - cleanup: Whether to delete rootDir after the operation.
+    private func installExtractedContent(from rootDir: URL,
+                                         specificRoot: String? = nil,
+                                         cleanup: Bool) {
+        let fm = FileManager.default
+        let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
+
+        do {
+            // 1. Collect all folders that contain a manifest.json
+            var manifestDirs: [URL] = []
+            let enumerateRoot = specificRoot.map { rootDir.appendingPathComponent($0) } ?? rootDir
+
+            if let enumerator = fm.enumerator(
+                at: enumerateRoot,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            ) {
+                for case let fileURL as URL in enumerator {
+                    if fileURL.lastPathComponent.lowercased() == "manifest.json" {
+                        manifestDirs.append(fileURL.deletingLastPathComponent())
+                    }
+                }
+            }
+
+            // 2. Keep only top-most (shallowest) folders — skip children already covered by a parent
+            let topLevelDirs = manifestDirs.filter { candidate in
+                !manifestDirs.contains { other in
+                    other != candidate && candidate.path.hasPrefix(other.path + "/")
+                }
+            }
+
+            guard !topLevelDirs.isEmpty else {
+                if cleanup { try? fm.removeItem(at: rootDir) }
+                DispatchQueue.main.async {
+                    self.isInstallingMod = false
+                    self.showModal(message: self.L(L10n.Mods.installNoModFound))
+                }
+                return
+            }
+
+            // 3. Create Mods dir if needed
+            if !fm.fileExists(atPath: modsPath) {
+                try fm.createDirectory(atPath: modsPath, withIntermediateDirectories: true)
+            }
+
+            // 4. For each mod folder, find its root name relative to rootDir, then move/copy
+            var installedNames: [String] = []
+            var movedRoots = Set<String>()
+
+            for modDir in topLevelDirs {
+                let relative = Array(modDir.pathComponents.dropFirst(rootDir.pathComponents.count))
+                guard let rootName = relative.first else { continue }
+                if movedRoots.contains(rootName) { continue }
+                movedRoots.insert(rootName)
+
+                let srcRoot = rootDir.appendingPathComponent(rootName)
+                let destRoot = URL(fileURLWithPath: modsPath).appendingPathComponent(rootName)
+                let destBackup = URL(fileURLWithPath: modsPath).appendingPathComponent("\(rootName)_backup_temp")
+
+                if fm.fileExists(atPath: destRoot.path) {
+                    if fm.fileExists(atPath: destBackup.path) {
+                        try? fm.removeItem(at: destBackup)
+                    }
+                    try fm.moveItem(at: destRoot, to: destBackup)
+                }
+
+                do {
+                    if cleanup {
+                        try fm.moveItem(at: srcRoot, to: destRoot)
+                    } else {
+                        try fm.copyItem(at: srcRoot, to: destRoot)
+                    }
+                    if fm.fileExists(atPath: destBackup.path) {
+                        try? fm.trashItem(at: destBackup, resultingItemURL: nil)
+                    }
+                    installedNames.append(rootName)
+                } catch {
+                    if fm.fileExists(atPath: destBackup.path) && !fm.fileExists(atPath: destRoot.path) {
+                        try? fm.moveItem(at: destBackup, to: destRoot)
+                    }
+                    throw error
+                }
+            }
+
+            if cleanup { try? fm.removeItem(at: rootDir) }
+
+            DispatchQueue.main.async {
+                self.isInstallingMod = false
+                let names = installedNames.joined(separator: ", ")
+                let msg = String(format: self.L(L10n.Mods.installSuccess), names)
+                self.showModal(message: msg)
+                self.log(msg)
+                self.scanMods()
+            }
+
+        } catch {
+            if cleanup { try? fm.removeItem(at: rootDir) }
+            DispatchQueue.main.async {
+                self.isInstallingMod = false
+                self.showModal(message: String(format: self.L(L10n.VM.unzipFailed), error.localizedDescription))
+            }
+        }
+    }
+
+    // MARK: - Nexus Auto-Download
+    
+    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: Int) {
+        let apiKey = self.nexusApiKey
+        guard !apiKey.isEmpty else { return }
+        
+        DispatchQueue.main.async {
+            self.downloadingMods.insert(mod.name)
+        }
+        
+        // Step 1: get files list to find latest file ID
+        NexusAPIService.shared.getModFiles(modId: nexusId, apiKey: apiKey) { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .success(let fileList):
+                // Find main file or latest file. For simplicity, just grab the first file in the 'main' category (id = 1) or fallback to first.
+                // Usually fileList.files is sorted by uploaded date descending.
+                let targetFile = fileList.files.first { $0.categoryId == 1 } ?? fileList.files.first
+                guard let fileId = targetFile?.fileId else {
+                    DispatchQueue.main.async {
+                        self.downloadingMods.remove(mod.name)
+                        self.showModal(message: "Could not find a valid file to download for \(mod.name).")
+                    }
+                    return
+                }
+                
+                // Step 2: get download link
+                NexusAPIService.shared.getDownloadLink(modId: nexusId, fileId: fileId, apiKey: apiKey) { linkResult in
+                    switch linkResult {
+                    case .success(let links):
+                        guard let downloadLink = links.first?.URI, let url = URL(string: downloadLink) else {
+                            DispatchQueue.main.async {
+                                self.downloadingMods.remove(mod.name)
+                                self.showModal(message: "Could not obtain download link for \(mod.name).")
+                            }
+                            return
+                        }
+                        
+                        // Step 3: download the file
+                        let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".zip")
+                        let task = URLSession.shared.downloadTask(with: url) { localURL, response, error in
+                            if let error = error {
+                                DispatchQueue.main.async {
+                                    self.downloadingMods.remove(mod.name)
+                                    self.showModal(message: "Download failed: \(error.localizedDescription)")
+                                }
+                                return
+                            }
+                            guard let localURL = localURL else { return }
+                            
+                            do {
+                                try FileManager.default.moveItem(at: localURL, to: tempZipURL)
+                                DispatchQueue.main.async {
+                                    // Step 4: Install it! (We can reuse installModFromZip, but we also want to clear downloadingMods)
+                                    // So we'll dispatch directly to installModFromZip and let it run. We just remove downloadingMods.
+                                    self.downloadingMods.remove(mod.name)
+                                    self.installModFromZip(url: tempZipURL)
+                                }
+                            } catch {
+                                DispatchQueue.main.async {
+                                    self.downloadingMods.remove(mod.name)
+                                    self.showModal(message: "File move error: \(error.localizedDescription)")
+                                }
+                            }
+                        }
+                        task.resume()
+                        
+                    case .failure(let error):
+                        DispatchQueue.main.async {
+                            self.downloadingMods.remove(mod.name)
+                            self.showModal(message: "Failed to get download link: \(error.localizedDescription)")
+                        }
+                    }
+                }
+            case .failure(let error):
+                DispatchQueue.main.async {
+                    self.downloadingMods.remove(mod.name)
+                    self.showModal(message: "Failed to fetch mod files: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
     // Install SMAPI via Installer Helper
     func installSmapi() {
         smapiInstaller.install(gameDir: gameDir) { success, msg in
@@ -869,75 +1226,76 @@ class StarHubTHViewModel: ObservableObject {
 
     // MARK: - SMAPI Log Reader
 
-    /// Load SMAPI-latest.txt once when Logs tab is opened.
-    /// No live polling — SMAPI doesn't flush continuously anyway.
+    /// Load SMAPI-latest.txt asynchronously when Logs tab is opened.
     func loadSmapiLog() {
         let path = smapiLogPath
-        guard FileManager.default.fileExists(atPath: path),
-              let data = FileManager.default.contents(atPath: path),
-              let text = String(data: data, encoding: .utf8) else { return }
+        guard FileManager.default.fileExists(atPath: path) else { return }
 
-        let lines = text.components(separatedBy: .newlines)
-        var entries: [LogEntry] = []
+        isReadingSMAPILog = true
 
-        for line in lines {
-            // SMAPI format: [HH:MM:SS LEVEL  Context] message
-            // (double space between level and context is intentional in SMAPI)
-            if line.hasPrefix("[") {
-                guard let bracketEnd = line.firstIndex(of: "]") else {
-                    // malformed — skip
-                    continue
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let data = FileManager.default.contents(atPath: path),
+                  let text = String(data: data, encoding: .utf8) else {
+                DispatchQueue.main.async {
+                    self.isReadingSMAPILog = false
                 }
-
-                let header = String(line[line.index(after: line.startIndex)..<bracketEnd])
-                // Split by whitespace, filter empty (handles double space)
-                let headerParts = header.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-                // headerParts: [0]=HH:MM:SS, [1]=LEVEL, [2+]=Context
-
-                let ts = headerParts.count >= 1 ? headerParts[0] : "—"
-                let levelStr = headerParts.count >= 2 ? headerParts[1] : ""
-                let contextName: String? = {
-                    guard headerParts.count >= 3 else { return nil }
-                    let name = headerParts[2...].joined(separator: " ")
-                    return (name == "SMAPI" || name == "game") ? nil : name
-                }()
-
-                let level: LogLevel
-                switch levelStr.uppercased() {
-                case "ERROR":  level = .error
-                case "WARN":   level = .warning
-                case "ALERT":  level = .warning
-                case "INFO":   level = .info
-                default:       level = .smapi  // TRACE, DEBUG, etc.
-                }
-
-                // Message = everything after "] "
-                let msgStart = line.index(after: bracketEnd)
-                let message = msgStart < line.endIndex
-                    ? String(line[msgStart...]).trimmingCharacters(in: .whitespaces)
-                    : ""
-
-                if !message.isEmpty || contextName != nil {
-                    var entry = LogEntry(timestamp: ts, message: message, level: level, source: .smapi)
-                    entry.modName = contextName
-                    entries.append(entry)
-                }
-            } else {
-                // Continuation line — append to last entry's message
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                guard !trimmed.isEmpty, !entries.isEmpty else { continue }
-                let last = entries.removeLast()
-                let combined = last.message.isEmpty ? trimmed : last.message + "\n" + trimmed
-                var updated = LogEntry(timestamp: last.timestamp, message: combined, level: last.level, source: .smapi)
-                updated.modName = last.modName
-                entries.append(updated)
+                return
             }
-        }
 
-        if Thread.isMainThread {
-            logEntries.append(contentsOf: entries)
-        } else {
-            DispatchQueue.main.async { self.logEntries.append(contentsOf: entries) }
+            let lines = text.components(separatedBy: .newlines)
+            var entries: [LogEntry] = []
+
+            for line in lines {
+                if line.hasPrefix("[") {
+                    guard let bracketEnd = line.firstIndex(of: "]") else {
+                        continue
+                    }
+
+                    let header = String(line[line.index(after: line.startIndex)..<bracketEnd])
+                    let headerParts = header.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+
+                    let ts = headerParts.count >= 1 ? headerParts[0] : "—"
+                    let levelStr = headerParts.count >= 2 ? headerParts[1] : ""
+                    let contextName: String? = {
+                        guard headerParts.count >= 3 else { return nil }
+                        let name = headerParts[2...].joined(separator: " ")
+                        return (name == "SMAPI" || name == "game") ? nil : name
+                    }()
+
+                    let level: LogLevel
+                    switch levelStr.uppercased() {
+                    case "ERROR":  level = .error
+                    case "WARN":   level = .warning
+                    case "ALERT":  level = .warning
+                    case "INFO":   level = .info
+                    default:       level = .smapi  // TRACE, DEBUG, etc.
+                    }
+
+                    let msgStart = line.index(after: bracketEnd)
+                    let message = msgStart < line.endIndex
+                        ? String(line[msgStart...]).trimmingCharacters(in: .whitespaces)
+                        : ""
+
+                    if !message.isEmpty || contextName != nil {
+                        var entry = LogEntry(timestamp: ts, message: message, level: level, source: .smapi)
+                        entry.modName = contextName
+                        entries.append(entry)
+                    }
+                } else {
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    guard !trimmed.isEmpty, !entries.isEmpty else { continue }
+                    let last = entries.removeLast()
+                    let combined = last.message.isEmpty ? trimmed : last.message + "\n" + trimmed
+                    var updated = LogEntry(timestamp: last.timestamp, message: combined, level: last.level, source: .smapi)
+                    updated.modName = last.modName
+                    entries.append(updated)
+                }
+            }
+
+            DispatchQueue.main.async {
+                self.logEntries.append(contentsOf: entries)
+                self.isReadingSMAPILog = false
+            }
         }
     }
 
@@ -1050,12 +1408,18 @@ class StarHubTHViewModel: ObservableObject {
         
         var roots = rootSaves.map { buildNode(for: $0) }
         
-        // Apply tag filter
+        // Apply tag filter recursively
         if !saveFilterTag.isEmpty {
-            roots = roots.filter { node in
+            func filterNode(_ node: SaveNode) -> SaveNode? {
                 let tag = SaveNotesStore.shared.note(for: node.info.folderName).tag
-                return tag == saveFilterTag
+                let selfMatches = tag == saveFilterTag
+                let filteredChildren = node.children.compactMap { filterNode($0) }
+                if selfMatches || !filteredChildren.isEmpty {
+                    return SaveNode(info: node.info, children: filteredChildren)
+                }
+                return nil
             }
+            roots = roots.compactMap { filterNode($0) }
         }
         
         roots = sortedNodes(roots)
@@ -1208,6 +1572,91 @@ class StarHubTHViewModel: ObservableObject {
             }
         } catch {
             showModal(message: L(L10n.VM.cannotRunZip))
+        }
+    }
+    
+    func backupMod(mod: ModItem) {
+        guard !gameDir.isEmpty else {
+            showModal(message: L(L10n.Settings.gameDirNotSet))
+            return
+        }
+        let basePath = (gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
+        let modDir = (basePath as NSString).appendingPathComponent(mod.folderName)
+        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium).replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "")
+        let defaultFileName = "\(mod.folderName)_Backup_\(timestamp).zip"
+        
+        DispatchQueue.main.async {
+            let panel = NSSavePanel()
+            panel.title = "Save Backup"
+            panel.nameFieldStringValue = defaultFileName
+            panel.allowedContentTypes = [.zip]
+            panel.canCreateDirectories = true
+            
+            if panel.runModal() == .OK, let url = panel.url {
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let process = Process()
+                    process.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
+                    process.arguments = ["-r", url.path, "."]
+                    process.currentDirectoryURL = URL(fileURLWithPath: modDir)
+                    
+                    do {
+                        try process.run()
+                        process.waitUntilExit()
+                        DispatchQueue.main.async {
+                            if process.terminationStatus == 0 {
+                                self.showModal(message: String(format: self.L(L10n.VM.backupModsSuccess), url.path))
+                            } else {
+                                self.showModal(message: self.L(L10n.VM.zipModsError))
+                            }
+                        }
+                    } catch {
+                        DispatchQueue.main.async {
+                            self.showModal(message: self.L(L10n.VM.cannotRunZip))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    func restoreModZip(mod: ModItem) {
+        guard !gameDir.isEmpty else {
+            showModal(message: L(L10n.Settings.gameDirNotSet))
+            return
+        }
+        let basePath = (gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
+        let modDir = (basePath as NSString).appendingPathComponent(mod.folderName)
+        
+        DispatchQueue.main.async {
+            let panel = NSOpenPanel()
+            panel.title = "Select Mod Backup (.zip)"
+            panel.allowedContentTypes = [.init(filenameExtension: "zip")!]
+            panel.allowsMultipleSelection = false
+            
+            if panel.runModal() == .OK, let zipUrl = panel.url {
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let process = Process()
+                    process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+                    process.arguments = ["-o", zipUrl.path, "-d", modDir]
+                    
+                    do {
+                        try process.run()
+                        process.waitUntilExit()
+                        DispatchQueue.main.async {
+                            if process.terminationStatus == 0 {
+                                self.showModal(message: "Restored \(mod.name) from zip backup successfully!")
+                                self.scanMods()
+                            } else {
+                                self.showModal(message: "Failed to extract zip backup.")
+                            }
+                        }
+                    } catch {
+                        DispatchQueue.main.async {
+                            self.showModal(message: "Error restoring mod zip: \(error.localizedDescription)")
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -1519,17 +1968,23 @@ class StarHubTHViewModel: ObservableObject {
             return
         }
 
-        activeProfileId = id
-        saveProfiles()
-        applyProfileToFilesystem(profile: profile)
-        self.log(String(format: L(L10n.VM.switchProfile), profile.name))
+        let success = applyProfileToFilesystem(profile: profile)
+        if success {
+            activeProfileId = id
+            saveProfiles()
+            self.log(String(format: L(L10n.VM.switchProfile), profile.name))
+        } else {
+            showModal(message: "Failed to apply profile completely due to filesystem errors.")
+        }
     }
 
     /// Actually move mod files to match the given profile's enabledModIds.
-    private func applyProfileToFilesystem(profile: ModProfile) {
+    @discardableResult
+    private func applyProfileToFilesystem(profile: ModProfile) -> Bool {
         let fm = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
         let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
+        var hasError = false
 
         // Check whether a mod (or any of its children) is covered by the profile's enabled list
         func isCoveredByProfile(_ mod: ModItem) -> Bool {
@@ -1544,9 +1999,32 @@ class StarHubTHViewModel: ObservableObject {
             if !isCoveredByProfile(mod) {
                 let src = (modsPath as NSString).appendingPathComponent(mod.folderName)
                 let dst = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
-                try? fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
-                                        withIntermediateDirectories: true, attributes: nil)
-                try? fm.moveItem(atPath: src, toPath: dst)
+                let dstBackup = "\(dst)_profile_backup_temp"
+                do {
+                    try fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
+                                            withIntermediateDirectories: true, attributes: nil)
+                    if fm.fileExists(atPath: dst) {
+                        if fm.fileExists(atPath: dstBackup) {
+                            try? fm.removeItem(atPath: dstBackup)
+                        }
+                        try fm.moveItem(atPath: dst, toPath: dstBackup)
+                    }
+                    
+                    do {
+                        try fm.moveItem(atPath: src, toPath: dst)
+                        if fm.fileExists(atPath: dstBackup) {
+                            try? fm.trashItem(at: URL(fileURLWithPath: dstBackup), resultingItemURL: nil)
+                        }
+                    } catch {
+                        if fm.fileExists(atPath: dstBackup) && !fm.fileExists(atPath: dst) {
+                            try? fm.moveItem(atPath: dstBackup, toPath: dst)
+                        }
+                        throw error
+                    }
+                } catch {
+                    print("Failed to disable \(mod.name) for profile: \(error)")
+                    hasError = true
+                }
             }
         }
 
@@ -1555,14 +2033,38 @@ class StarHubTHViewModel: ObservableObject {
             if isCoveredByProfile(mod) {
                 let src = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
                 let dst = (modsPath as NSString).appendingPathComponent(mod.folderName)
-                try? fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
-                                        withIntermediateDirectories: true, attributes: nil)
-                try? fm.moveItem(atPath: src, toPath: dst)
+                let dstBackup = "\(dst)_profile_backup_temp"
+                do {
+                    try fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
+                                            withIntermediateDirectories: true, attributes: nil)
+                    if fm.fileExists(atPath: dst) {
+                        if fm.fileExists(atPath: dstBackup) {
+                            try? fm.removeItem(atPath: dstBackup)
+                        }
+                        try fm.moveItem(atPath: dst, toPath: dstBackup)
+                    }
+                    
+                    do {
+                        try fm.moveItem(atPath: src, toPath: dst)
+                        if fm.fileExists(atPath: dstBackup) {
+                            try? fm.trashItem(at: URL(fileURLWithPath: dstBackup), resultingItemURL: nil)
+                        }
+                    } catch {
+                        if fm.fileExists(atPath: dstBackup) && !fm.fileExists(atPath: dst) {
+                            try? fm.moveItem(atPath: dstBackup, toPath: dst)
+                        }
+                        throw error
+                    }
+                } catch {
+                    print("Failed to enable \(mod.name) for profile: \(error)")
+                    hasError = true
+                }
             }
         }
 
         self.scanMods()
         self.syncActiveProfileIds()
+        return !hasError
     }
 
     /// Compute which uniqueIds should be added/removed when toggling a mod in a profile,

@@ -112,6 +112,7 @@ def create_app_bundle():
         "-o", app_executable,
         "-parse-as-library",
         "-module-cache-path", module_cache_dir,
+        "-target", "arm64-apple-macos13.0",
     ]
     
     # Run compiler

@@ -25,6 +25,7 @@ struct MainView: View {
     private var navigationTitleText: String {
         if currentTab == "Saves" && vm.viewingSaveTimeline != nil { return vm.L(L10n.Saves.timeline) }
         if currentTab == "Saves" && vm.editingSave != nil { return vm.editingSave!.playerName }
+        if currentTab == "Mods" && vm.editingModConfig != nil { return vm.editingModConfig!.name }
         if currentTab == "ThaiHub" && vm.viewingThaiMod != nil { return vm.viewingThaiMod!.name }
         if currentTab == "Mods" { return vm.L(L10n.Mods.mods) }
         if currentTab == "Updates" { return vm.L(L10n.Main.softwareUpdate) }
@@ -36,8 +37,7 @@ struct MainView: View {
     }
     
     var body: some View {
-        ZStack {
-            NavigationSplitView {
+        NavigationSplitView {
             VStack(alignment: .leading, spacing: 16) {
                 
                 // Search Bar
@@ -232,13 +232,17 @@ struct MainView: View {
             .padding(.top, 14)
             .padding(.bottom, 10)
             .frame(minWidth: 240, idealWidth: 240, maxWidth: 240, maxHeight: .infinity, alignment: .top)
-            .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
+            .background(Color(nsColor: .windowBackgroundColor))
 
         } detail: {
             // ── CONTENT AREA ─────────────────────────────────────────
             Group {
                 if currentTab == "Mods" {
-                    ModListView(vm: vm)
+                    if let mod = vm.editingModConfig {
+                        ModConfigEditorView(vm: vm, mod: mod)
+                    } else {
+                        ModListView(vm: vm)
+                    }
                 } else if currentTab == "Saves" {
                     if let save = vm.viewingSaveTimeline {
                         SaveTimelineView(vm: vm, save: save)
@@ -261,9 +265,9 @@ struct MainView: View {
                     HomeView(vm: vm)
                 }
             }
-            .navigationTitle(navigationTitleText)
-            .onChange(of: currentTab) {
+            .onChange(of: currentTab, perform: { _ in
                 vm.editingSave = nil
+                vm.editingModConfig = nil
                 vm.viewingThaiMod = nil
                 
                 if !isNavigatingBackOrForward {
@@ -274,45 +278,46 @@ struct MainView: View {
                 } else {
                     isNavigatingBackOrForward = false
                 }
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigation) {
-                    HStack(spacing: 8) {
-                        Button(action: {
-                            if vm.editingSave != nil {
-                                vm.editingSave = nil
-                            } else if vm.viewingThaiMod != nil {
-                                vm.viewingThaiMod = nil
-                            } else if tabHistory.count > 1 {
-                                isNavigatingBackOrForward = true
-                                let current = tabHistory.removeLast()
-                                forwardHistory.append(current)
-                                currentTab = tabHistory.last ?? "Home"
-                            }
-                        }) {
-                            Image(systemName: "chevron.left")
+            })
+            .background(Color(nsColor: .controlBackgroundColor))
+            .toolbarBackground(.hidden, for: .automatic)
+        }
+        // End of NavigationSplitView
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                HStack(spacing: 8) {
+                    Button(action: {
+                        if vm.editingSave != nil {
+                            vm.editingSave = nil
+                        } else if vm.editingModConfig != nil {
+                            vm.editingModConfig = nil
+                        } else if vm.viewingThaiMod != nil {
+                            vm.viewingThaiMod = nil
+                        } else if tabHistory.count > 1 {
+                            isNavigatingBackOrForward = true
+                            let current = tabHistory.removeLast()
+                            forwardHistory.append(current)
+                            currentTab = tabHistory.last ?? "Home"
                         }
-                        .disabled(vm.editingSave == nil && vm.viewingThaiMod == nil && tabHistory.count <= 1)
-                        
-                        Button(action: {
-                            if let next = forwardHistory.popLast() {
-                                isNavigatingBackOrForward = true
-                                tabHistory.append(next)
-                                currentTab = next
-                            }
-                        }) {
-                            Image(systemName: "chevron.right")
-                        }
-                        .disabled(forwardHistory.isEmpty)
+                    }) {
+                        Image(systemName: "chevron.left")
                     }
+                    .disabled(vm.editingSave == nil && vm.viewingThaiMod == nil && vm.editingModConfig == nil && tabHistory.count <= 1)
+                    
+                    Button(action: {
+                        if let next = forwardHistory.popLast() {
+                            isNavigatingBackOrForward = true
+                            tabHistory.append(next)
+                            currentTab = next
+                        }
+                    }) {
+                        Image(systemName: "chevron.right")
+                    }
+                    .disabled(forwardHistory.isEmpty)
                 }
             }
-            .frame(minWidth: 560, minHeight: 400)
-            .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
-            .toolbarBackground(.hidden, for: .windowToolbar)
         }
-        
-        } // End of outer ZStack
+        .navigationTitle(navigationTitleText)
         .frame(minWidth: 820, minHeight: 520)
         .preferredColorScheme(colorScheme)
         .environment(\.locale, Locale(identifier: vm.currentLanguage))
@@ -403,6 +408,8 @@ struct UpdatesView: View {
     @ObservedObject var vm: StarHubTHViewModel
     @Binding var currentTab: String
     
+    @State private var viewingModDetails: ModItem?
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -453,12 +460,17 @@ struct UpdatesView: View {
                                     .buttonStyle(PlainButtonStyle())
                                     .pointingHandCursor()
                                     
-                                    Button(action: {}) {
+                                    Button(action: {
+                                        if let modItem = vm.mods.first(where: { $0.name == mod.name }) {
+                                            viewingModDetails = modItem
+                                        }
+                                    }) {
                                         Image(systemName: "info.circle")
                                             .foregroundColor(.secondary)
                                             .font(.system(size: 16))
                                     }
                                     .buttonStyle(PlainButtonStyle())
+                                    .help(vm.L(L10n.Settings.nexusChangelog))
                                 }
                             }
                             
@@ -471,6 +483,21 @@ struct UpdatesView: View {
                                     .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                                     .tint(.blue)
+                                
+                                Button(action: {
+                                    if let modItem = vm.mods.first(where: { $0.name == mod.name }) {
+                                        viewingModDetails = modItem
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: "doc.text")
+                                        Text(vm.L(L10n.Settings.nexusChangelog))
+                                    }
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.blue)
+                                }
+                                .buttonStyle(.plain)
+                                .pointingHandCursor()
                             }
                             .padding(.top, 8)
                         }
@@ -528,7 +555,10 @@ struct UpdatesView: View {
                 }
                 
             }
-            .padding(30)
+            .padding(20)
+        }
+        .sheet(item: $viewingModDetails) { modItem in
+            ModDetailView(vm: vm, mod: modItem, initialTab: 1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))

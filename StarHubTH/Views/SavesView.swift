@@ -100,9 +100,13 @@ struct SavesView: View {
     @State private var searchText = ""
 
     var filteredSaves: [SaveGameInfo] {
-        vm.saves.filter {
-            $0.playerName.localizedCaseInsensitiveContains(searchText) ||
-            $0.farmName.localizedCaseInsensitiveContains(searchText)
+        vm.saves.filter { save in
+            let searchMatch = searchText.isEmpty ||
+                save.playerName.localizedCaseInsensitiveContains(searchText) ||
+                save.farmName.localizedCaseInsensitiveContains(searchText)
+            let tagMatch = vm.saveFilterTag.isEmpty ||
+                SaveNotesStore.shared.note(for: save.folderName).tag == vm.saveFilterTag
+            return searchMatch && tagMatch
         }
     }
 
@@ -233,7 +237,7 @@ struct SavesView: View {
                     Spacer()
                 }
             } else if vm.saveViewMode == .grid {
-                SavesGridView(vm: vm, saves: searchText.isEmpty ? vm.savesHierarchy.map(\.info) : filteredSaves)
+                SavesGridView(vm: vm, saves: filteredSaves)
             } else {
                 Form {
                     Section {
@@ -514,14 +518,14 @@ struct SaveEditorView: View {
     let availableTags = ["", "⭐", "🏆", "🧪", "❤️", "💎", "📅"]
     
     let presetIcons: [(String, String, String)] = [
-        ("preset:person", "person.crop.circle.fill", "เริ่มต้น"),
-        ("preset:star",   "star.fill",               "ดาว"),
-        ("preset:leaf",   "leaf.fill",               "ใบไม้"),
-        ("preset:heart",  "heart.fill",              "หัวใจ"),
-        ("preset:cat",    "cat.fill",                "แมว"),
-        ("preset:dog",    "dog.fill",                "สุนัข"),
-        ("preset:hare",   "hare.fill",               "กระต่าย"),
-        ("preset:ant",    "ant.fill",                "มด"),
+        ("preset:person", "person.crop.circle.fill", "Default"),
+        ("preset:star",   "star.fill",               "Star"),
+        ("preset:leaf",   "leaf.fill",               "Leaf"),
+        ("preset:heart",  "heart.fill",              "Heart"),
+        ("preset:cat",    "cat.fill",                "Cat"),
+        ("preset:dog",    "dog.fill",                "Dog"),
+        ("preset:hare",   "hare.fill",               "Rabbit"),
+        ("preset:ant",    "ant.fill",                "Ant"),
     ]
     
     init(vm: StarHubTHViewModel, save: SaveGameInfo) {

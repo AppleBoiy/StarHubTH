@@ -7,6 +7,7 @@ struct SettingsView: View {
     @AppStorage("closeAfterLaunch") private var closeAfterLaunch: Bool = false
     @AppStorage("appColorScheme") private var appColorScheme: String = "System"
     @AppStorage("showDeveloperLogs") private var showDeveloperLogs: Bool = false
+    @AppStorage("nexusApiKey") private var nexusApiKey: String = ""
     
     var body: some View {
         ScrollView {
@@ -26,6 +27,42 @@ struct SettingsView: View {
                         .fixedSize()
                         
                         InfoPopoverButton(text: vm.L(L10n.Settings.selectLanguage))
+                    }
+                }
+                
+                // ── Nexus API ──
+                StandardSection(
+                    title: vm.L(L10n.Settings.nexusApiKey),
+                    footer: vm.L(L10n.Settings.nexusApiSectionFooter)
+                ) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(alignment: .center, spacing: 12) {
+                            SecureField(vm.L(L10n.Settings.nexusApiKeyPlaceholder), text: $nexusApiKey)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            
+                            if !nexusApiKey.isEmpty {
+                                Label(vm.L(L10n.Settings.nexusConnected), systemImage: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.system(size: 13, weight: .medium))
+                            } else {
+                                Label(vm.L(L10n.Settings.nexusNotConnected), systemImage: "xmark.circle.fill")
+                                    .foregroundColor(.red)
+                                    .font(.system(size: 13, weight: .medium))
+                            }
+                            
+                            Button(action: {
+                                if let url = URL(string: "https://www.nexusmods.com/users/myaccount?tab=api+access") {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            }) {
+                                HStack(spacing: 4) {
+                                    Text(vm.L(L10n.Settings.nexusGetApiKey))
+                                    Image(systemName: "arrow.up.right.square")
+                                }
+                            }
+                            
+                            InfoPopoverButton(text: vm.L(L10n.Settings.nexusApiKeyHint))
+                        }
                     }
                 }
                 

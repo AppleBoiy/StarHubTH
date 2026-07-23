@@ -117,31 +117,62 @@ class SmapiInstaller: ObservableObject {
                 
                 let targetGameBin = (gameDir as NSString).appendingPathComponent("StardewValley")
                 let backupGameBin = (gameDir as NSString).appendingPathComponent("StardewValley-original")
+                let smapiBackupFolder = (gameDir as NSString).appendingPathComponent(".smapi_backup_temp")
                 
                 if fm.fileExists(atPath: targetGameBin) && !fm.fileExists(atPath: backupGameBin) {
                     try fm.copyItem(atPath: targetGameBin, toPath: backupGameBin)
                 }
                 
-                let payloadItems = try fm.contentsOfDirectory(atPath: sourcePayload)
-                for item in payloadItems {
-                    if item.hasPrefix(".") { continue }
-                    let srcItem = (sourcePayload as NSString).appendingPathComponent(item)
-                    let destItem = (gameDir as NSString).appendingPathComponent(item)
-                    if fm.fileExists(atPath: destItem) { try fm.removeItem(atPath: destItem) }
-                    try fm.copyItem(atPath: srcItem, toPath: destItem)
+                if fm.fileExists(atPath: smapiBackupFolder) {
+                    try? fm.removeItem(atPath: smapiBackupFolder)
                 }
+                try fm.createDirectory(atPath: smapiBackupFolder, withIntermediateDirectories: true, attributes: nil)
                 
-                var attributes = try fm.attributesOfItem(atPath: targetGameBin)
-                attributes[.posixPermissions] = 0o755
-                try fm.setAttributes(attributes, ofItemAtPath: targetGameBin)
+                let payloadItems = try fm.contentsOfDirectory(atPath: sourcePayload)
+                var copiedDestPaths: [String] = []
                 
-                try? fm.removeItem(at: zipDest)
-                try? fm.removeItem(at: extractDir)
-                
-                DispatchQueue.main.async {
-                    self.progress = 1.0
-                    self.isInstalling = false
-                    completion(true, L10n.Smapi.installSuccess)
+                do {
+                    for item in payloadItems {
+                        if item.hasPrefix(".") { continue }
+                        let srcItem = (sourcePayload as NSString).appendingPathComponent(item)
+                        let destItem = (gameDir as NSString).appendingPathComponent(item)
+                        
+                        if fm.fileExists(atPath: destItem) {
+                            let backupItem = (smapiBackupFolder as NSString).appendingPathComponent(item)
+                            try fm.moveItem(atPath: destItem, toPath: backupItem)
+                        }
+                        
+                        try fm.copyItem(atPath: srcItem, toPath: destItem)
+                        copiedDestPaths.append(destItem)
+                    }
+                    
+                    var attributes = try fm.attributesOfItem(atPath: targetGameBin)
+                    attributes[.posixPermissions] = 0o755
+                    try fm.setAttributes(attributes, ofItemAtPath: targetGameBin)
+                    
+                    try? fm.removeItem(atPath: smapiBackupFolder)
+                    try? fm.removeItem(at: zipDest)
+                    try? fm.removeItem(at: extractDir)
+                    
+                    DispatchQueue.main.async {
+                        self.progress = 1.0
+                        self.isInstalling = false
+                        completion(true, L10n.Smapi.installSuccess)
+                    }
+                } catch {
+                    // Rollback copied payload items and restore backed up items
+                    for path in copiedDestPaths {
+                        try? fm.removeItem(atPath: path)
+                    }
+                    if let backedUpItems = try? fm.contentsOfDirectory(atPath: smapiBackupFolder) {
+                        for item in backedUpItems {
+                            let backupItem = (smapiBackupFolder as NSString).appendingPathComponent(item)
+                            let destItem = (gameDir as NSString).appendingPathComponent(item)
+                            try? fm.moveItem(atPath: backupItem, toPath: destItem)
+                        }
+                    }
+                    try? fm.removeItem(atPath: smapiBackupFolder)
+                    throw error
                 }
                 
             } catch {
@@ -161,6 +192,7 @@ class SmapiInstaller: ObservableObject {
         let launcherPath = (gameDir as NSString).appendingPathComponent("StardewValley")
         let originalPath = (gameDir as NSString).appendingPathComponent("StardewValley-original")
         let internalPath = (gameDir as NSString).appendingPathComponent("smapi-internal")
+        let tempTrashLauncher = (gameDir as NSString).appendingPathComponent("StardewValley_uninstall_temp")
         
         guard fm.fileExists(atPath: originalPath) else {
             completion(false, L10n.Smapi.notFound)
@@ -168,10 +200,25 @@ class SmapiInstaller: ObservableObject {
         }
         
         do {
-            if fm.fileExists(atPath: launcherPath) { try fm.removeItem(atPath: launcherPath) }
-            try fm.moveItem(atPath: originalPath, toPath: launcherPath)
-            if fm.fileExists(atPath: internalPath) { try fm.removeItem(atPath: internalPath) }
-            completion(true, L10n.Smapi.uninstallSuccess)
+            if fm.fileExists(atPath: tempTrashLauncher) {
+                try? fm.removeItem(atPath: tempTrashLauncher)
+            }
+            if fm.fileExists(atPath: launcherPath) {
+                try fm.moveItem(atPath: launcherPath, toPath: tempTrashLauncher)
+            }
+            
+            do {
+                try fm.moveItem(atPath: originalPath, toPath: launcherPath)
+                if fm.fileExists(atPath: internalPath) { try? fm.removeItem(atPath: internalPath) }
+                if fm.fileExists(atPath: tempTrashLauncher) { try? fm.removeItem(atPath: tempTrashLauncher) }
+                completion(true, L10n.Smapi.uninstallSuccess)
+            } catch {
+                // Rollback launcher if restoring original failed
+                if fm.fileExists(atPath: tempTrashLauncher) && !fm.fileExists(atPath: launcherPath) {
+                    try? fm.moveItem(atPath: tempTrashLauncher, toPath: launcherPath)
+                }
+                throw error
+            }
         } catch {
             completion(false, L10n.Smapi.uninstallFailed + error.localizedDescription)
         }

@@ -101,15 +101,15 @@ struct SaveGameInfo: Identifiable, Equatable, Hashable {
     
     var farmTypeName: String {
         switch whichFarm {
-        case 0: return "ฟาร์มมาตรฐาน" // Standard Farm
-        case 1: return "ฟาร์มริมน้ำ" // Riverland Farm
-        case 2: return "ฟาร์มในป่า" // Forest Farm
-        case 3: return "ฟาร์มบนเขา" // Hill-top Farm
-        case 4: return "ฟาร์มสัตว์ประหลาด" // Wilderness Farm
-        case 5: return "ฟาร์มสี่มุม" // Four Corners Farm
-        case 6: return "ฟาร์มริมหาด" // Beach Farm
-        case 7: return "ฟาร์มทุ่งหญ้า" // Meadowlands Farm
-        default: return "ฟาร์มลึกลับ"
+        case 0: return "Standard Farm"
+        case 1: return "Riverland Farm"
+        case 2: return "Forest Farm"
+        case 3: return "Hill-top Farm"
+        case 4: return "Wilderness Farm"
+        case 5: return "Four Corners Farm"
+        case 6: return "Beach Farm"
+        case 7: return "Meadowlands Farm"
+        default: return "Custom Farm"
         }
     }
     
@@ -589,22 +589,29 @@ class SaveManager {
             .deletingLastPathComponent()
             .appendingPathComponent("\(saveFolder.lastPathComponent).backup_\(timestamp)")
 
+        let tempTrash = saveFolder.deletingLastPathComponent()
+            .appendingPathComponent("\(saveFolder.lastPathComponent)_RESTORING_TEMP")
+
         do {
             // Backup current state
             try fm.copyItem(at: saveFolder, to: preRestoreBackupPath)
 
-            // Remove current save folder content (move to trash first, then restore)
-            let tempTrash = saveFolder.deletingLastPathComponent()
-                .appendingPathComponent("\(saveFolder.lastPathComponent)_RESTORING_TEMP")
+            // Move current save folder to temporary staging
             try fm.moveItem(at: saveFolder, to: tempTrash)
 
-            // Copy backup into place
-            try fm.copyItem(at: backup.folderPath, to: saveFolder)
-
-            // Trash the temp
-            try fm.trashItem(at: tempTrash, resultingItemURL: nil)
-
-            return true
+            do {
+                // Copy backup into place
+                try fm.copyItem(at: backup.folderPath, to: saveFolder)
+                // Trash the temp after successful restore
+                try? fm.trashItem(at: tempTrash, resultingItemURL: nil)
+                return true
+            } catch {
+                // Rollback: restore original save from tempTrash
+                if fm.fileExists(atPath: tempTrash.path) && !fm.fileExists(atPath: saveFolder.path) {
+                    try? fm.moveItem(at: tempTrash, to: saveFolder)
+                }
+                throw error
+            }
         } catch {
             print("Failed to restore backup: \(error)")
             return false
