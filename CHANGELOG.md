@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1-preview] - 2026-07-23
+
+### Added
+- **Testing**: Introduced a comprehensive, standalone, scriptable Unit Test suite (`run_tests.py`) and wrote extensive tests for `ModTagInference`, `ModManifestParser`, `SaveFileParser`, and `SmapiLogParser` to guarantee stability.
+
+### Changed
+- **Architecture**: Performed major architectural refactoring of the main ViewModel, offloading extensive business logic into specialized, stateless services (`ModInstaller`, `NexusDownloader`, `ProfileManager`, `ModScanner`, and `SmapiLogParser`).
+- **Safety**: Conducted a thorough codebase audit to replace dangerous force unwraps (`!`), unsafe casts (`as!`), and silently swallowed errors (`try?`) with safe optional bindings and robust error handling.
+
+### Removed
+- **Technical Debt**: Eliminated hundreds of lines of dead code, including unused methods, variables, and deprecated/orphaned UI views (`CodeEditorView`, `ModCoverView`, `NexusLinkView`, `SpriteSlice`).
+
 ## [1.1.0] - 2026-07-23
 
 ### Added
