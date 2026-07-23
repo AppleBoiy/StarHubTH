@@ -222,7 +222,7 @@
   "nexus_endorsed": "รับรองสำเร็จแล้ว!",
   "nexus_mod_details": "รายละเอียดม็อด",
   "nexus_description": "คำอธิบาย",
-  "nexus_changelog": "บันทึกการเปลี่ยนแปลง (Changelog)",
+  "nexus_changelog": "บันทึกการเปลี่ยนแปลง",
   "nexus_no_changelog": "ไม่พบบันทึกการเปลี่ยนแปลง",
   "smapi_downloading": "กำลังเริ่มดาวน์โหลด SMAPI...",
   "smapi_download_failed": "ดาวน์โหลดล้มเหลว: %@",

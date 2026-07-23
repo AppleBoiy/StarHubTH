@@ -222,7 +222,7 @@
 "nexus_endorsed" = "รับรองสำเร็จแล้ว!";
 "nexus_mod_details" = "รายละเอียดม็อด";
 "nexus_description" = "คำอธิบาย";
-"nexus_changelog" = "บันทึกการเปลี่ยนแปลง (Changelog)";
+"nexus_changelog" = "บันทึกการเปลี่ยนแปลง";
 "nexus_no_changelog" = "ไม่พบบันทึกการเปลี่ยนแปลง";
 "smapi_downloading" = "กำลังเริ่มดาวน์โหลด SMAPI...";
 "smapi_download_failed" = "ดาวน์โหลดล้มเหลว: %@";
@@ -341,7 +341,7 @@
 "profiles_select_mods" = "เลือกม็อดที่คุณต้องการให้เปิดใช้งานในโปรไฟล์นี้";
 "profiles_manage" = "จัดการ...";
 "profiles_manage_mods" = "จัดการม็อดในโปรไฟล์";
-"profiles_dependencies" = "Dependencies (ม็อดที่ต้องการ)";
+"profiles_dependencies" = "ม็อดที่ต้องการ";
 "profiles_required" = "Required";
 "profiles_optional" = "Optional";
 "profiles_select_all" = "เลือกทั้งหมด";
@@ -401,4 +401,4 @@
 "mods_sort_update_asc" = "อัปเดตเก่าสุด";
 "mods_sort_update_desc" = "อัปเดตล่าสุด";
 "tags_spoiler" = "สปอยล์";
-"vm_no_dependencies_found" = "ไม่พบม็อดที่ต้องการ (Dependencies)";
+"vm_no_dependencies_found" = "ไม่พบม็อดที่ต้องการ";
