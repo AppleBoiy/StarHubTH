@@ -3,7 +3,13 @@
 </p>
 
 *   **Easy Game Launch**: Launch Stardew Valley in either Vanilla mode or through SMAPI for modded play.
-*   **Mod Manager**: Enable or disable mods effortlessly through a beautiful app interface — no manual file moving required.
+*   **Mod Manager**: 
+    *   Enable or disable mods effortlessly through a beautiful app interface.
+    *   **NEW!** Install mods automatically by dragging and dropping `.zip` files or folders.
+    *   **NEW!** Filter and tag system to quickly sort mods by category and status.
+    *   **NEW!** 1-Click Mod Backup to zip your entire mods folder securely to your Desktop.
+*   **Mod Config Editor**: Edit mod settings directly within the app, complete with native nested menu layouts that mirror the in-game Generic Mod Config Menu.
+*   **Nexus Mods Integration**: View mod details, changelogs, and download mods directly from Nexus Mods without leaving the app.
 *   **Mod Profiles**: Group mods into multiple profiles and switch between them instantly with a single click.
 *   **Thai Translation Hub**: A dedicated hub listing all Thai translation mods — browse, check status, download, and track updates in one place.
 *   **Save Manager**:
