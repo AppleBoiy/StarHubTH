@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-07-23
+
+### Added
+- **App Changelog**: Added an in-app changelog page to view update history directly within StarHubTH.
+- **Mod List View**: Added a new filtering system to easily sort mods by status (All / Enabled / Disabled) using interactive filter pills.
+- **Mod List View**: Added a new category/tag filter dropdown to filter mods by their specific types.
+- **Mod Installation**: Added the ability to easily install mods directly from `.zip` files or unzipped folders. The app automatically extracts, organizes, and places the mod contents into the correct Stardew Valley Mods directory.
+- **Mod Backup**: Added a convenient "Backup Mods" feature to quickly compress and save your entire active Mods folder into a backup zip file on your Desktop.
+- **Nexus Mods Integration**: Added the ability to download and install mods directly from Nexus Mods into the app using a 1-click download process.
+- **Mod Detail View**: Integrated with Nexus Mods API to automatically fetch and display mod descriptions, changelogs, and cover images directly within the app.
+- **Mod Config Editor**: Complete layout redesign to strictly adhere to native macOS Human Interface Guidelines (HIG).
+- **Mod Config Editor**: Implemented a recursive tree data structure to support properly nested configurations that expand/collapse, matching the in-game Generic Mod Config Menu.
+
+### Fixed
+- **Mod Config Editor**: Fixed a type-inference bug where configuration values `0` and `1` were incorrectly parsed and displayed as boolean toggles (On/Off) instead of number inputs.
+- **Mod Config Editor**: Fixed the appearance of the top Toolbar Segmented Picker.
+- **Mod Config Editor**: Completed 100% Thai localization coverage for all editor strings.
+
 ## [1.0.9] - 2026-07-18
 
 ### Fixed

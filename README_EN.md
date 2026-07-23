@@ -20,12 +20,12 @@
 
 |   |   |
 | :---: | :---: |
-| <img src="screenshots/1.png" width="400"> | <img src="screenshots/2.png" width="400"> |
-| <img src="screenshots/3.png" width="400"> | <img src="screenshots/4.png" width="400"> |
-| <img src="screenshots/5.png" width="400"> | <img src="screenshots/6.png" width="400"> |
-| <img src="screenshots/7.png" width="400"> | <img src="screenshots/8.png" width="400"> |
-| <img src="screenshots/9.png" width="400"> | <img src="screenshots/10.png" width="400"> |
-| <img src="screenshots/11.png" width="400"> | <img src="screenshots/12.png" width="400"> |
+| <img src="screenshots/en/1.png" width="400"> | <img src="screenshots/en/2.png" width="400"> |
+| <img src="screenshots/en/3.png" width="400"> | <img src="screenshots/en/4.png" width="400"> |
+| <img src="screenshots/en/5.png" width="400"> | <img src="screenshots/en/6.png" width="400"> |
+| <img src="screenshots/en/7.png" width="400"> | <img src="screenshots/en/8.png" width="400"> |
+| <img src="screenshots/en/9.png" width="400"> | <img src="screenshots/en/10.png" width="400"> |
+| <img src="screenshots/en/11.png" width="400"> | <img src="screenshots/en/12.png" width="400"> |
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/install_banner.png" alt="Installation" width="300">

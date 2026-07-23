@@ -33,6 +33,7 @@ struct MainView: View {
         if currentTab == "Saves" { return vm.L(L10n.Saves.saves) }
         if currentTab == "Settings" { return vm.L(L10n.Settings.settings) }
         if currentTab == "Logs" { return vm.L(L10n.Logs.logs) }
+        if currentTab == "AppChangelog" { return vm.L(L10n.Main.appChangelog) }
         return vm.L(L10n.Main.home)
     }
     
@@ -196,6 +197,16 @@ struct MainView: View {
                             currentTab: $currentTab
                         )
                     }
+                    
+                    if matchesSearch(vm.L(L10n.Main.appChangelog)) {
+                        SidebarNavItem(
+                            icon: "doc.text.magnifyingglass",
+                            iconColor: .blue,
+                            label: vm.L(L10n.Main.appChangelog),
+                            tab: "AppChangelog",
+                            currentTab: $currentTab
+                        )
+                    }
                 }
                 
                 // Thai Hub Section
@@ -259,6 +270,8 @@ struct MainView: View {
                     ThaiTranslationHubView(vm: vm)
                 } else if currentTab == "Settings" {
                     SettingsView(vm: vm)
+                } else if currentTab == "AppChangelog" {
+                    AppChangelogView(vm: vm)
                 } else if currentTab == "Logs" {
                     LogsView(vm: vm)
                 } else {

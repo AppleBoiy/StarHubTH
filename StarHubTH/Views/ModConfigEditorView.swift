@@ -16,6 +16,20 @@ struct ConfigItem: Identifiable {
     var originalValue: Any? // Keep nested arrays/objects unmodified
 }
 
+class ConfigTreeNode: Identifiable {
+    let id: String
+    let title: String
+    let item: ConfigItem?
+    var children: [ConfigTreeNode]
+    
+    init(id: String, title: String, item: ConfigItem? = nil, children: [ConfigTreeNode] = []) {
+        self.id = id
+        self.title = title
+        self.item = item
+        self.children = children
+    }
+}
+
 struct ModConfigEditorView: View {
     @ObservedObject var vm: StarHubTHViewModel
     let mod: ModItem
@@ -33,85 +47,80 @@ struct ModConfigEditorView: View {
         return (modPath as NSString).appendingPathComponent("config.json")
     }
     
+    private func buildTree(items: [ConfigItem]) -> [ConfigTreeNode] {
+        let root = ConfigTreeNode(id: "root", title: "root")
+        
+        for item in items {
+            var currentNode = root
+            var currentPath = ""
+            
+            for (index, segment) in item.keyPath.enumerated() {
+                currentPath += (currentPath.isEmpty ? "" : " > ") + segment
+                let isLast = index == item.keyPath.count - 1
+                
+                if isLast {
+                    let leaf = ConfigTreeNode(id: item.id.uuidString, title: segment, item: item)
+                    currentNode.children.append(leaf)
+                } else {
+                    if let existing = currentNode.children.first(where: { $0.title == segment }) {
+                        currentNode = existing
+                    } else {
+                        let newGroup = ConfigTreeNode(id: currentPath, title: segment)
+                        currentNode.children.append(newGroup)
+                        currentNode = newGroup
+                    }
+                }
+            }
+        }
+        
+        return root.children
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             if selectedTab == 0 {
                 if configItems.isEmpty {
                     VStack {
                         Spacer()
-                        Text("No configurable settings found.")
+                        Text(vm.L(L10n.Settings.configNoSettingsFound))
                             .foregroundColor(.secondary)
                         Spacer()
                     }
                 } else {
                     ScrollView {
                         VStack(spacing: 20) {
-                            StandardSection(title: "Settings") {
-                                VStack(spacing: 0) {
-                                    let filtered = configItems.filter { searchText.isEmpty || $0.key.localizedCaseInsensitiveContains(searchText) }
-                                    if filtered.isEmpty && !searchText.isEmpty {
-                                        Text("No settings found for \"\(searchText)\"")
-                                            .foregroundColor(.secondary)
-                                            .padding()
-                                    } else {
-                                        ForEach(Array(filtered.enumerated()), id: \.element.id) { index, item in
-                                            HStack {
-                                                Text(item.key)
-                                                    .font(.system(size: 13))
-                                                    .foregroundColor(.primary)
-                                                Spacer()
-                                                
-                                                switch item.type {
-                                                case .boolean:
-                                                    Toggle("", isOn: Binding(
-                                                        get: { item.boolValue },
-                                                        set: { newValue in
-                                                            if let i = configItems.firstIndex(where: { $0.id == item.id }) {
-                                                                configItems[i].boolValue = newValue
-                                                                syncToText()
-                                                            }
-                                                        }
-                                                    ))
-                                                    .toggleStyle(SwitchToggleStyle(tint: .blue))
-                                                    .controlSize(.small)
-                                                    .labelsHidden()
-                                                    
-                                                case .number:
-                                                    if item.isInt {
-                                                        TextField("", value: Binding(
-                                                            get: { Int(item.numberValue) },
-                                                            set: { newValue in
-                                                                if let i = configItems.firstIndex(where: { $0.id == item.id }) {
-                                                                    configItems[i].numberValue = Double(newValue)
-                                                                    syncToText()
-                                                                }
-                                                            }
-                                                        ), formatter: NumberFormatter())
-                                                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                                                        .frame(width: 100)
-                                                    } else {
-                                                        TextField("", value: Binding(
-                                                            get: { item.numberValue },
-                                                            set: { newValue in
-                                                                if let i = configItems.firstIndex(where: { $0.id == item.id }) {
-                                                                    configItems[i].numberValue = newValue
-                                                                    syncToText()
-                                                                }
-                                                            }
-                                                        ), formatter: NumberFormatter())
-                                                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                                                        .frame(width: 100)
+                            let filteredItems = configItems.filter { item in
+                                searchText.isEmpty || item.key.localizedCaseInsensitiveContains(searchText)
+                            }
+                            
+                            if filteredItems.isEmpty && !searchText.isEmpty {
+                                Text(String(format: vm.L(L10n.Settings.configNoSettingsFoundFor), searchText))
+                                    .foregroundColor(.secondary)
+                                    .padding()
+                            } else {
+                                let tree = buildTree(items: filteredItems)
+                                let rootLeaves = tree.filter { $0.item != nil }
+                                let rootGroups = tree.filter { $0.item == nil }
+                                
+                                if !rootLeaves.isEmpty {
+                                    StandardSection(title: vm.L(L10n.Settings.settings)) {
+                                        VStack(spacing: 0) {
+                                            ForEach(Array(rootLeaves.enumerated()), id: \.element.id) { index, leafNode in
+                                                if let item = leafNode.item {
+                                                    renderItemRow(item: item, label: leafNode.title)
+                                                        .padding(.vertical, 4)
+                                                    if index < rootLeaves.count - 1 {
+                                                        Divider()
                                                     }
-                                                default:
-                                                    EmptyView()
                                                 }
                                             }
-                                            .padding(.vertical, 10)
-                                            
-                                            if index < filtered.count - 1 {
-                                                Divider()
-                                            }
                                         }
+                                    }
+                                }
+                                
+                                ForEach(rootGroups) { groupNode in
+                                    StandardSection(title: groupNode.title) {
+                                        renderNodeChildren(nodes: groupNode.children)
                                     }
                                 }
                             }
@@ -121,9 +130,15 @@ struct ModConfigEditorView: View {
                 }
             } else {
                 VStack {
-                    StandardSection(title: "Raw JSON") {
+                    StandardSection(title: vm.L(L10n.Settings.configRawJson)) {
                         TextEditor(text: $configText)
-                            .font(.system(.body, design: .monospaced))
+                            .font(.system(size: 13, design: .monospaced))
+                            .scrollContentBackground(.hidden)
+                            .padding(8)
+                            .background(Color(nsColor: .textBackgroundColor))
+                            .cornerRadius(6)
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.12), lineWidth: 1))
+                            .frame(minHeight: 320)
                             .onChange(of: configText) { newValue in
                                 validateJson(newValue)
                                 if !isInvalidJson {
@@ -151,7 +166,7 @@ struct ModConfigEditorView: View {
                         Label(vm.L(L10n.Settings.configRestoreConfig), systemImage: "arrow.counterclockwise")
                     }
                 } label: {
-                    Label("Backup / Restore", systemImage: "ellipsis.circle")
+                    Label(vm.L(L10n.Settings.configBackupAndRestore), systemImage: "ellipsis.circle")
                 }
                 .menuStyle(.borderedButton)
                 
@@ -186,15 +201,14 @@ struct ModConfigEditorView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
         }
-        .searchable(text: $searchText, prompt: Text("Search settings..."))
+        .searchable(text: $searchText, prompt: Text(vm.L(L10n.Settings.configSearchPlaceholder)))
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Picker("", selection: $selectedTab) {
                     Text(vm.L(L10n.Settings.configVisualEditor)).tag(0)
                     Text(vm.L(L10n.Settings.configCodeEditor)).tag(1)
                 }
-                .pickerStyle(SegmentedPickerStyle())
-                .frame(width: 220)
+                .pickerStyle(.segmented)
             }
         }
         .toolbarBackground(.hidden, for: .automatic)
@@ -254,17 +268,19 @@ struct ModConfigEditorView: View {
                 for (index, elem) in arr.enumerated() {
                     extractItems(from: elem, parentPath: parentPath + ["[\(index)]"])
                 }
-            } else if let b = value as? Bool {
-                newItems.append(ConfigItem(keyPath: parentPath, boolValue: b, type: .boolean, originalValue: value))
+            } else if let num = value as? NSNumber {
+                if CFGetTypeID(num) == CFBooleanGetTypeID() {
+                    newItems.append(ConfigItem(keyPath: parentPath, boolValue: num.boolValue, type: .boolean, originalValue: value))
+                } else {
+                    let isInt = CFNumberIsFloatType(num) == false
+                    newItems.append(ConfigItem(keyPath: parentPath, numberValue: num.doubleValue, isInt: isInt, type: .number, originalValue: value))
+                }
             } else if let s = value as? String {
                 if s.lowercased() == "true" {
                     newItems.append(ConfigItem(keyPath: parentPath, boolValue: true, stringValue: "true_as_string", type: .boolean, originalValue: value))
                 } else if s.lowercased() == "false" {
                     newItems.append(ConfigItem(keyPath: parentPath, boolValue: false, stringValue: "false_as_string", type: .boolean, originalValue: value))
                 }
-            } else if let n = value as? NSNumber {
-                let isInt = CFNumberIsFloatType(n) == false
-                newItems.append(ConfigItem(keyPath: parentPath, numberValue: n.doubleValue, isInt: isInt, type: .number, originalValue: value))
             }
         }
         
@@ -387,5 +403,122 @@ struct ModConfigEditorView: View {
                 vm.showModal(message: "Failed to load config: \(error.localizedDescription)")
             }
         }
+    }
+    
+    @ViewBuilder
+    private func renderNodeChildren(nodes: [ConfigTreeNode]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(nodes.enumerated()), id: \.element.id) { index, node in
+                if let item = node.item {
+                    renderItemRow(item: item, label: node.title)
+                        .padding(.vertical, 4)
+                    if index < nodes.count - 1 {
+                        Divider()
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(node.title)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.secondary)
+                            .padding(.top, 12)
+                            .padding(.bottom, 4)
+                        
+                        AnyView(renderNodeChildren(nodes: node.children))
+                            .padding(.leading, 12)
+                    }
+                    if index < nodes.count - 1 {
+                        Divider()
+                    }
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func renderItemRow(item: ConfigItem, label: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 13))
+                .foregroundColor(.primary)
+            Spacer()
+            
+            switch item.type {
+            case .boolean:
+                Toggle("", isOn: Binding(
+                    get: { item.boolValue },
+                    set: { newValue in
+                        if let i = configItems.firstIndex(where: { $0.id == item.id }) {
+                            configItems[i].boolValue = newValue
+                            syncToText()
+                        }
+                    }
+                ))
+                .toggleStyle(SwitchToggleStyle(tint: .blue))
+                .controlSize(.small)
+                .labelsHidden()
+                
+            case .number:
+                if item.isInt {
+                    HStack(spacing: 6) {
+                        TextField("", value: Binding(
+                            get: { Int(item.numberValue) },
+                            set: { newValue in
+                                if let i = configItems.firstIndex(where: { $0.id == item.id }) {
+                                    configItems[i].numberValue = Double(newValue)
+                                    syncToText()
+                                }
+                            }
+                        ), formatter: NumberFormatter())
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 70)
+                        
+                        Stepper("", onIncrement: {
+                            if let i = configItems.firstIndex(where: { $0.id == item.id }) {
+                                configItems[i].numberValue += 1
+                                syncToText()
+                            }
+                        }, onDecrement: {
+                            if let i = configItems.firstIndex(where: { $0.id == item.id }) {
+                                configItems[i].numberValue -= 1
+                                syncToText()
+                            }
+                        })
+                        .labelsHidden()
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        TextField("", value: Binding(
+                            get: { item.numberValue },
+                            set: { newValue in
+                                if let i = configItems.firstIndex(where: { $0.id == item.id }) {
+                                    configItems[i].numberValue = newValue
+                                    syncToText()
+                                }
+                            }
+                        ), formatter: NumberFormatter())
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 70)
+                        
+                        Stepper("", onIncrement: {
+                            if let i = configItems.firstIndex(where: { $0.id == item.id }) {
+                                configItems[i].numberValue += 0.5
+                                syncToText()
+                            }
+                        }, onDecrement: {
+                            if let i = configItems.firstIndex(where: { $0.id == item.id }) {
+                                configItems[i].numberValue -= 0.5
+                                syncToText()
+                            }
+                        })
+                        .labelsHidden()
+                    }
+                }
+            default:
+                EmptyView()
+            }
+        }
+        .padding(.vertical, 8)
     }
 }

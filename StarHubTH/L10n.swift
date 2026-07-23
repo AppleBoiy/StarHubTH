@@ -10,6 +10,7 @@ enum L10n {
         static let gameManagement       = "main_game_management"
         static let system               = "main_system"
         static let online               = "main_online"
+        static let appChangelog         = "main_app_changelog"
         static let readyToPlay          = "main_ready_to_play"
         static let launchingGame        = "main_launching_game"
         static let launchGame           = "main_launch_game"
@@ -256,6 +257,11 @@ enum L10n {
         static let configBackupMod      = "config_backup_mod"
         static let configRestoreMod     = "config_restore_mod"
         static let configRestoreConfig  = "config_restore_config"
+        static let configBackupAndRestore = "config_backup_and_restore"
+        static let configNoSettingsFound  = "config_no_settings_found"
+        static let configNoSettingsFoundFor = "config_no_settings_found_for"
+        static let configSearchPlaceholder = "config_search_placeholder"
+        static let configRawJson          = "config_raw_json"
         
         // Nexus features
         static let nexusDownloadInstall = "nexus_download_install"

@@ -21,12 +21,12 @@
 
 |   |   |
 | :---: | :---: |
-| <img src="screenshots/1.png" width="400"> | <img src="screenshots/2.png" width="400"> |
-| <img src="screenshots/3.png" width="400"> | <img src="screenshots/4.png" width="400"> |
-| <img src="screenshots/5.png" width="400"> | <img src="screenshots/6.png" width="400"> |
-| <img src="screenshots/7.png" width="400"> | <img src="screenshots/8.png" width="400"> |
-| <img src="screenshots/9.png" width="400"> | <img src="screenshots/10.png" width="400"> |
-| <img src="screenshots/11.png" width="400"> | <img src="screenshots/12.png" width="400"> |
+| <img src="screenshots/th/1.png" width="400"> | <img src="screenshots/th/2.png" width="400"> |
+| <img src="screenshots/th/3.png" width="400"> | <img src="screenshots/th/4.png" width="400"> |
+| <img src="screenshots/th/5.png" width="400"> | <img src="screenshots/th/6.png" width="400"> |
+| <img src="screenshots/th/7.png" width="400"> | <img src="screenshots/th/8.png" width="400"> |
+| <img src="screenshots/th/9.png" width="400"> | <img src="screenshots/th/10.png" width="400"> |
+| <img src="screenshots/th/11.png" width="400"> | <img src="screenshots/th/12.png" width="400"> |
 
 
 <p align="center">
