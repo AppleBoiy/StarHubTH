@@ -279,6 +279,50 @@ struct DependencyRow: View {
     }
 }
 
+struct SpoilerView: View {
+    let title: String
+    let content: String
+    @State private var isExpanded = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                    Text(title.isEmpty ? "Spoiler" : title)
+                        .font(.system(size: 13, weight: .semibold))
+                    Spacer()
+                    Text(isExpanded ? "Hide" : "Show")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.blue)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.primary.opacity(0.05))
+                .cornerRadius(6)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .pointingHandCursor()
+            
+            if isExpanded {
+                Text(.init(content))
+                    .font(.body)
+                    .textSelection(.enabled)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.primary.opacity(0.03))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                    )
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
 struct BBCodeView: View {
     let blocks: [NexusAPIService.DescriptionBlock]
     
@@ -300,6 +344,8 @@ struct BBCodeView: View {
                             ProgressView()
                         }
                     }
+                case .spoiler(let title, let content):
+                    SpoilerView(title: title, content: content)
                 }
             }
         }

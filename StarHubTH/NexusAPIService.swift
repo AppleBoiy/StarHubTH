@@ -195,9 +195,10 @@ class NexusAPIService {
     enum DescriptionBlock: Hashable {
         case text(String)
         case image(URL)
+        case spoiler(title: String, content: String)
     }
     
-    // Helper: format HTML and BBCode into basic Markdown and extract images
+    // Helper: format HTML and BBCode into basic Markdown and extract images & spoilers
     static func parseBlocks(_ str: String) -> [DescriptionBlock] {
         var formatted = str
         
@@ -208,8 +209,9 @@ class NexusAPIService {
                              .replacingOccurrences(of: "&gt;", with: ">")
                              .replacingOccurrences(of: "&quot;", with: "\"")
         
-        // 2. Convert <br> and <br/> to newlines
+        // 2. Convert <br> and HTML block tags to newlines so text doesn't run together
         formatted = formatted.replacingOccurrences(of: "<br\\s*/?>", with: "\n", options: .regularExpression)
+        formatted = formatted.replacingOccurrences(of: "(?i)</?(?:p|div|h[1-6]|li|tr|blockquote)\\b[^>]*>", with: "\n", options: .regularExpression)
         
         // 3. Strip all other HTML tags
         formatted = formatted.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
@@ -224,9 +226,6 @@ class NexusAPIService {
         // Headers (Size tags and heading tags)
         formatted = formatted.replacingOccurrences(of: "(?s)\\[size=[^\\]]+\\]\\s*(.*?)\\s*\\[/size\\]", with: "**$1**", options: [.regularExpression, .caseInsensitive])
         formatted = formatted.replacingOccurrences(of: "(?s)\\[heading[=\\d]*\\]\\s*(.*?)\\s*\\[/heading\\]", with: "**$1**", options: [.regularExpression, .caseInsensitive])
-        
-        // Spoilers
-        formatted = formatted.replacingOccurrences(of: "(?s)\\[spoiler\\]\\s*(.*?)\\s*\\[/spoiler\\]", with: "\n*--- Spoiler ---*\n$1\n*--- End Spoiler ---*\n", options: [.regularExpression, .caseInsensitive])
         
         // Lists
         formatted = formatted.replacingOccurrences(of: "(?i)\\[/?list(?:=[^\\]]+)?\\]", with: "\n", options: .regularExpression)
@@ -244,28 +243,51 @@ class NexusAPIService {
         // 5. Strip remaining formatting BBCode tags (keeping their inner content)
         formatted = formatted.replacingOccurrences(of: "(?s)\\[/?(?:color|center|left|right|font|align|quote|sub|sup|code)(?:=[^\\]]+)?\\]", with: "", options: [.regularExpression, .caseInsensitive])
         
-        // 6. Split by [img] tags
+        // 6. Tokenize by [img] and [spoiler] tags
         var blocks: [DescriptionBlock] = []
-        let pattern = "(?s)\\[img\\](.*?)\\[/img\\]"
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+        let combinedPattern = "(?s)(\\[img\\](.*?)\\[/img\\]|\\[spoiler(?:=(.*?))?\\](.*?)\\[/spoiler\\])"
+        guard let regex = try? NSRegularExpression(pattern: combinedPattern, options: .caseInsensitive) else {
             return [.text(formatted.trimmingCharacters(in: .whitespacesAndNewlines))]
         }
         
         let nsString = formatted as NSString
-        let results = regex.matches(in: formatted, range: NSRange(location: 0, length: nsString.length))
+        let matches = regex.matches(in: formatted, range: NSRange(location: 0, length: nsString.length))
         
         var lastEnd = 0
-        for match in results {
+        for match in matches {
             let textRange = NSRange(location: lastEnd, length: match.range.location - lastEnd)
             let textStr = nsString.substring(with: textRange).trimmingCharacters(in: .whitespacesAndNewlines)
             if !textStr.isEmpty {
                 blocks.append(.text(textStr))
             }
             
-            let imgUrlRange = match.range(at: 1)
-            let imgUrlStr = nsString.substring(with: imgUrlRange).trimmingCharacters(in: .whitespacesAndNewlines)
-            if let url = URL(string: imgUrlStr) {
-                blocks.append(.image(url))
+            let fullMatch = nsString.substring(with: match.range)
+            if fullMatch.lowercased().hasPrefix("[img]") {
+                let imgUrlRange = match.range(at: 2)
+                if imgUrlRange.location != NSNotFound {
+                    let imgUrlStr = nsString.substring(with: imgUrlRange).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if let url = URL(string: imgUrlStr) {
+                        blocks.append(.image(url))
+                    }
+                }
+            } else if fullMatch.lowercased().hasPrefix("[spoiler") {
+                let titleRange = match.range(at: 3)
+                let contentRange = match.range(at: 4)
+                
+                var titleStr = "Spoiler"
+                if titleRange.location != NSNotFound {
+                    let extracted = nsString.substring(with: titleRange).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !extracted.isEmpty {
+                        titleStr = extracted
+                    }
+                }
+                
+                var contentStr = ""
+                if contentRange.location != NSNotFound {
+                    contentStr = nsString.substring(with: contentRange).trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+                
+                blocks.append(.spoiler(title: titleStr, content: contentStr))
             }
             
             lastEnd = match.range.location + match.range.length
