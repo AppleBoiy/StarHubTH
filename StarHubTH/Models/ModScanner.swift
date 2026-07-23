@@ -56,7 +56,8 @@ struct ModScanner {
                         isEnabled: isEnabled,
                         dependencies: [],
                         children: modsInGroup,
-                        isGroup: true
+                        isGroup: true,
+                        modTag: modsInGroup.first(where: { !$0.modTag.isEmpty })?.modTag ?? ""
                     )
                     scannedMods.append(groupMod)
                 }
