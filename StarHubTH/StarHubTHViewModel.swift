@@ -36,34 +36,58 @@ struct ModItem: Identifiable, Equatable {
     /// Infer a display type tag from manifest metadata.
     static func inferTag(name: String, uniqueId: String, description: String) -> String {
         let haystack = "\(name) \(uniqueId) \(description)".lowercased()
-        if haystack.contains("content patcher") || uniqueId.lowercased().hasPrefix("pathoschild.contentpatcher") {
-            return "Content Patcher"
+        
+        // Helper to match exact whole words using regex, preventing false positives like "fruit" -> "ui"
+        let matchWord = { (word: String) -> Bool in
+            return haystack.range(of: "\\b\(word)\\b", options: .regularExpression) != nil
         }
-        if haystack.contains("framework") || haystack.contains("smapi") || haystack.contains("spacechase") && haystack.contains("core") {
-            return "Framework"
-        }
-        if haystack.contains("cosmetic") || haystack.contains("portrait") || haystack.contains("sprite") || haystack.contains("retexture") || haystack.contains("skin") || haystack.contains("hair") || haystack.contains("fashion") {
-            return "Cosmetic"
-        }
-        if haystack.contains(" npc") || haystack.contains("marriage") || haystack.contains("bachelor") || haystack.contains("villager") {
-            return "NPC"
-        }
-        if haystack.contains("ui") || haystack.contains("interface") || haystack.contains("hud") || haystack.contains("menu") || haystack.contains("inventory") {
-            return "UI"
-        }
-        if haystack.contains("music") || haystack.contains("audio") || haystack.contains("sound") || haystack.contains("ambient") {
-            return "Audio"
-        }
-        if haystack.contains("cheat") || haystack.contains("time") || haystack.contains("speed") || haystack.contains("gameplay") || haystack.contains("harvest") || haystack.contains("farm") || haystack.contains("crop") || haystack.contains("fishing") {
-            return "Gameplay"
-        }
-        if haystack.contains("map") || haystack.contains("location") || haystack.contains("world") || haystack.contains("tile") {
-            return "Map"
-        }
-        if haystack.contains("translation") || haystack.contains("language") || haystack.contains("locale") || haystack.contains("thai") {
+        
+        // Translation
+        if matchWord("translation") || matchWord("language") || matchWord("locale") || matchWord("thai") || matchWord("i18n") || matchWord("spanish") || matchWord("chinese") || matchWord("korean") || matchWord("french") || matchWord("russian") || matchWord("german") {
             return "Translation"
         }
-        return ""
+        
+        // Framework / API
+        if matchWord("framework") || matchWord("api") || matchWord("library") || matchWord("core") || matchWord("toolkit") || matchWord("util") || matchWord("utility") || haystack.contains("smapi") || (haystack.contains("spacechase") && haystack.contains("core")) {
+            return "Framework"
+        }
+        
+        // Content Patcher
+        if haystack.contains("content patcher") || uniqueId.lowercased().hasPrefix("pathoschild.contentpatcher") || matchWord("cp") {
+            return "Content Patcher"
+        }
+        
+        // UI / HUD
+        if matchWord("ui") || matchWord("interface") || matchWord("hud") || matchWord("menu") || matchWord("inventory") || matchWord("tooltip") || matchWord("display") || matchWord("cursor") || matchWord("minimap") {
+            return "UI"
+        }
+        
+        // Cosmetic / Visuals
+        if matchWord("cosmetic") || matchWord("portrait") || matchWord("portraits") || matchWord("sprite") || matchWord("sprites") || matchWord("retexture") || matchWord("skin") || matchWord("hair") || matchWord("fashion") || matchWord("visual") || matchWord("texture") || matchWord("textures") || matchWord("recolor") || matchWord("appearance") || matchWord("clothes") || matchWord("shirt") || matchWord("hat") || matchWord("furniture") || matchWord("building") || matchWord("buildings") || matchWord("aesthetic") {
+            return "Cosmetic"
+        }
+        
+        // NPC / Dialogues
+        if matchWord("npc") || matchWord("npcs") || matchWord("marriage") || matchWord("bachelor") || matchWord("bachelorette") || matchWord("villager") || matchWord("dialogue") || matchWord("dialogues") || matchWord("event") || matchWord("events") || matchWord("character") || matchWord("schedule") || matchWord("heart") {
+            return "NPC"
+        }
+        
+        // Audio / Music
+        if matchWord("music") || matchWord("audio") || matchWord("sound") || matchWord("sounds") || matchWord("ambient") || matchWord("bgm") || matchWord("voice") || matchWord("sfx") {
+            return "Audio"
+        }
+        
+        // Map / Locations
+        if matchWord("map") || matchWord("maps") || matchWord("location") || matchWord("locations") || matchWord("world") || matchWord("tile") || matchWord("tiles") || matchWord("expansion") || matchWord("dungeon") || matchWord("greenhouse") || matchWord("cave") || matchWord("caves") || matchWord("town") {
+            return "Map"
+        }
+        
+        // Gameplay / Mechanics
+        if matchWord("cheat") || matchWord("time") || matchWord("speed") || matchWord("gameplay") || matchWord("harvest") || matchWord("farm") || matchWord("crop") || matchWord("crops") || matchWord("fishing") || matchWord("balance") || matchWord("combat") || matchWord("mining") || matchWord("foraging") || matchWord("animal") || matchWord("animals") || matchWord("pet") || matchWord("pets") || matchWord("economy") || matchWord("item") || matchWord("items") || matchWord("recipe") || matchWord("recipes") || matchWord("machine") || matchWord("machines") || matchWord("artisan") || matchWord("tool") || matchWord("tools") || matchWord("weapon") || matchWord("weapons") || matchWord("skill") || matchWord("skills") || matchWord("automate") || matchWord("automation") {
+            return "Gameplay"
+        }
+        
+        return "Other" // Catch-all for uncategorized mods
     }
 }
 
@@ -189,10 +213,87 @@ class StarHubTHViewModel: ObservableObject {
     @Published var smapiInstalledVersion: String? = nil   // nil = not installed
     @Published var mods: [ModItem] = []
     
-    // Mod list filter / sort state
+    // Current filter options
     @Published var modFilterStatus: ModFilterStatus = .all
-    @Published var modFilterTag: String = ""        // "" = all types
+    @Published var modFilterTag: String = ""
     @Published var modSortOption: ModSortOption = .name
+    
+    // Custom Tags
+    var customModTags: [String: String] {
+        get { UserDefaults.standard.dictionary(forKey: "customModTags") as? [String: String] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: "customModTags") }
+    }
+    
+    func setCustomTag(for modId: String, tag: String, shouldRefresh: Bool = true) {
+        var tags = customModTags
+        tags[modId] = tag
+        customModTags = tags
+        if shouldRefresh { refresh() }
+    }
+    
+    func resetCustomTag(for modId: String) {
+        var tags = customModTags
+        tags.removeValue(forKey: modId)
+        customModTags = tags
+        refresh()
+    }
+    
+    func syncTagFromNexus(for mod: ModItem, shouldRefresh: Bool = true, completion: @escaping (Bool) -> Void) {
+        let apiKey = nexusApiKey
+        guard !apiKey.isEmpty, let url = URL(string: mod.nexusUrl), let modId = Int(url.lastPathComponent) else {
+            completion(false)
+            return
+        }
+        
+        NexusAPIService.shared.getModInfo(modId: modId, apiKey: apiKey) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let info):
+                    if let categoryId = info.categoryId {
+                        let newTag = NexusAPIService.categoryTag(from: categoryId)
+                        self?.setCustomTag(for: mod.uniqueId, tag: newTag, shouldRefresh: shouldRefresh)
+                        completion(true)
+                    } else {
+                        completion(false)
+                    }
+                case .failure:
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    @Published var isSyncingAllTags = false
+    @Published var syncAllTagsProgress: Double = 0.0
+    
+    func syncAllTagsFromNexus() {
+        let apiKey = nexusApiKey
+        guard !apiKey.isEmpty else { return }
+        
+        isSyncingAllTags = true
+        syncAllTagsProgress = 0.0
+        
+        let modsToSync = mods.filter { !$0.nexusUrl.isEmpty && Int((URL(string: $0.nexusUrl)?.lastPathComponent) ?? "") != nil }
+        var completedCount = 0
+        
+        guard !modsToSync.isEmpty else {
+            isSyncingAllTags = false
+            return
+        }
+        
+        for mod in modsToSync {
+            syncTagFromNexus(for: mod, shouldRefresh: false) { _ in
+                DispatchQueue.main.async {
+                    completedCount += 1
+                    self.syncAllTagsProgress = Double(completedCount) / Double(modsToSync.count)
+                    if completedCount >= modsToSync.count {
+                        self.isSyncingAllTags = false
+                        self.refresh()
+                    }
+                }
+            }
+        }
+    }
     
     // Thai Translation Hub State
     @Published var thaiTranslations: [ThaiTranslationMod] = []
@@ -339,7 +440,52 @@ class StarHubTHViewModel: ObservableObject {
     /// Typed-key shorthand. Prefer this over localizedString(for:) with raw strings.
     /// Example: vm.L(L10n.Mods.enabled)
     func L(_ key: String) -> String {
-        localizedString(for: key)
+        return localizedString(for: key)
+    }
+    
+    func localizedTag(_ tag: String) -> String {
+        let rawTag = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+        if rawTag.isEmpty { return rawTag }
+        
+        switch rawTag {
+        case "Content Patcher": return L(L10n.Tags.contentPatcher)
+        case "Framework": return L(L10n.Tags.framework)
+        case "Cosmetic": return L(L10n.Tags.cosmetic)
+        case "NPC": return L(L10n.Tags.npc)
+        case "UI": return L(L10n.Tags.ui)
+        case "Audio": return L(L10n.Tags.audio)
+        case "Map": return L(L10n.Tags.map)
+        case "Gameplay": return L(L10n.Tags.gameplay)
+        case "Translation": return L(L10n.Tags.translation)
+        case "Other": return L(L10n.Tags.other)
+        case "tag_nexus_2": return L(L10n.Tags.nexus2)
+        case "tag_nexus_3": return L(L10n.Tags.nexus3)
+        case "tag_nexus_4": return L(L10n.Tags.nexus4)
+        case "tag_nexus_5": return L(L10n.Tags.nexus5)
+        case "tag_nexus_6": return L(L10n.Tags.nexus6)
+        case "tag_nexus_7": return L(L10n.Tags.nexus7)
+        case "tag_nexus_8": return L(L10n.Tags.nexus8)
+        case "tag_nexus_9": return L(L10n.Tags.nexus9)
+        case "tag_nexus_10": return L(L10n.Tags.nexus10)
+        case "tag_nexus_11": return L(L10n.Tags.nexus11)
+        case "tag_nexus_12": return L(L10n.Tags.nexus12)
+        case "tag_nexus_13": return L(L10n.Tags.nexus13)
+        case "tag_nexus_14": return L(L10n.Tags.nexus14)
+        case "tag_nexus_15": return L(L10n.Tags.nexus15)
+        case "tag_nexus_16": return L(L10n.Tags.nexus16)
+        case "tag_nexus_17": return L(L10n.Tags.nexus17)
+        case "tag_nexus_18": return L(L10n.Tags.nexus18)
+        case "tag_nexus_19": return L(L10n.Tags.nexus19)
+        case "tag_nexus_20": return L(L10n.Tags.nexus20)
+        case "tag_nexus_21": return L(L10n.Tags.nexus21)
+        case "tag_nexus_22": return L(L10n.Tags.nexus22)
+        case "tag_nexus_23": return L(L10n.Tags.nexus23)
+        case "tag_nexus_24": return L(L10n.Tags.nexus24)
+        case "tag_nexus_25": return L(L10n.Tags.nexus25)
+        case "tag_nexus_26": return L(L10n.Tags.nexus26)
+        case "tag_nexus_27": return L(L10n.Tags.nexus27)
+        default: return tag
+        }
     }
     
     func refresh() {
@@ -472,7 +618,7 @@ class StarHubTHViewModel: ObservableObject {
             }
         }
             
-            let inferredTag = ModItem.inferTag(name: name, uniqueId: uniqueId, description: description)
+            let finalTag = customModTags[uniqueId] ?? ModItem.inferTag(name: name, uniqueId: uniqueId, description: description)
             
             return ModItem(
                 uniqueId: uniqueId,
@@ -484,7 +630,7 @@ class StarHubTHViewModel: ObservableObject {
                 nexusUrl: nexusUrl,
                 isEnabled: isEnabled,
                 dependencies: dependencies,
-                modTag: inferredTag
+                modTag: finalTag
             )
         }
         

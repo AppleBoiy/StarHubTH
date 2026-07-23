@@ -6,17 +6,6 @@ struct AppChangelogView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text(vm.L(L10n.Main.appChangelog))
-                    .font(.title2)
-                    .fontWeight(.bold)
-                Spacer()
-            }
-            .padding()
-            .background(Color(NSColor.windowBackgroundColor))
-            
-            Divider()
-            
             ScrollView {
                 SimpleMarkdownView(text: changelogText)
                     .padding(20)

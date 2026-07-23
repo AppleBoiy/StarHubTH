@@ -214,6 +214,42 @@ struct ModListView: View {
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .searchable(text: $searchText, prompt: Text(vm.L(L10n.Mods.searchMods)))
+        .toolbar {
+            ToolbarItem {
+                Button {
+                    if vm.nexusApiKey.isEmpty {
+                        vm.showModal(message: vm.L(L10n.Settings.nexusApiKeyMissing))
+                    } else {
+                        vm.syncAllTagsFromNexus()
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        if vm.isSyncingAllTags {
+                            ProgressView().controlSize(.small).scaleEffect(0.7)
+                            Text("\(Int(vm.syncAllTagsProgress * 100))%")
+                                .font(.system(size: 12))
+                                .monospacedDigit()
+                        } else {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 11))
+                            Text(vm.L(L10n.Tags.sync))
+                                .font(.system(size: 12))
+                        }
+                    }
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.primary.opacity(0.06))
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                .pointingHandCursor()
+                .disabled(vm.isSyncingAllTags)
+                .help(vm.L(L10n.Tags.sync))
+            }
+        }
     }
 }
 
@@ -248,7 +284,7 @@ struct ModControlsBar: View {
                         vm.modFilterTag = tag
                     } label: {
                         HStack {
-                            Text(tag)
+                            Text(vm.localizedTag(tag))
                             if vm.modFilterTag == tag {
                                 Image(systemName: "checkmark")
                             }
@@ -581,7 +617,7 @@ struct ModListRow: View {
 
                     // Type tag badge
                     if !mod.modTag.isEmpty && !isChild {
-                        Text(mod.modTag)
+                        Text(vm.localizedTag(mod.modTag))
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 5)
@@ -847,6 +883,34 @@ struct ModListRow: View {
         .animation(.easeInOut(duration: 0.1), value: isHovered)
         .onHover { isHovered = $0 }
         .contextMenu {
+            Menu {
+                ForEach(["tag_nexus_2", "tag_nexus_3", "tag_nexus_4", "tag_nexus_5", "tag_nexus_6", "tag_nexus_7", "tag_nexus_8", "tag_nexus_9", "tag_nexus_10", "tag_nexus_11", "tag_nexus_12", "tag_nexus_13", "tag_nexus_14", "tag_nexus_15", "tag_nexus_16", "tag_nexus_17", "tag_nexus_18", "tag_nexus_19", "tag_nexus_20", "tag_nexus_21", "tag_nexus_22", "tag_nexus_23", "tag_nexus_24", "tag_nexus_25", "tag_nexus_26", "tag_nexus_27", "Content Patcher", "Translation", "Other"], id: \.self) { tag in
+                    Button {
+                        vm.setCustomTag(for: mod.uniqueId, tag: tag)
+                    } label: {
+                        HStack {
+                            Text(vm.localizedTag(tag))
+                            if vm.customModTags[mod.uniqueId] == tag {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+                
+                if vm.customModTags[mod.uniqueId] != nil {
+                    Divider()
+                    Button(role: .destructive) {
+                        vm.resetCustomTag(for: mod.uniqueId)
+                    } label: {
+                        Text(vm.L(L10n.Tags.reset))
+                    }
+                }
+            } label: {
+                Text(vm.L(L10n.Tags.change))
+            }
+            
+            Divider()
+            
             Button(vm.L(L10n.Mods.openInFinder)) {
                 let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
                 let url = URL(fileURLWithPath: vm.gameDir)

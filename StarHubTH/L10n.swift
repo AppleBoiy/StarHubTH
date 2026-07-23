@@ -160,6 +160,8 @@ enum L10n {
         static let sortAuthor           = "mods_sort_author"
         static let sortVersion          = "mods_sort_version"
         static let sortStatus           = "mods_sort_status"
+        static let sortUpdateAsc        = "mods_sort_update_asc"
+        static let sortUpdateDesc       = "mods_sort_update_desc"
         // Update
         static let updateAvailable      = "mods_update_available"
         static let updateMod            = "mods_update_mod"
@@ -171,6 +173,52 @@ enum L10n {
         static let installDropHint      = "mods_install_drop_hint"
         static let installInvalidFile   = "mods_install_invalid_file"
         static let installing           = "mods_installing"
+    }
+    
+    // MARK: - Tags
+    enum Tags {
+        static let contentPatcher       = "tag_content_patcher"
+        static let framework            = "tag_framework"
+        static let cosmetic             = "tag_cosmetic"
+        static let npc                  = "tag_npc"
+        static let ui                   = "tag_ui"
+        static let audio                = "tag_audio"
+        static let map                  = "tag_map"
+        
+        static let nexus2               = "tag_nexus_2"
+        static let nexus3               = "tag_nexus_3"
+        static let nexus4               = "tag_nexus_4"
+        static let nexus5               = "tag_nexus_5"
+        static let nexus6               = "tag_nexus_6"
+        static let nexus7               = "tag_nexus_7"
+        static let nexus8               = "tag_nexus_8"
+        static let nexus9               = "tag_nexus_9"
+        static let nexus10              = "tag_nexus_10"
+        static let nexus11              = "tag_nexus_11"
+        static let nexus12              = "tag_nexus_12"
+        static let nexus13              = "tag_nexus_13"
+        static let nexus14              = "tag_nexus_14"
+        static let nexus15              = "tag_nexus_15"
+        static let nexus16              = "tag_nexus_16"
+        static let nexus17              = "tag_nexus_17"
+        static let nexus18              = "tag_nexus_18"
+        static let nexus19              = "tag_nexus_19"
+        static let nexus20              = "tag_nexus_20"
+        static let nexus21              = "tag_nexus_21"
+        static let nexus22              = "tag_nexus_22"
+        static let nexus23              = "tag_nexus_23"
+        static let nexus24              = "tag_nexus_24"
+        static let nexus25              = "tag_nexus_25"
+        static let nexus26              = "tag_nexus_26"
+        static let nexus27              = "tag_nexus_27"
+
+        static let gameplay             = "tag_gameplay"
+        static let translation          = "tag_translation"
+        static let other                = "tag_other"
+        
+        static let change               = "tag_change"
+        static let reset                = "tag_reset"
+        static let sync                 = "tag_sync"
     }
 
     // MARK: - Logs
@@ -244,6 +292,7 @@ enum L10n {
         static let nexusApiKeyPlaceholder = "nexus_api_key_placeholder"
         static let nexusGetApiKey       = "nexus_get_api_key"
         static let nexusApiSectionFooter = "nexus_api_section_footer"
+        static let nexusApiKeyMissing   = "nexus_api_key_missing"
         
         // Mod Config
         static let configEditor         = "config_editor"

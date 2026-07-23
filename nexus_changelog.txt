@@ -1,0 +1,45 @@
+### Version 1.1.0 - English
+
+[b]Added[/b]
+[list]
+[*] [b]App Changelog[/b]: Added an in-app changelog page to view update history directly within StarHubTH.
+[*] [b]Mod List View[/b]: Added a new filtering system to easily sort mods by status (All / Enabled / Disabled) using interactive filter pills.
+[*] [b]Mod List View[/b]: Added a new category/tag filter dropdown to filter mods by their specific types.
+[*] [b]Mod Installation[/b]: Added the ability to easily install mods directly from .zip files or unzipped folders. The app automatically extracts, organizes, and places the mod contents into the correct Stardew Valley Mods directory.
+[*] [b]Mod Backup[/b]: Added a convenient "Backup Mods" feature to quickly compress and save your entire active Mods folder into a backup zip file on your Desktop.
+[*] [b]Nexus Mods Integration[/b]: Added the ability to download and install mods directly from Nexus Mods into the app using a 1-click download process.
+[*] [b]Mod Detail View[/b]: Integrated with Nexus Mods API to automatically fetch and display mod descriptions, changelogs, and cover images directly within the app.
+[*] [b]Mod Config Editor[/b]: Complete layout redesign to strictly adhere to native macOS Human Interface Guidelines (HIG).
+[*] [b]Mod Config Editor[/b]: Implemented a recursive tree data structure to support properly nested configurations that expand/collapse, matching the in-game Generic Mod Config Menu.
+[/list]
+
+[b]Fixed[/b]
+[list]
+[*] [b]Mod Config Editor[/b]: Fixed a type-inference bug where configuration values 0 and 1 were incorrectly parsed and displayed as boolean toggles (On/Off) instead of number inputs.
+[*] [b]Mod Config Editor[/b]: Fixed the appearance of the top Toolbar Segmented Picker.
+[*] [b]Mod Config Editor[/b]: Completed 100% Thai localization coverage for all editor strings.
+[/list]
+
+---
+
+### Version 1.1.0 - Thai (ภาษาไทย)
+
+[b]เพิ่มฟีเจอร์ใหม่ (Added)[/b]
+[list]
+[*] [b]App Changelog[/b]: เพิ่มหน้าต่างบันทึกการเปลี่ยนแปลง (Changelog) ภายในแอป เพื่อให้สามารถดูประวัติการอัปเดตได้โดยตรง
+[*] [b]Mod List View[/b]: เพิ่มระบบกรอง (Filter) ม็อดตามสถานะการเปิด/ปิด (ทั้งหมด / เปิดใช้งาน / ปิดใช้งาน) ด้วยปุ่มกด (Pills)
+[*] [b]Mod List View[/b]: เพิ่มระบบกรองหมวดหมู่ (Category/Tag) เพื่อค้นหาม็อดตามประเภทได้อย่างรวดเร็ว
+[*] [b]Mod Installation[/b]: เพิ่มระบบติดตั้งม็อดอัตโนมัติจากการลากไฟล์ .zip หรือโฟลเดอร์มาวาง แอปจะจัดการแตกไฟล์และนำไปใส่ในโฟลเดอร์ Mods ของ Stardew Valley ให้อย่างถูกต้อง
+[*] [b]Mod Backup[/b]: เพิ่มปุ่ม "Backup Mods" สำหรับบีบอัดโฟลเดอร์ม็อดทั้งหมดเป็นไฟล์ .zip ไปไว้บนหน้า Desktop ในคลิกเดียว
+[*] [b]Nexus Mods Integration[/b]: เพิ่มระบบดาวน์โหลดและติดตั้งม็อดจาก Nexus Mods เข้าแอปได้โดยตรงแบบ 1-click
+[*] [b]Mod Detail View[/b]: เชื่อมต่อกับ Nexus Mods API เพื่อดึงข้อมูลคำอธิบายม็อด, ประวัติการอัปเดต, และรูปภาพหน้าปกมาแสดงภายในแอปโดยอัตโนมัติ
+[*] [b]Mod Config Editor[/b]: ปรับโฉมหน้าตาการตั้งค่าม็อดใหม่ทั้งหมด ให้สอดคล้องกับหลักการออกแบบของ macOS (Human Interface Guidelines)
+[*] [b]Mod Config Editor[/b]: รองรับระบบเมนูตั้งค่าแบบซ้อนทับ (Nested Tree/Categories) ซึ่งสามารถกดขยาย/หดได้ เหมือนกับใน Generic Mod Config Menu ของเกมเป๊ะๆ
+[/list]
+
+[b]แก้ไขบั๊ก (Fixed)[/b]
+[list]
+[*] [b]Mod Config Editor[/b]: แก้ไขบั๊กที่ทำให้ค่าตั้งค่าม็อดที่เป็นตัวเลข 0 และ 1 ถูกแปลงและแสดงผลเป็นสวิตช์เปิด/ปิด (On/Off) แทนที่จะเป็นช่องกรอกตัวเลข
+[*] [b]Mod Config Editor[/b]: แก้ไขการแสดงผลของ Toolbar Segmented Picker ด้านบนให้ถูกต้องสวยงาม
+[*] [b]Mod Config Editor[/b]: แปลข้อความทั้งหมดในหน้าต่างการตั้งค่าเป็นภาษาไทย 100%
+[/list]

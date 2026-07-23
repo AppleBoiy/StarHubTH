@@ -64,6 +64,22 @@ struct ModDetailView: View {
                         ProgressView().controlSize(.small)
                             .padding(.top, 4)
                     }
+                    
+                    if nexusId != nil && !vm.nexusApiKey.isEmpty {
+                        Button {
+                            isLoading = true
+                            vm.syncTagFromNexus(for: mod) { success in
+                                isLoading = false
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text(vm.L(L10n.Tags.sync))
+                            }
+                            .font(.system(size: 11))
+                        }
+                        .padding(.top, 4)
+                    }
                 }
                 .padding(.leading, coverUrl == nil ? 0 : 8)
                 
