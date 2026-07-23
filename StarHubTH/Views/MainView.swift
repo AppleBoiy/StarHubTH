@@ -24,9 +24,9 @@ struct MainView: View {
     
     private var navigationTitleText: String {
         if currentTab == "Saves" && vm.viewingSaveTimeline != nil { return vm.L(L10n.Saves.timeline) }
-        if currentTab == "Saves" && vm.editingSave != nil { return vm.editingSave!.playerName }
-        if currentTab == "Mods" && vm.editingModConfig != nil { return vm.editingModConfig!.name }
-        if currentTab == "ThaiHub" && vm.viewingThaiMod != nil { return vm.viewingThaiMod!.name }
+        if currentTab == "Saves", let save = vm.editingSave { return save.playerName }
+        if currentTab == "Mods", let config = vm.editingModConfig { return config.name }
+        if currentTab == "ThaiHub", let thaiMod = vm.viewingThaiMod { return thaiMod.name }
         if currentTab == "Mods" { return vm.L(L10n.Mods.mods) }
         if currentTab == "Updates" { return vm.L(L10n.Main.softwareUpdate) }
         if currentTab == "ThaiHub" { return vm.L(L10n.ThaiHub.title) }

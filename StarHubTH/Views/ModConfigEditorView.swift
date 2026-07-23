@@ -139,12 +139,12 @@ struct ModConfigEditorView: View {
                             .cornerRadius(6)
                             .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.12), lineWidth: 1))
                             .frame(minHeight: 320)
-                            .onChange(of: configText) { newValue in
+                            .onChange(of: configText, perform: { newValue in
                                 validateJson(newValue)
                                 if !isInvalidJson {
                                     parseToVisual()
                                 }
-                            }
+                            })
                     }
                 }
                 .padding(30)

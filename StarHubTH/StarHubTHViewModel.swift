@@ -109,15 +109,6 @@ struct ThaiTranslationMod: Identifiable, Equatable {
     var isInstalled: Bool = false
     var isOriginalModInstalled: Bool = false
     
-    func translatedStatus(vm: StarHubTHViewModel) -> String {
-        if status.contains("เสร็จสมบูรณ์") {
-            return "✅ " + vm.L(L10n.ThaiHub.completed)
-        } else if status.contains("รอแปล") {
-            return "⏳ " + vm.L(L10n.ThaiHub.waitingTranslation)
-        }
-        return status
-    }
-    
     func installationStatusText(vm: StarHubTHViewModel) -> String {
         if isInstalled {
             return vm.L(L10n.ThaiHub.installed)
@@ -546,91 +537,12 @@ class StarHubTHViewModel: ObservableObject {
     }
     
     func scanMods() {
-        guard !gameDir.isEmpty else {
-            self.mods = []
-            return
-        }
-        
-        let fm = FileManager.default
-        let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
-        let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
-        
-        var scannedMods: [ModItem] = []
-        
-        // Helper to parse a folder containing manifest.json
-        func parseModFolder(at path: String, relativePath: String, isEnabled: Bool) -> ModItem? {
-            return ModManifestParser.parse(at: path, relativePath: relativePath, isEnabled: isEnabled, customTags: customModTags)
-        }
-        
-        // Helper to recursively scan folders for manifest.json and group them
-        func scanFolderForMods(at path: String, isEnabled: Bool) {
-            let url = URL(fileURLWithPath: path)
-            var groups: [String: [ModItem]] = [:]
-            var ungrouped: [ModItem] = []
-            
-            if let enumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
-                for case let fileURL as URL in enumerator {
-                    if fileURL.lastPathComponent.lowercased() == "manifest.json" {
-                        let modFolderURL = fileURL.deletingLastPathComponent()
-                        let relativePath = modFolderURL.path.replacingOccurrences(of: url.path, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                        if let mod = parseModFolder(at: modFolderURL.path, relativePath: relativePath, isEnabled: isEnabled) {
-                            
-                            // Determine top-level folder
-                            let pathComponents = relativePath.components(separatedBy: "/")
-                            
-                            if pathComponents.count > 1, let topFolder = pathComponents.first, !topFolder.isEmpty {
-                                groups[topFolder, default: []].append(mod)
-                            } else {
-                                ungrouped.append(mod)
-                            }
-                        }
-                    }
-                }
-            }
-            
-            scannedMods.append(contentsOf: ungrouped)
-            
-            for (groupName, modsInGroup) in groups {
-                if modsInGroup.count == 1 {
-                    scannedMods.append(modsInGroup[0])
-                } else {
-                    let groupMod = ModItem(
-                        uniqueId: "",
-                        name: groupName,
-                        folderName: groupName,
-                        version: "",
-                        author: "Group",
-                        description: "\(modsInGroup.count) mods",
-                        nexusUrl: "",
-                        isEnabled: isEnabled,
-                        dependencies: [],
-                        children: modsInGroup,
-                        isGroup: true
-                    )
-                    scannedMods.append(groupMod)
-                }
-            }
-        }
-        
-        // Scan enabled mods folder
-        if fm.fileExists(atPath: modsPath) {
-            scanFolderForMods(at: modsPath, isEnabled: true)
-        }
-        
-        // Scan disabled mods folder
-        if fm.fileExists(atPath: disabledModsPath) {
-            scanFolderForMods(at: disabledModsPath, isEnabled: false)
-        }
+        let scannedMods = ModScanner.scan(gameDir: gameDir, customModTags: customModTags)
         
         parseSMAPILog()
             
         DispatchQueue.main.async {
-            self.mods = scannedMods.sorted { 
-                if $0.isGroup != $1.isGroup {
-                    return $0.isGroup 
-                }
-                return $0.name.lowercased() < $1.name.lowercased() 
-            }
+            self.mods = scannedMods
             if self.selectedMod == nil, let first = self.mods.first {
                 self.selectedMod = first
             }
@@ -847,180 +759,43 @@ class StarHubTHViewModel: ObservableObject {
         }
     }
 
-    /// Installs a mod from a .zip file — unzips to a temp dir then delegates to installExtractedContent.
+    /// Installs a mod from a .zip file
     func installModFromZip(url: URL) {
-        let fm = FileManager.default
-        let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            DispatchQueue.main.async { self.isInstallingMod = true }
-
-            do {
-                try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
-
-                let unzip = Process()
-                unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-                unzip.arguments = ["-o", "-q", url.path, "-d", tempDir.path]
-                try unzip.run()
-                unzip.waitUntilExit()
-
-                guard unzip.terminationStatus == 0 else {
-                    try? fm.removeItem(at: tempDir)
-                    DispatchQueue.main.async {
-                        self.isInstallingMod = false
-                        self.showModal(message: self.L(L10n.VM.unzipError))
-                    }
-                    return
-                }
-
-                let fallback = url.deletingPathExtension().lastPathComponent
-                self.installExtractedContent(from: tempDir, fallbackRootName: fallback, cleanup: true)
-
-            } catch {
-                try? fm.removeItem(at: tempDir)
-                DispatchQueue.main.async {
-                    self.isInstallingMod = false
-                    self.showModal(message: String(format: self.L(L10n.VM.unzipFailed), error.localizedDescription))
-                }
-            }
+        DispatchQueue.main.async { self.isInstallingMod = true }
+        ModInstaller.installFromZip(url: url, gameDir: gameDir) { [weak self] result in
+            guard let self = self else { return }
+            self.handleInstallResult(result)
         }
     }
 
     /// Installs a mod from an already-extracted folder.
-    /// Handles both a single mod folder (contains manifest.json directly)
-    /// and a pack folder (contains multiple sub-mod folders each with manifest.json).
-        func installModFromFolder(url: URL) {
-        DispatchQueue.global(qos: .userInitiated).async {
-            DispatchQueue.main.async { self.isInstallingMod = true }
-            self.installExtractedContent(from: url.deletingLastPathComponent(),
-                                         specificRoot: url.lastPathComponent,
-                                         fallbackRootName: url.lastPathComponent,
-                                         cleanup: false)
+    func installModFromFolder(url: URL) {
+        DispatchQueue.main.async { self.isInstallingMod = true }
+        ModInstaller.installFromFolder(url: url, gameDir: gameDir) { [weak self] result in
+            guard let self = self else { return }
+            self.handleInstallResult(result)
         }
     }
-
-    /// Shared worker: scans `rootDir` for sub-folders that directly contain manifest.json,
-    /// moves them into the game's Mods/ folder, then optionally removes `rootDir` (for temp dirs).
-    /// - Parameters:
-    ///   - rootDir: Directory to scan (either a temp unzip dir or the parent of a dropped folder).
-    ///   - specificRoot: If non-nil, only the item with this name inside rootDir is considered.
-    ///   - cleanup: Whether to delete rootDir after the operation.
-    private func installExtractedContent(from rootDir: URL,
-                                         specificRoot: String? = nil,
-                                         fallbackRootName: String? = nil,
-                                         cleanup: Bool) {
-        let fm = FileManager.default
-        let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
-
-        do {
-            // 1. Collect all folders that contain a manifest.json
-            var manifestDirs: [URL] = []
-            let enumerateRoot = specificRoot.map { rootDir.appendingPathComponent($0) } ?? rootDir
-
-            if let enumerator = fm.enumerator(
-                at: enumerateRoot,
-                includingPropertiesForKeys: [.isDirectoryKey],
-                options: [.skipsHiddenFiles]
-            ) {
-                for case let fileURL as URL in enumerator {
-                    if fileURL.lastPathComponent.lowercased() == "manifest.json" {
-                        manifestDirs.append(fileURL.deletingLastPathComponent())
-                    }
-                }
-            }
-
-            // 2. Keep only top-most (shallowest) folders — skip children already covered by a parent
-            let topLevelDirs = manifestDirs.filter { candidate in
-                !manifestDirs.contains { other in
-                    other != candidate && candidate.path.hasPrefix(other.path + "/")
-                }
-            }
-
-            guard !topLevelDirs.isEmpty else {
-                if cleanup { try? fm.removeItem(at: rootDir) }
-                DispatchQueue.main.async {
-                    self.isInstallingMod = false
-                    self.showModal(message: self.L(L10n.Mods.installNoModFound))
-                }
-                return
-            }
-
-            // 3. Create Mods dir if needed
-            if !fm.fileExists(atPath: modsPath) {
-                try fm.createDirectory(atPath: modsPath, withIntermediateDirectories: true)
-            }
-
-            // 4. For each mod folder, find its root name relative to rootDir, then move/copy
-            var installedNames: [String] = []
-            var movedRoots = Set<String>()
-
-            for modDir in topLevelDirs {
-                let originalRelative = Array(modDir.pathComponents.dropFirst(rootDir.pathComponents.count))
-                var relative = originalRelative
-                
-                // Strip common generic wrapper folders from the root
-                while let first = relative.first, 
-                      first.lowercased() == "mods" || first.lowercased() == "stardew valley" || first.lowercased() == "stardewvalley" || first.lowercased() == "stardew_valley" {
-                    relative.removeFirst()
-                }
-                
-                let rootName = relative.first ?? fallbackRootName ?? "UnknownMod"
-                if movedRoots.contains(rootName) { continue }
-                movedRoots.insert(rootName)
-                
-                var srcRoot = rootDir
-                if let firstUnstripped = relative.first, let index = originalRelative.firstIndex(of: firstUnstripped) {
-                    for i in 0...index {
-                        srcRoot = srcRoot.appendingPathComponent(originalRelative[i])
-                    }
-                } else {
-                    srcRoot = modDir
-                }
-
-                let destRoot = URL(fileURLWithPath: modsPath).appendingPathComponent(rootName)
-                let destBackup = URL(fileURLWithPath: modsPath).appendingPathComponent("\(rootName)_backup_temp")
-
-                if fm.fileExists(atPath: destRoot.path) {
-                    if fm.fileExists(atPath: destBackup.path) {
-                        try? fm.removeItem(at: destBackup)
-                    }
-                    try fm.moveItem(at: destRoot, to: destBackup)
-                }
-
-                do {
-                    if cleanup {
-                        try fm.moveItem(at: srcRoot, to: destRoot)
-                    } else {
-                        try fm.copyItem(at: srcRoot, to: destRoot)
-                    }
-                    if fm.fileExists(atPath: destBackup.path) {
-                        try? fm.trashItem(at: destBackup, resultingItemURL: nil)
-                    }
-                    installedNames.append(rootName)
-                } catch {
-                    if fm.fileExists(atPath: destBackup.path) && !fm.fileExists(atPath: destRoot.path) {
-                        try? fm.moveItem(at: destBackup, to: destRoot)
-                    }
-                    throw error
-                }
-            }
-
-            if cleanup { try? fm.removeItem(at: rootDir) }
-
-            DispatchQueue.main.async {
-                self.isInstallingMod = false
+    
+    private func handleInstallResult(_ result: Result<[String], ModInstallerError>) {
+        DispatchQueue.main.async {
+            self.isInstallingMod = false
+            switch result {
+            case .success(let installedNames):
                 let names = installedNames.joined(separator: ", ")
                 let msg = String(format: self.L(L10n.Mods.installSuccess), names)
                 self.showModal(message: msg)
                 self.log(msg)
                 self.scanMods()
-            }
-
-        } catch {
-            if cleanup { try? fm.removeItem(at: rootDir) }
-            DispatchQueue.main.async {
-                self.isInstallingMod = false
-                self.showModal(message: String(format: self.L(L10n.VM.unzipFailed), error.localizedDescription))
+            case .failure(let error):
+                switch error {
+                case .noModFound:
+                    self.showModal(message: self.L(L10n.Mods.installNoModFound))
+                case .unzipProcessError:
+                    self.showModal(message: self.L(L10n.VM.unzipError))
+                case .unzipFailed(let msg), .other(let msg):
+                    self.showModal(message: String(format: self.L(L10n.VM.unzipFailed), msg))
+                }
             }
         }
     }
@@ -1028,81 +803,23 @@ class StarHubTHViewModel: ObservableObject {
     // MARK: - Nexus Auto-Download
     
     func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: Int) {
-        let apiKey = self.nexusApiKey
-        guard !apiKey.isEmpty else { return }
-        
         DispatchQueue.main.async {
             self.downloadingMods.insert(mod.name)
         }
         
-        // Step 1: get files list to find latest file ID
-        NexusAPIService.shared.getModFiles(modId: nexusId, apiKey: apiKey) { [weak self] result in
+        NexusDownloader.downloadUpdate(nexusId: nexusId, apiKey: self.nexusApiKey) { [weak self] result in
             guard let self = self else { return }
+            
             switch result {
-            case .success(let fileList):
-                // Find main file or latest file. For simplicity, just grab the first file in the 'main' category (id = 1) or fallback to first.
-                // Usually fileList.files is sorted by uploaded date descending.
-                let targetFile = fileList.files.first { $0.categoryId == 1 } ?? fileList.files.first
-                guard let fileId = targetFile?.fileId else {
-                    DispatchQueue.main.async {
-                        self.downloadingMods.remove(mod.name)
-                        self.showModal(message: "Could not find a valid file to download for \(mod.name).")
-                    }
-                    return
-                }
-                
-                // Step 2: get download link
-                NexusAPIService.shared.getDownloadLink(modId: nexusId, fileId: fileId, apiKey: apiKey) { linkResult in
-                    switch linkResult {
-                    case .success(let links):
-                        guard let downloadLink = links.first?.URI, let url = URL(string: downloadLink) else {
-                            DispatchQueue.main.async {
-                                self.downloadingMods.remove(mod.name)
-                                self.showModal(message: "Could not obtain download link for \(mod.name).")
-                            }
-                            return
-                        }
-                        
-                        // Step 3: download the file
-                        let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".zip")
-                        let task = URLSession.shared.downloadTask(with: url) { localURL, response, error in
-                            if let error = error {
-                                DispatchQueue.main.async {
-                                    self.downloadingMods.remove(mod.name)
-                                    self.showModal(message: "Download failed: \(error.localizedDescription)")
-                                }
-                                return
-                            }
-                            guard let localURL = localURL else { return }
-                            
-                            do {
-                                try FileManager.default.moveItem(at: localURL, to: tempZipURL)
-                                DispatchQueue.main.async {
-                                    // Step 4: Install it! (We can reuse installModFromZip, but we also want to clear downloadingMods)
-                                    // So we'll dispatch directly to installModFromZip and let it run. We just remove downloadingMods.
-                                    self.downloadingMods.remove(mod.name)
-                                    self.installModFromZip(url: tempZipURL)
-                                }
-                            } catch {
-                                DispatchQueue.main.async {
-                                    self.downloadingMods.remove(mod.name)
-                                    self.showModal(message: "File move error: \(error.localizedDescription)")
-                                }
-                            }
-                        }
-                        task.resume()
-                        
-                    case .failure(let error):
-                        DispatchQueue.main.async {
-                            self.downloadingMods.remove(mod.name)
-                            self.showModal(message: "Failed to get download link: \(error.localizedDescription)")
-                        }
-                    }
+            case .success(let zipUrl):
+                DispatchQueue.main.async {
+                    self.downloadingMods.remove(mod.name)
+                    self.installModFromZip(url: zipUrl)
                 }
             case .failure(let error):
                 DispatchQueue.main.async {
                     self.downloadingMods.remove(mod.name)
-                    self.showModal(message: "Failed to fetch mod files: \(error.localizedDescription)")
+                    self.showModal(message: error.localizedDescription)
                 }
             }
         }
@@ -1140,80 +857,7 @@ class StarHubTHViewModel: ObservableObject {
             }
         }
     }
-    @Published var isPlayingGame: Bool = false
-    @Published var selectedProfile: String = "SMAPI"
-    
-    // Launch Stardew Valley (with selected profile)
-    func launchGame() {
-        guard !gameDir.isEmpty else {
-            showModal(message: L(L10n.Settings.gameDirNotSet))
-            return
-        }
-        
-        let profile = UserDefaults.standard.string(forKey: "launchProfile") ?? "SMAPI"
-        let closeAfter = UserDefaults.standard.bool(forKey: "closeAfterLaunch")
-        
-        self.isPlayingGame = true
-        
-        let originalPath = (gameDir as NSString).appendingPathComponent("StardewValley-original")
-        
-        if profile == "Vanilla" && FileManager.default.fileExists(atPath: originalPath) {
-            log(L(L10n.VM.launchingVanilla))
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/bash")
-            process.arguments = [originalPath]
-            process.currentDirectoryURL = URL(fileURLWithPath: gameDir)
-            do {
-                try process.run()
-                log(L(L10n.VM.launchVanillaSuccess))
-                if closeAfter { NSApplication.shared.terminate(nil) }
-            } catch {
-                log(String(format: L(L10n.VM.launchVanillaError), error.localizedDescription))
-                showModal(message: L(L10n.VM.cannotStartVanilla))
-            }
-        } else {
-            log(L(L10n.VM.launchingSmapi))
-            if let steamURL = URL(string: "steam://run/413150") {
-                if NSWorkspace.shared.open(steamURL) {
-                    log(L(L10n.VM.launchSteamSuccess))
-                    startSmapiLogWatcher()
-                    if closeAfter { NSApplication.shared.terminate(nil) }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                        self.isPlayingGame = false
-                    }
-                    return
-                }
-            }
-            
-        let nsPath = gameDir as NSString
-        var appPath = gameDir
-        if nsPath.contains(".app") {
-            var current = nsPath
-            while current.length > 0 && !current.lastPathComponent.hasSuffix(".app") {
-                current = current.deletingLastPathComponent as NSString
-            }
-            if current.length > 0 {
-                appPath = current as String
-            }
-        }
-        
-        // Fallback: Open app directly
-        let appURL = URL(fileURLWithPath: appPath)
-            if NSWorkspace.shared.open(appURL) {
-                log(L(L10n.VM.launchDirectSuccess))
-                startSmapiLogWatcher()
-                if closeAfter { NSApplication.shared.terminate(nil) }
-            } else {
-                log(L(L10n.VM.cannotStartDirect))
-                showModal(message: L(L10n.VM.cannotStartGame))
-            }
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-            self.isPlayingGame = false
-        }
-    }
-    
+
     func log(_ message: String, level: LogLevel = .info) {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
@@ -1323,13 +967,6 @@ class StarHubTHViewModel: ObservableObject {
         smapiLogFileHandle = nil
     }
 
-    private func smapiLineLevel(_ line: String) -> LogLevel {
-        if line.contains(" ERROR ") || line.contains("[ERROR") { return .error }
-        if line.contains(" WARN ")  || line.contains("[WARN")  { return .warning }
-        if line.contains(" ALERT ") { return .warning }
-        return .smapi
-    }
-    
     func showModal(message: String) {
         self.alertMessage = message
         self.showAlert = true
@@ -1900,28 +1537,13 @@ class StarHubTHViewModel: ObservableObject {
     
     // MARK: - Mod Profiles
     func loadProfiles() {
-        if let data = UserDefaults.standard.data(forKey: "modProfiles"),
-           let profiles = try? JSONDecoder().decode([ModProfile].self, from: data) {
-            self.modProfiles = profiles
-        } else {
-            self.modProfiles = []
-        }
-        
-        if let activeIdStr = UserDefaults.standard.string(forKey: "activeProfileId"),
-           let activeId = UUID(uuidString: activeIdStr) {
-            self.activeProfileId = activeId
-        }
+        let loaded = ProfileManager.shared.loadProfiles()
+        self.modProfiles = loaded.profiles
+        self.activeProfileId = loaded.activeId
     }
     
     func saveProfiles() {
-        if let data = try? JSONEncoder().encode(modProfiles) {
-            UserDefaults.standard.set(data, forKey: "modProfiles")
-        }
-        if let activeId = activeProfileId {
-            UserDefaults.standard.set(activeId.uuidString, forKey: "activeProfileId")
-        } else {
-            UserDefaults.standard.removeObject(forKey: "activeProfileId")
-        }
+        ProfileManager.shared.saveProfiles(modProfiles, activeProfileId: activeProfileId)
     }
     
     func createProfile(name: String) {
@@ -1990,90 +1612,10 @@ class StarHubTHViewModel: ObservableObject {
     /// Actually move mod files to match the given profile's enabledModIds.
     @discardableResult
     private func applyProfileToFilesystem(profile: ModProfile) -> Bool {
-        let fm = FileManager.default
-        let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
-        let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
-        var hasError = false
-
-        // Check whether a mod (or any of its children) is covered by the profile's enabled list
-        func isCoveredByProfile(_ mod: ModItem) -> Bool {
-            if mod.isGroup, let children = mod.children {
-                return children.contains { profile.enabledModIds.contains($0.uniqueId) }
-            }
-            return profile.enabledModIds.contains(mod.uniqueId)
-        }
-
-        // Disable mods not in profile
-        for mod in mods.filter({ $0.isEnabled }) {
-            if !isCoveredByProfile(mod) {
-                let src = (modsPath as NSString).appendingPathComponent(mod.folderName)
-                let dst = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
-                let dstBackup = "\(dst)_profile_backup_temp"
-                do {
-                    try fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
-                                            withIntermediateDirectories: true, attributes: nil)
-                    if fm.fileExists(atPath: dst) {
-                        if fm.fileExists(atPath: dstBackup) {
-                            try? fm.removeItem(atPath: dstBackup)
-                        }
-                        try fm.moveItem(atPath: dst, toPath: dstBackup)
-                    }
-                    
-                    do {
-                        try fm.moveItem(atPath: src, toPath: dst)
-                        if fm.fileExists(atPath: dstBackup) {
-                            try? fm.trashItem(at: URL(fileURLWithPath: dstBackup), resultingItemURL: nil)
-                        }
-                    } catch {
-                        if fm.fileExists(atPath: dstBackup) && !fm.fileExists(atPath: dst) {
-                            try? fm.moveItem(atPath: dstBackup, toPath: dst)
-                        }
-                        throw error
-                    }
-                } catch {
-                    print("Failed to disable \(mod.name) for profile: \(error)")
-                    hasError = true
-                }
-            }
-        }
-
-        // Enable mods in profile
-        for mod in mods.filter({ !$0.isEnabled }) {
-            if isCoveredByProfile(mod) {
-                let src = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
-                let dst = (modsPath as NSString).appendingPathComponent(mod.folderName)
-                let dstBackup = "\(dst)_profile_backup_temp"
-                do {
-                    try fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
-                                            withIntermediateDirectories: true, attributes: nil)
-                    if fm.fileExists(atPath: dst) {
-                        if fm.fileExists(atPath: dstBackup) {
-                            try? fm.removeItem(atPath: dstBackup)
-                        }
-                        try fm.moveItem(atPath: dst, toPath: dstBackup)
-                    }
-                    
-                    do {
-                        try fm.moveItem(atPath: src, toPath: dst)
-                        if fm.fileExists(atPath: dstBackup) {
-                            try? fm.trashItem(at: URL(fileURLWithPath: dstBackup), resultingItemURL: nil)
-                        }
-                    } catch {
-                        if fm.fileExists(atPath: dstBackup) && !fm.fileExists(atPath: dst) {
-                            try? fm.moveItem(atPath: dstBackup, toPath: dst)
-                        }
-                        throw error
-                    }
-                } catch {
-                    print("Failed to enable \(mod.name) for profile: \(error)")
-                    hasError = true
-                }
-            }
-        }
-
+        let success = ProfileManager.shared.applyProfileToFilesystem(profile: profile, mods: mods, gameDir: gameDir)
         self.scanMods()
         self.syncActiveProfileIds()
-        return !hasError
+        return success
     }
 
     /// Compute which uniqueIds should be added/removed when toggling a mod in a profile,

@@ -59,7 +59,7 @@ struct HomeView: View {
                         title: LocalizedStringKey(vm.L(L10n.Home.modManager)),
                         detail: LocalizedStringKey(vm.smapiInstalledVersion == nil
                             ? vm.L(L10n.Home.notInstalled)
-                            : "SMAPI \(vm.smapiInstalledVersion!)"),
+                            : "SMAPI \(vm.smapiInstalledVersion ?? "")"),
                         showDivider: true
                     )
                     StandardRow(

@@ -1,0 +1,119 @@
+import Foundation
+
+class ProfileManager {
+    static let shared = ProfileManager()
+    private init() {}
+    
+    func loadProfiles() -> (profiles: [ModProfile], activeId: UUID?) {
+        var loadedProfiles: [ModProfile] = []
+        var loadedActiveId: UUID? = nil
+        
+        if let data = UserDefaults.standard.data(forKey: "modProfiles"),
+           let profiles = try? JSONDecoder().decode([ModProfile].self, from: data) {
+            loadedProfiles = profiles
+        }
+        
+        if let activeIdStr = UserDefaults.standard.string(forKey: "activeProfileId"),
+           let activeId = UUID(uuidString: activeIdStr) {
+            loadedActiveId = activeId
+        }
+        
+        return (loadedProfiles, loadedActiveId)
+    }
+    
+    func saveProfiles(_ profiles: [ModProfile], activeProfileId: UUID?) {
+        if let data = try? JSONEncoder().encode(profiles) {
+            UserDefaults.standard.set(data, forKey: "modProfiles")
+        }
+        if let activeId = activeProfileId {
+            UserDefaults.standard.set(activeId.uuidString, forKey: "activeProfileId")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "activeProfileId")
+        }
+    }
+    
+    /// Moves mod files to match the given profile's enabledModIds.
+    func applyProfileToFilesystem(profile: ModProfile, mods: [ModItem], gameDir: String) -> Bool {
+        let fm = FileManager.default
+        let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
+        let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
+        var hasError = false
+        
+        func isCoveredByProfile(_ mod: ModItem) -> Bool {
+            if mod.isGroup, let children = mod.children {
+                return children.contains { profile.enabledModIds.contains($0.uniqueId) }
+            }
+            return profile.enabledModIds.contains(mod.uniqueId)
+        }
+        
+        // Disable mods not in profile
+        for mod in mods.filter({ $0.isEnabled }) {
+            if !isCoveredByProfile(mod) {
+                let src = (modsPath as NSString).appendingPathComponent(mod.folderName)
+                let dst = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
+                let dstBackup = "\(dst)_profile_backup_temp"
+                do {
+                    try fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
+                                            withIntermediateDirectories: true, attributes: nil)
+                    if fm.fileExists(atPath: dst) {
+                        if fm.fileExists(atPath: dstBackup) {
+                            try? fm.removeItem(atPath: dstBackup)
+                        }
+                        try fm.moveItem(atPath: dst, toPath: dstBackup)
+                    }
+                    
+                    do {
+                        try fm.moveItem(atPath: src, toPath: dst)
+                        if fm.fileExists(atPath: dstBackup) {
+                            try? fm.trashItem(at: URL(fileURLWithPath: dstBackup), resultingItemURL: nil)
+                        }
+                    } catch {
+                        if fm.fileExists(atPath: dstBackup) && !fm.fileExists(atPath: dst) {
+                            try? fm.moveItem(atPath: dstBackup, toPath: dst)
+                        }
+                        throw error
+                    }
+                } catch {
+                    print("Failed to disable \(mod.name) for profile: \(error)")
+                    hasError = true
+                }
+            }
+        }
+        
+        // Enable mods in profile
+        for mod in mods.filter({ !$0.isEnabled }) {
+            if isCoveredByProfile(mod) {
+                let src = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
+                let dst = (modsPath as NSString).appendingPathComponent(mod.folderName)
+                let dstBackup = "\(dst)_profile_backup_temp"
+                do {
+                    try fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
+                                            withIntermediateDirectories: true, attributes: nil)
+                    if fm.fileExists(atPath: dst) {
+                        if fm.fileExists(atPath: dstBackup) {
+                            try? fm.removeItem(atPath: dstBackup)
+                        }
+                        try fm.moveItem(atPath: dst, toPath: dstBackup)
+                    }
+                    
+                    do {
+                        try fm.moveItem(atPath: src, toPath: dst)
+                        if fm.fileExists(atPath: dstBackup) {
+                            try? fm.trashItem(at: URL(fileURLWithPath: dstBackup), resultingItemURL: nil)
+                        }
+                    } catch {
+                        if fm.fileExists(atPath: dstBackup) && !fm.fileExists(atPath: dst) {
+                            try? fm.moveItem(atPath: dstBackup, toPath: dst)
+                        }
+                        throw error
+                    }
+                } catch {
+                    print("Failed to enable \(mod.name) for profile: \(error)")
+                    hasError = true
+                }
+            }
+        }
+        
+        return !hasError
+    }
+}

@@ -207,9 +207,9 @@ class SaveManager {
         } else {
             let replacement = "<spouse>\(newSpouse)</spouse>"
             let firstMatch = regex.firstMatch(in: block, options: [], range: fullRange)
-            if firstMatch != nil {
+            if let firstMatch = firstMatch {
                 // Tag exists — replace it
-                return regex.stringByReplacingMatches(in: block, options: [], range: firstMatch!.range, withTemplate: replacement)
+                return regex.stringByReplacingMatches(in: block, options: [], range: firstMatch.range, withTemplate: replacement)
             } else {
                 // Tag doesn't exist — insert after <name>...</name>
                 let namePattern = "(<name>[^<]*</name>)"

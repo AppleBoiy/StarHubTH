@@ -162,7 +162,7 @@ struct ModDetailView: View {
             DispatchQueue.main.async {
                 if case .success(let files) = result {
                     // Combine changelogs from files, or just take the latest file's changelog
-                    if let latestChangelog = files.files.first(where: { $0.changelogHtml != nil && !$0.changelogHtml!.isEmpty })?.changelogHtml {
+                    if let latestChangelog = files.files.first(where: { !($0.changelogHtml?.isEmpty ?? true) })?.changelogHtml {
                         self.nexusChangelog = NexusAPIService.stripHTML(latestChangelog)
                     }
                 }
