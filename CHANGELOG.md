@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1-preview] - 2026-07-23
 
 ### Added
+- **Mod Details**: Replaced the modal popup sheet with a fully native, inline detail pane that matches the style of macOS system settings.
+- **Dependency Graph**: Replaced the simple Mod Dependencies text list with a new, fully visual horizontal Node Tree.
+- **Dependency Resolution**: Added Auto-Resolve for missing dependencies. The Dependency Graph now highlights missing required mods in red and provides a one-click "Download Missing" button to instantly search Nexus Mods.
+- **Nexus Integration**: Added quick-access Nexus links and Sync buttons directly to the ModDetailView header.
+- **Collections**: Implemented native parsing and installation support for Nexus Collections (`collection.json`), paving the way for 1-click modpack imports.
 - **Testing**: Introduced a comprehensive, standalone, scriptable Unit Test suite (`run_tests.py`) and wrote extensive tests for `ModTagInference`, `ModManifestParser`, `SaveFileParser`, and `SmapiLogParser` to guarantee stability.
 
 ### Changed
@@ -15,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Safety**: Conducted a thorough codebase audit to replace dangerous force unwraps (`!`), unsafe casts (`as!`), and silently swallowed errors (`try?`) with safe optional bindings and robust error handling.
 
 ### Removed
-- **Technical Debt**: Eliminated hundreds of lines of dead code, including unused methods, variables, and deprecated/orphaned UI views (`CodeEditorView`, `ModCoverView`, `NexusLinkView`, `SpriteSlice`).
+- **Technical Debt**: Eliminated hundreds of lines of dead code, including unused methods, variables, obsolete UI state (`isShowingDetails`, `isShowingDependencies`), and deprecated/orphaned UI views (`CodeEditorView`, `ModCoverView`, `NexusLinkView`, `SpriteSlice`).
 
 ## [1.1.0] - 2026-07-23
 
