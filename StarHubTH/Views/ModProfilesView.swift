@@ -68,18 +68,18 @@ struct ModProfilesView: View {
                                                 NSWorkspace.shared.open(url)
                                             }
                                         }
-                                        vm.showModal(message: "Collection Imported. Missing mods have been opened in your browser for download.")
+                                        vm.showModal(message: vm.L(L10n.VM.collectionImportedMissing))
                                     }
                                 } else {
-                                    DispatchQueue.main.async { vm.showModal(message: "Collection Imported") }
+                                    DispatchQueue.main.async { vm.showModal(message: vm.L(L10n.VM.collectionImported)) }
                                 }
                             }
                         } catch {
-                            vm.showModal(message: "Failed to import collection: \(error.localizedDescription)")
+                            vm.showModal(message: String(format: vm.L(L10n.VM.collectionImportFailed), error.localizedDescription))
                         }
                     }
                 }) {
-                    Text("Import Collection")
+                    Text(vm.L(L10n.Profiles.importCollection))
                 }
                 
                 Spacer()
@@ -320,23 +320,23 @@ struct ProfileDetailSheet: View {
                 // Export Row
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Export Collection")
+                        Text(vm.L(L10n.Profiles.exportCollection))
                             .font(.system(size: 13))
-                        Text("Share your mod list as a JSON modpack.")
+                        Text(vm.L(L10n.Profiles.exportCollectionHint))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button("Export") {
+                    Button(vm.L(L10n.Settings.configSave)) {
                         let panel = NSSavePanel()
                         panel.allowedContentTypes = [.json]
                         panel.nameFieldStringValue = "\(profile.name.replacingOccurrences(of: " ", with: "_")).json"
                         if panel.runModal() == .OK, let url = panel.url {
                             do {
                                 try ProfileManager.shared.exportProfile(profile, mods: vm.mods, to: url)
-                                vm.showModal(message: "Collection Exported Successfully")
+                                vm.showModal(message: vm.L(L10n.VM.collectionExported))
                             } catch {
-                                vm.showModal(message: "Failed to export: \(error.localizedDescription)")
+                                vm.showModal(message: String(format: vm.L(L10n.VM.collectionExportFailed), error.localizedDescription))
                             }
                         }
                     }

@@ -390,3 +390,14 @@
 "saves_non_object" = "(Cannot edit this item)";
 "saves_inventory_success" = "Inventory saved successfully!";
 "saves_inventory_error" = "Error saving inventory";
+"profiles_export_collection" = "Export Collection";
+"profiles_export_collection_hint" = "Export to share with others";
+"profiles_import_collection" = "Import Collection";
+"vm_collection_export_failed" = "Failed to export collection.";
+"vm_collection_exported" = "Collection exported successfully.";
+"vm_collection_import_failed" = "Failed to import collection.";
+"vm_collection_imported" = "Collection imported successfully.";
+"vm_collection_imported_missing" = "Collection imported, but some mods are missing.";
+"mods_sort_update_asc" = "Oldest Update";
+"mods_sort_update_desc" = "Newest Update";
+"tags_spoiler" = "Spoiler";

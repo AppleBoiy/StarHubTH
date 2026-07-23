@@ -177,6 +177,7 @@ enum L10n {
     
     // MARK: - Tags
     enum Tags {
+        static let spoiler              = "tags_spoiler"
         static let contentPatcher       = "tag_content_patcher"
         static let framework            = "tag_framework"
         static let cosmetic             = "tag_cosmetic"
@@ -411,6 +412,9 @@ enum L10n {
         static let modsInProfile        = "profiles_mods_in_profile"
         static let modsInProfileLong    = "profiles_mods_in_profile_long"
         static let selectMods           = "profiles_select_mods"
+        static let exportCollection     = "profiles_export_collection"
+        static let exportCollectionHint = "profiles_export_collection_hint"
+        static let importCollection     = "profiles_import_collection"
         static let manage               = "profiles_manage"
         static let manageMods           = "profiles_manage_mods"
         static let dependencies         = "profiles_dependencies"
@@ -448,6 +452,11 @@ enum L10n {
         static let backupModsSuccess    = "vm_backup_mods_success"
         static let zipModsError         = "vm_zip_mods_error"
         static let cleanModsSuccess     = "vm_clean_mods_success"
+        static let collectionExportFailed = "vm_collection_export_failed"
+        static let collectionExported     = "vm_collection_exported"
+        static let collectionImportFailed = "vm_collection_import_failed"
+        static let collectionImported     = "vm_collection_imported"
+        static let collectionImportedMissing = "vm_collection_imported_missing"
         static let cleanModsNotFound    = "vm_clean_mods_not_found"
         static let cleanModsError       = "vm_clean_mods_error"
         static let urlError             = "vm_url_error"

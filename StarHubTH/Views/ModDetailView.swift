@@ -87,6 +87,37 @@ struct ModDetailView: View {
                 }
                 
                 Spacer()
+                
+                HStack(spacing: 12) {
+                    if nexusId != nil && !vm.nexusApiKey.isEmpty {
+                        Button {
+                            isLoading = true
+                            vm.syncTagFromNexus(for: mod) { success in
+                                isLoading = false
+                            }
+                        } label: {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 16))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(vm.L(L10n.Tags.sync))
+                    }
+                    
+                    if !mod.nexusUrl.isEmpty {
+                        Button {
+                            if let url = URL(string: mod.nexusUrl) {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            Image(systemName: "link")
+                                .font(.system(size: 16))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open on Nexus Mods")
+                    }
+                }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -99,7 +130,7 @@ struct ModDetailView: View {
                 VStack(alignment: .leading) {
                     if selectedTab == 0 {
                         if let blocks = nexusDescription {
-                            BBCodeView(blocks: blocks)
+                            BBCodeView(vm: vm, blocks: blocks)
                         } else {
                             Text(.init(mod.description))
                                 .font(.body)
@@ -107,7 +138,7 @@ struct ModDetailView: View {
                         }
                     } else if selectedTab == 1 {
                         if let blocks = nexusChangelog {
-                            BBCodeView(blocks: blocks)
+                            BBCodeView(vm: vm, blocks: blocks)
                         } else if let locLog = localChangelog {
                             Text(.init(locLog))
                                 .font(.system(.body, design: .monospaced))
@@ -132,34 +163,6 @@ struct ModDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .toolbar {
-            if nexusId != nil && !vm.nexusApiKey.isEmpty {
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        isLoading = true
-                        vm.syncTagFromNexus(for: mod) { success in
-                            isLoading = false
-                        }
-                    } label: {
-                        Label(vm.L(L10n.Tags.sync), systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .help(vm.L(L10n.Tags.sync))
-                }
-            }
-            
-            if !mod.nexusUrl.isEmpty {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        if let url = URL(string: mod.nexusUrl) {
-                            NSWorkspace.shared.open(url)
-                        }
-                    } label: {
-                        Label("Nexus Mods", systemImage: "arrow.up.right.square")
-                    }
-                    .help("Open on Nexus Mods")
-                }
-            }
-        }
         .onAppear(perform: loadNexusInfo)
     }
     
@@ -280,6 +283,7 @@ struct DependencyRow: View {
 }
 
 struct SpoilerView: View {
+    @ObservedObject var vm: StarHubTHViewModel
     let title: String
     let content: String
     @State private var isExpanded = false
@@ -290,7 +294,8 @@ struct SpoilerView: View {
                 HStack {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 11, weight: .bold))
-                    Text(title.isEmpty ? "Spoiler" : title)
+                    let displayTitle = (title.isEmpty || title == "tag_show_spoiler") ? vm.L(L10n.Tags.spoiler) : title
+                    Text(displayTitle)
                         .font(.system(size: 13, weight: .semibold))
                     Spacer()
                     Text(isExpanded ? "Hide" : "Show")
@@ -324,6 +329,7 @@ struct SpoilerView: View {
 }
 
 struct BBCodeView: View {
+    @ObservedObject var vm: StarHubTHViewModel
     let blocks: [NexusAPIService.DescriptionBlock]
     
     var body: some View {
@@ -345,7 +351,7 @@ struct BBCodeView: View {
                         }
                     }
                 case .spoiler(let title, let content):
-                    SpoilerView(title: title, content: content)
+                    SpoilerView(vm: vm, title: title, content: content)
                 }
             }
         }

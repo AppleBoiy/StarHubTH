@@ -390,3 +390,14 @@
 "saves_non_object" = "(ไม่สามารถแก้ไขได้)";
 "saves_inventory_success" = "บันทึกไอเทมสำเร็จ!";
 "saves_inventory_error" = "เกิดข้อผิดพลาดในการบันทึกไอเทม";
+"profiles_export_collection" = "ส่งออกคอลเลกชัน";
+"profiles_export_collection_hint" = "ส่งออกเพื่อแบ่งปันให้ผู้อื่น";
+"profiles_import_collection" = "นำเข้าคอลเลกชัน";
+"vm_collection_export_failed" = "ส่งออกคอลเลกชันล้มเหลว";
+"vm_collection_exported" = "ส่งออกคอลเลกชันสำเร็จ";
+"vm_collection_import_failed" = "นำเข้าคอลเลกชันล้มเหลว";
+"vm_collection_imported" = "นำเข้าคอลเลกชันสำเร็จ";
+"vm_collection_imported_missing" = "นำเข้าคอลเลกชันแล้ว แต่บางม็อดขาดหายไป";
+"mods_sort_update_asc" = "อัปเดตเก่าสุด";
+"mods_sort_update_desc" = "อัปเดตล่าสุด";
+"tags_spoiler" = "สปอยล์";
