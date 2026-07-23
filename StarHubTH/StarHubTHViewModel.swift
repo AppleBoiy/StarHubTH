@@ -559,79 +559,7 @@ class StarHubTHViewModel: ObservableObject {
         
         // Helper to parse a folder containing manifest.json
         func parseModFolder(at path: String, relativePath: String, isEnabled: Bool) -> ModItem? {
-            let manifestPath = (path as NSString).appendingPathComponent("manifest.json")
-            guard fm.fileExists(atPath: manifestPath) else { return nil }
-            
-            var name = (path as NSString).lastPathComponent
-            var uniqueId = ""
-            var version = "Unknown"
-            var author = "Unknown"
-            var description = ""
-            var nexusUrl = ""
-            var dependencies: [ModDependency] = []
-            
-            if let rawData = try? Data(contentsOf: URL(fileURLWithPath: manifestPath)),
-               let rawString = String(data: rawData, encoding: .utf8) {
-                
-                // Strip block comments (/* ... */) often added by ModManifestBuilder
-                let cleanString = rawString.replacingOccurrences(of: "/\\*[\\s\\S]*?\\*/", with: "", options: .regularExpression)
-                
-                let options: JSONSerialization.ReadingOptions = [.json5Allowed]
-                
-                if let data = cleanString.data(using: .utf8),
-                   let json = try? JSONSerialization.jsonObject(with: data, options: options) as? [String: Any] {
-                    
-                    if let mName = json.caseInsensitiveValue(forKey: "Name") as? String { name = mName }
-                if let mUniqueId = json.caseInsensitiveValue(forKey: "UniqueID") as? String { uniqueId = mUniqueId }
-                
-                let mVer = json.caseInsensitiveValue(forKey: "Version")
-                if let vStr = mVer as? String { 
-                    version = vStr 
-                } else if let vDict = mVer as? [String: Any] {
-                    let major = vDict.caseInsensitiveValue(forKey: "MajorVersion") as? Int ?? 1
-                    let minor = vDict.caseInsensitiveValue(forKey: "MinorVersion") as? Int ?? 0
-                    let patch = vDict.caseInsensitiveValue(forKey: "PatchVersion") as? Int ?? 0
-                    version = "\(major).\(minor).\(patch)"
-                }
-                
-                if let mAuthor = json.caseInsensitiveValue(forKey: "Author") as? String { author = mAuthor }
-                if let mDesc = json.caseInsensitiveValue(forKey: "Description") as? String { description = mDesc }
-                
-                if let deps = json.caseInsensitiveValue(forKey: "Dependencies") as? [[String: Any]] {
-                    for dep in deps {
-                        if let depId = dep.caseInsensitiveValue(forKey: "UniqueID") as? String {
-                            let isReq = dep.caseInsensitiveValue(forKey: "IsRequired") as? Bool ?? true
-                            dependencies.append(ModDependency(uniqueId: depId, isRequired: isReq))
-                        }
-                    }
-                }
-                
-                if let updateKeys = json.caseInsensitiveValue(forKey: "UpdateKeys") as? [String] {
-                    for key in updateKeys {
-                        if key.lowercased().hasPrefix("nexus:") {
-                            let id = key.replacingOccurrences(of: "nexus:", with: "", options: .caseInsensitive)
-                            nexusUrl = "https://www.nexusmods.com/stardewvalley/mods/\(id.trimmingCharacters(in: .whitespacesAndNewlines))"
-                            break
-                        }
-                    }
-                }
-            }
-        }
-            
-            let finalTag = customModTags[uniqueId] ?? ModItem.inferTag(name: name, uniqueId: uniqueId, description: description)
-            
-            return ModItem(
-                uniqueId: uniqueId,
-                name: name,
-                folderName: relativePath.isEmpty ? (path as NSString).lastPathComponent : relativePath,
-                version: version,
-                author: author,
-                description: description,
-                nexusUrl: nexusUrl,
-                isEnabled: isEnabled,
-                dependencies: dependencies,
-                modTag: finalTag
-            )
+            return ModManifestParser.parse(at: path, relativePath: relativePath, isEnabled: isEnabled, customTags: customModTags)
         }
         
         // Helper to recursively scan folders for manifest.json and group them
@@ -728,93 +656,11 @@ class StarHubTHViewModel: ObservableObject {
             return
         }
         
-        var updates: [ModUpdateInfo] = []
-        var errors: [String] = []
-        
-        let lines = logContent.components(separatedBy: .newlines)
-        var isParsingUpdates = false
-        var isParsingErrors = false
-        
-        for line in lines {
-            // Check for Updates
-            if line.contains("You can update") {
-                isParsingUpdates = true
-                continue
-            }
-            if isParsingUpdates {
-                if line.contains("ALERT SMAPI") && line.contains("https://") {
-                    // Example: [12:00:00 ALERT SMAPI]    Content Patcher 2.0.0: https://smapi.io/mods#Content_Patcher
-                    let parts = line.components(separatedBy: "ALERT SMAPI]")
-                    if parts.count > 1 {
-                        let infoString = parts[1].trimmingCharacters(in: .whitespaces)
-                        let split = infoString.components(separatedBy: ": https://")
-                        if split.count == 2 {
-                            let nameAndVersion = split[0]
-                            let url = "https://" + split[1]
-                            
-                            // Naive split by last space for version
-                            let nvSplit = nameAndVersion.components(separatedBy: " ")
-                            let version = nvSplit.last ?? ""
-                            let name = nvSplit.dropLast().joined(separator: " ")
-                            
-                            updates.append(ModUpdateInfo(name: name, version: version, url: url))
-                        }
-                    }
-                } else if !line.contains("ALERT SMAPI") {
-                    // Reached end of alert block
-                    isParsingUpdates = false
-                }
-            }
-            
-            // Check for Errors (Skipped mods or general red text)
-            if line.contains("ERROR SMAPI") {
-                if line.contains("Skipped mods") {
-                    isParsingErrors = true
-                    continue
-                }
-                
-                if isParsingErrors {
-                    if line.contains("-------------------------") || line.contains("These mods could not be added") {
-                        continue
-                    }
-                    if line.contains("WARN ") || line.contains("INFO ") || line.contains("TRACE ") || line.contains("DEBUG ") {
-                        isParsingErrors = false
-                    } else {
-                        let parts = line.components(separatedBy: "ERROR SMAPI]")
-                        if parts.count > 1 {
-                            let msg = parts[1].trimmingCharacters(in: .whitespaces)
-                            if !msg.isEmpty {
-                                errors.append(msg)
-                            }
-                        }
-                    }
-                } else {
-                    // General error line not in "Skipped mods"
-                    if !line.contains("Skipped mods") && !line.contains("-------------------------") {
-                        let parts = line.components(separatedBy: "ERROR")
-                        if parts.count > 1 {
-                            let msg = parts[1].trimmingCharacters(in: .whitespaces)
-                            // Filter out known empty or structural lines
-                            if msg.hasPrefix("SMAPI]") {
-                                let actualMsg = msg.replacingOccurrences(of: "SMAPI]", with: "").trimmingCharacters(in: .whitespaces)
-                                if !actualMsg.isEmpty {
-                                    errors.append(actualMsg)
-                                }
-                            }
-                        }
-                    }
-                }
-            } else if isParsingErrors && (line.contains("WARN ") || line.contains("INFO ") || line.contains("TRACE ") || line.contains("DEBUG ")) {
-                isParsingErrors = false
-            }
-        }
-        
-        // Remove duplicates and limit error messages
-        let uniqueErrors = Array(NSOrderedSet(array: errors)).prefix(10).map { $0 as! String }
+        let result = SmapiLogParser.parse(logContent: logContent)
         
         DispatchQueue.main.async {
-            self.outOfDateMods = updates
-            self.smapiErrors = uniqueErrors
+            self.outOfDateMods = result.outOfDateMods
+            self.smapiErrors = result.errors
         }
     }
     
