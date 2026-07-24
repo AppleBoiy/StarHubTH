@@ -12,6 +12,7 @@ protocol PreferenceStoring {
     func set(_ value: Bool, forKey key: String)
     func set(_ value: Data?, forKey key: String)
     func set(_ value: [String: String], forKey key: String)
+    func set(_ value: [String], forKey key: String)
 
     func removeObject(forKey key: String)
 }

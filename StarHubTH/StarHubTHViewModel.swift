@@ -9,7 +9,7 @@ final class StarHubTHViewModel: ObservableObject {
 
     @Published var gameDir: String = "" {
         didSet {
-            UserDefaults.standard.set(gameDir, forKey: "gameDir")
+            preferenceStoring.set(gameDir, forKey: "gameDir")
             self.refresh()
         }
     }
@@ -41,8 +41,8 @@ final class StarHubTHViewModel: ObservableObject {
 
     // Custom Tags
     var customModTags: [String: String] {
-        get { UserDefaults.standard.dictionary(forKey: "customModTags") as? [String: String] ?? [:] }
-        set { UserDefaults.standard.set(newValue, forKey: "customModTags") }
+        get { preferenceStoring.dictionary(forKey: "customModTags") ?? [:] }
+        set { preferenceStoring.set(newValue, forKey: "customModTags") }
     }
 
     func setCustomTag(for modId: ModItem.UniqueID, tag: String, shouldRefresh: Bool = true) {
@@ -169,8 +169,8 @@ final class StarHubTHViewModel: ObservableObject {
                 currentLanguage = "en"
                 return
             }
-            UserDefaults.standard.set(currentLanguage, forKey: "currentLanguage")
-            UserDefaults.standard.set([currentLanguage], forKey: "AppleLanguages")
+            preferenceStoring.set(currentLanguage, forKey: "currentLanguage")
+            preferenceStoring.set([currentLanguage], forKey: "AppleLanguages")
             UserDefaults.standard.synchronize()
         }
     }
@@ -210,26 +210,28 @@ final class StarHubTHViewModel: ObservableObject {
     /// When true, toggling a mod also cascades to its dependencies / dependents.
     /// Persisted in UserDefaults so SettingsView @AppStorage stays in sync.
     var chainToggleDependencies: Bool {
-        get { UserDefaults.standard.object(forKey: "chainToggleDependencies") as? Bool ?? true }
-        set { UserDefaults.standard.set(newValue, forKey: "chainToggleDependencies") }
+        get { preferenceStoring.bool(forKey: "chainToggleDependencies") ?? true }
+        set { preferenceStoring.set(newValue, forKey: "chainToggleDependencies") }
     }
-    
+
     var nexusApiKey: String {
-        get { UserDefaults.standard.string(forKey: "nexusApiKey") ?? "" }
+        get { preferenceStoring.string(forKey: "nexusApiKey") ?? "" }
     }
     
     @Published var downloadingMods: Set<String> = []
     
     let smapiInstaller = SmapiInstaller()
-    
+    private let filePicking: FilePicking = FilePicker()
+    private let preferenceStoring: PreferenceStoring = PreferenceStore()
+
     init() {
         // Force sync AppleLanguages with currentLanguage at startup
-        let savedLang = Self.normalizedLanguage(UserDefaults.standard.string(forKey: "currentLanguage"))
+        let savedLang = Self.normalizedLanguage(preferenceStoring.string(forKey: "currentLanguage"))
         currentLanguage = savedLang
-        UserDefaults.standard.set([savedLang], forKey: "AppleLanguages")
-        
+        preferenceStoring.set([savedLang], forKey: "AppleLanguages")
+
         // Automatically retrieve saved game path, or attempt to find the default Steam path on Mac
-        let savedPath = UserDefaults.standard.string(forKey: "gameDir") ?? ""
+        let savedPath = preferenceStoring.string(forKey: "gameDir") ?? ""
         if !savedPath.isEmpty && FileManager.default.fileExists(atPath: savedPath) {
             self.gameDir = savedPath
         } else {
@@ -311,13 +313,9 @@ final class StarHubTHViewModel: ObservableObject {
     
     
     func selectGameDir() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        if panel.runModal() == .OK {
-            self.gameDir = panel.url?.path ?? ""
-            UserDefaults.standard.set(self.gameDir, forKey: "gameDir")
+        if let url = filePicking.pickDirectory(title: nil) {
+            self.gameDir = url.path
+            preferenceStoring.set(self.gameDir, forKey: "gameDir")
             scanMods()
             checkSmapiVersion()
         }
@@ -625,18 +623,16 @@ final class StarHubTHViewModel: ObservableObject {
 
     @Published var isInstallingMod: Bool = false
 
-    /// Opens an NSOpenPanel — accepts both .zip files AND already-extracted folders.
+    /// Opens a file picker — accepts both .zip files AND already-extracted folders.
     func openInstallModPanel() {
-        let panel = NSOpenPanel()
-        panel.title = L(L10n.Mods.installMod)
-        panel.allowedContentTypes = [.init(filenameExtension: "zip")!]
-        panel.allowsMultipleSelection = true
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = true   // ← also accept extracted folders
-        if panel.runModal() == .OK {
-            for url in panel.urls {
-                installMod(url: url)
-            }
+        let urls = filePicking.pickFiles(
+            title: L(L10n.Mods.installMod),
+            allowedContentTypes: [.init(filenameExtension: "zip")!],
+            allowsMultipleSelection: true,
+            canChooseDirectories: true   // ← also accept extracted folders
+        )
+        for url in urls {
+            installMod(url: url)
         }
     }
 
@@ -1013,13 +1009,13 @@ final class StarHubTHViewModel: ObservableObject {
     }
     
     func selectCustomAvatar(forSave folderName: String, completion: ((String) -> Void)? = nil) {
-        #if canImport(AppKit)
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.png, .jpeg, .gif]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.title = L(L10n.Saves.avatarPanelTitle)
-        if panel.runModal() == .OK, let url = panel.url {
+        let urls = filePicking.pickFiles(
+            title: L(L10n.Saves.avatarPanelTitle),
+            allowedContentTypes: [.png, .jpeg, .gif],
+            allowsMultipleSelection: false,
+            canChooseDirectories: false
+        )
+        if let url = urls.first {
             // Copy to app support dir to prevent broken paths
             let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
                 .appendingPathComponent("StarHubTH/Avatars", isDirectory: true)
@@ -1029,7 +1025,6 @@ final class StarHubTHViewModel: ObservableObject {
             setAvatar(forSave: folderName, iconPath: destURL.path)
             completion?(destURL.path)
         }
-        #endif
     }
     
     func duplicateSave(info: SaveGameInfo, newName: String, newFarm: String) {

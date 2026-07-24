@@ -39,6 +39,10 @@ struct PreferenceStore: PreferenceStoring {
         defaults.set(value, forKey: key)
     }
 
+    func set(_ value: [String], forKey key: String) {
+        defaults.set(value, forKey: key)
+    }
+
     func removeObject(forKey key: String) {
         defaults.removeObject(forKey: key)
     }
