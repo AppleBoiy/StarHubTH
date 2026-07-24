@@ -71,6 +71,18 @@ python3 release.py
 ```
 Release files will be saved in the `bundles/` folder.
 
+### Running Tests
+```bash
+python3 run_tests.py
+```
+
+### Developer Docs
+If you are writing or modifying Swift in this project, read these first:
+
+*   [**docs/SWIFT_STANDARDS.md**](docs/SWIFT_STANDARDS.md) — the project's Swift coding standards, based on Apple's Swift API Design Guidelines, with a before/after drawn from real code in this repo for every rule. **Binding for all new code.**
+*   [**docs/PROJECT_STRUCTURE.md**](docs/PROJECT_STRUCTURE.md) — folder layout, per-layer import rules, and the complete file map. Check before creating any file.
+*   [**docs/REFACTOR_PLAN.md**](docs/REFACTOR_PLAN.md) — the phased migration plan for existing code.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/credits_banner.png" alt="Credits & License" width="300">
 </p>
