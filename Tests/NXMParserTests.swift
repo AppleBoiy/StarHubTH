@@ -14,8 +14,12 @@ class NXMParserTests {
         let result = NXMParser.parse(url: url)
         
         SimpleTestFramework.assertTrue(result != nil, "Should parse a valid NXM link")
-        SimpleTestFramework.assertEqual(result?.modId, 123, "Should correctly extract mod ID")
-        SimpleTestFramework.assertEqual(result?.fileId, 456, "Should correctly extract file ID")
+        if case .mod(let modId, let fileId) = result {
+            SimpleTestFramework.assertEqual(modId, 123, "Should correctly extract mod ID")
+            SimpleTestFramework.assertEqual(fileId, 456, "Should correctly extract file ID")
+        } else {
+            SimpleTestFramework.assertTrue(false, "Result should be a mod")
+        }
     }
     
     static func testInvalidNXMLink() {
@@ -37,8 +41,12 @@ class NXMParserTests {
         let result = NXMParser.parse(url: url)
         
         SimpleTestFramework.assertTrue(result != nil, "Should handle different casing")
-        SimpleTestFramework.assertEqual(result?.modId, 789, "Should extract mod ID with case insensitivity")
-        SimpleTestFramework.assertEqual(result?.fileId, 101, "Should extract file ID with case insensitivity")
+        if case .mod(let modId, let fileId) = result {
+            SimpleTestFramework.assertEqual(modId, 789, "Should extract mod ID with case insensitivity")
+            SimpleTestFramework.assertEqual(fileId, 101, "Should extract file ID with case insensitivity")
+        } else {
+            SimpleTestFramework.assertTrue(false, "Result should be a mod")
+        }
     }
     static func testNXMDownloadAndInstall() {
         let defaults = UserDefaults(suiteName: "com.appleboiy.StarHubTH")
@@ -54,7 +62,7 @@ class NXMParserTests {
         let urlString = "nxm://stardewvalley/mods/1536/files/128517"
         let url = URL(string: urlString)!
         
-        guard let (modId, fileId) = NXMParser.parse(url: url) else {
+        guard let result = NXMParser.parse(url: url), case .mod(let modId, let fileId) = result else {
             SimpleTestFramework.assertTrue(false, "Failed to parse test NXM link")
             return
         }

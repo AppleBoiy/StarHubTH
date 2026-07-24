@@ -368,6 +368,18 @@ struct MainView: View {
                 dismissButton: .default(Text(vm.L(L10n.Main.ok)))
             )
         }
+        .onReceive(URLDispatcher.shared.$openedURL) { url in
+            if let u = url {
+                vm.handleOpenURL(u)
+                URLDispatcher.shared.openedURL = nil
+            }
+        }
+        .onChange(of: vm.requestedTab) { newTab in
+            if let tab = newTab {
+                currentTab = tab
+                vm.requestedTab = nil
+            }
+        }
     }
     
     var colorScheme: ColorScheme? {
@@ -593,8 +605,5 @@ struct UpdatesView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
-        .onOpenURL { url in
-            vm.handleOpenURL(url)
-        }
     }
 }

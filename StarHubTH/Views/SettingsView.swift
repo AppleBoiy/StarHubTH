@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import CoreServices
+#endif
 
 struct SettingsView: View {
     @ObservedObject var vm: StarHubTHViewModel
@@ -63,6 +66,34 @@ struct SettingsView: View {
                             
                             InfoPopoverButton(text: vm.L(L10n.Settings.nexusApiKeyHint))
                         }
+                    }
+                }
+                
+                // ── Nexus Protocol Handler ──
+                StandardSection(
+                    title: "Nexus Download Handler",
+                    footer: "Allows StarHubTH to automatically intercept and handle 'Mod Manager Download' links (nxm://) from the Nexus Mods website."
+                ) {
+                    HStack(spacing: 12) {
+                        Text("Register as default handler for Nexus Mods links")
+                            .font(.system(size: 13))
+                        Spacer()
+                        Button("Set as Default") {
+                            #if os(macOS)
+                            let scheme = "nxm" as CFString
+                            let bundleID = "com.appleboiy.StarHubTH" as CFString
+                            let status = LSSetDefaultHandlerForURLScheme(scheme, bundleID)
+                            if status == 0 {
+                                vm.showModal(message: "StarHubTH is now successfully registered as your default Nexus Mods handler!")
+                            } else {
+                                vm.showModal(message: "Failed to set default handler. macOS returned status code: \(status)")
+                            }
+                            #endif
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        
+                        InfoPopoverButton(text: "If you have Vortex or Stardrop installed, macOS might send Nexus downloads to them instead. Click this to route them back to StarHubTH.")
                     }
                 }
                 

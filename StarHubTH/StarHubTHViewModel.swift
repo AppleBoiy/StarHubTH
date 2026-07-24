@@ -427,10 +427,16 @@ class StarHubTHViewModel: ObservableObject {
         
         return ""
     }
-    
+    @Published var requestedTab: String? = nil
+    @Published var importedModPack: StarHubPack? = nil
+
     func handleOpenURL(_ url: URL) {
         log("Opened with URL: \(url.absoluteString)", level: .info)
-        guard url.scheme?.lowercased() == "nxm" else { return }
+        
+        guard url.scheme?.lowercased() == "nxm" else {
+            self.log("Rejected: Not an NXM scheme")
+            return
+        }
         
         // Check if we have API key
         if self.nexusApiKey.isEmpty {
@@ -438,16 +444,37 @@ class StarHubTHViewModel: ObservableObject {
             return
         }
         
-        if let (modId, fileId) = NXMParser.parse(url: url) {
-            log("Downloading from NXM: Mod \(modId), File \(fileId)", level: .info)
-            self.downloadModFromNexus(nexusId: modId, fileId: fileId) { success in
-                if success {
-                    self.scanMods()
-                    self.showModal(message: "Successfully downloaded and installed mod from NXM link!")
+        if let result = NXMParser.parse(url: url) {
+            switch result {
+            case .mod(let modId, let fileId):
+                log("Downloading from NXM: Mod \(modId), File \(fileId)", level: .info)
+                self.downloadModFromNexus(nexusId: modId, fileId: fileId) { success in
+                    if success {
+                        self.scanMods()
+                        self.showModal(message: "Successfully downloaded and installed mod from NXM link!")
+                    }
+                }
+            case .collection(let slug):
+                log("Importing collection from NXM: \(slug)", level: .info)
+                
+                // Switch to the Mod Packs tab
+                DispatchQueue.main.async {
+                    self.requestedTab = "ModPacks"
+                }
+                // Trigger the import and save it to the view model
+                self.importCollectionFromURL("https://next.nexusmods.com/stardewvalley/collections/\(slug)") { pack in
+                    DispatchQueue.main.async {
+                        if let p = pack {
+                            self.importedModPack = p
+                        } else {
+                            // If it failed, importCollectionFromURL already showed a failure modal
+                            self.log("Import collection returned nil.")
+                        }
+                    }
                 }
             }
         } else {
-            self.showModal(message: "Unsupported or unrecognized NXM link format.")
+            self.log("Unsupported or unrecognized NXM link format: \(url.absoluteString)")
         }
     }
     
@@ -923,13 +950,35 @@ class StarHubTHViewModel: ObservableObject {
         let timestamp = formatter.string(from: Date())
         let entry = LogEntry(timestamp: timestamp, message: message, level: level, source: .app)
 
+        let logString = "[\(timestamp)] \(message)\n"
+
+        // Append to file logger
+        DispatchQueue.global(qos: .background).async {
+            if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+                let logDir = appSupport.appendingPathComponent("StarHubTH")
+                try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
+                let logFile = logDir.appendingPathComponent("StarHubTH_debug.log")
+                if let data = logString.data(using: .utf8) {
+                    if FileManager.default.fileExists(atPath: logFile.path) {
+                        if let fileHandle = try? FileHandle(forWritingTo: logFile) {
+                            fileHandle.seekToEndOfFile()
+                            fileHandle.write(data)
+                            fileHandle.closeFile()
+                        }
+                    } else {
+                        try? data.write(to: logFile)
+                    }
+                }
+            }
+        }
+
         if Thread.isMainThread {
             logEntries.append(entry)
-            logOutput += "[\(timestamp)] \(message)\n"
+            logOutput += logString
         } else {
             DispatchQueue.main.async {
                 self.logEntries.append(entry)
-                self.logOutput += "[\(timestamp)] \(message)\n"
+                self.logOutput += logString
             }
         }
     }

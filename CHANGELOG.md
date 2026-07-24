@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.2] - 2026-07-24
 
 ### Added
-- **NXM Protocol Support**: Implemented `nxm://` URL handler, enabling 1-click "Vortex" mod installations directly from the Nexus Mods website.
+- **NXM Protocol Support**: Implemented `nxm://` URL handler, enabling 1-click "Vortex" mod installations directly from the Nexus Mods website. Rebuilt the URL routing mechanism using a robust `NSAppleEventManager` and `URLDispatcher` architecture to seamlessly intercept links on macOS and route them directly into the SwiftUI Mod Packs view, completely bypassing native single-window routing bugs.
 - **Nexus Premium Integration**: Added support for Premium API Keys to enable automated, frictionless mod downloads without leaving the app.
 - **Collection Importing**: Integrated the Nexus GraphQL API to fetch, parse, and install full Mod Collections directly via collection slug/URL.
 - **Auto-Update System**: Outdated mods can now automatically fetch their latest versions and install updates seamlessly using the Premium API.

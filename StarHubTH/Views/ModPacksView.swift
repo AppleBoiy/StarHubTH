@@ -4,7 +4,6 @@ import UniformTypeIdentifiers
 struct ModPacksView: View {
     @ObservedObject var vm: StarHubTHViewModel
     @State private var isHoveringDrop = false
-    @State private var importedPack: StarHubPack? = nil
     @State private var collectionURL = ""
     
     var body: some View {
@@ -27,7 +26,7 @@ struct ModPacksView: View {
             }
             .padding(.top, 10)
             
-            if let pack = importedPack {
+            if let pack = vm.importedModPack {
                 // Imported Pack View
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
@@ -40,7 +39,7 @@ struct ModPacksView: View {
                         }
                         Spacer()
                         Button(role: .cancel) {
-                            withAnimation { importedPack = nil }
+                            withAnimation { vm.importedModPack = nil }
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.secondary)
@@ -125,7 +124,7 @@ struct ModPacksView: View {
                             guard !collectionURL.isEmpty else { return }
                             vm.importCollectionFromURL(collectionURL) { pack in
                                 if let p = pack {
-                                    withAnimation { self.importedPack = p }
+                                    withAnimation { self.vm.importedModPack = p }
                                 }
                             }
                         }
@@ -145,7 +144,7 @@ struct ModPacksView: View {
                         guard let url = item as? URL,
                               let pack = vm.importModPack(from: url) else { return }
                         DispatchQueue.main.async {
-                            withAnimation { self.importedPack = pack }
+                            withAnimation { self.vm.importedModPack = pack }
                         }
                     }
                     return true
