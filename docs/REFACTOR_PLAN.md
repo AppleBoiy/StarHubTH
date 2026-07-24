@@ -49,11 +49,11 @@
 - [x] 2.3 Introduce `Mod.Kind` (`.single` / `.group`)
 - [x] 2.4 Fix empty-`uniqueId` group latent bug + regression test
 - [x] 2.5 Add `Mod.UniqueID` / `Mod.NexusID` / `Mod.FolderName` wrapper types
-- [ ] 3.1 Define protocols at each I/O boundary
+- [x] 3.1 Define protocols at each I/O boundary — all 9: `NexusAPIClient`, `ModScanning`, `ModInstalling`, `SaveStoring`, `SaveNoteStoring`, `ProfileStoring`, `SmapiInstalling`, `FilePicking`, `PreferenceStoring`. Additive only — no ViewModel call sites touched yet.
 - [ ] 3.2 Rename implementations `Live*`, write `Stub*`
 - [ ] 3.3 Composition root (`App/DependencyContainer.swift`)
-- [ ] 3.4 Confine AppKit (`FilePicking`)
-- [ ] 3.5 Wrap `UserDefaults` (`PreferenceStoring`)
+- [ ] 3.4 Confine AppKit (`FilePicking`) — protocol done in 3.1; `FilePicker` (the Cocoa-importing implementation) exists but StarHubTHViewModel's 3 NSOpenPanel call sites still construct panels inline. Migrating them is what's left.
+- [ ] 3.5 Wrap `UserDefaults` (`PreferenceStoring`) — protocol + `PreferenceStore` done in 3.1; caching and migrating the 20+ real call sites off `UserDefaults.standard` directly is what's left.
 - [ ] 4.1 `LocalizationStore`
 - [ ] 4.2 `LogStore`
 - [ ] 4.3 `ThaiHubStore`
@@ -89,7 +89,7 @@
 - [ ] 9.3 SwiftLint / swift-format config (optional)
 - [ ] 9.4 Update `CHANGELOG.md`
 
-**Current state (verified 2026-07-25): Phase 0–2 done except 0.2/0.3 (partial characterization coverage).** Tree already has the `App/Features/DesignSystem/Localization/Support` layout. Next open step is **Phase 3** (protocols + DI). Note: this doc was edited concurrently by two sessions working the same plan — always re-verify against `git log` before trusting these checkboxes blindly.
+**Current state (verified 2026-07-25): Phase 0–2 done except 0.2/0.3 (partial characterization coverage); Phase 3.1 done.** Tree already has the `App/Features/DesignSystem/Localization/Support` layout, and all 9 I/O-boundary protocols exist with either an empty-extension conformance on the existing type, or (for `FilePicking`/`PreferenceStoring`, which had no existing type to conform) a new `Live`-equivalent implementation — `FilePicker` and `PreferenceStore`. Nothing is wired in yet: `StarHubTHViewModel` still calls `.shared`/`UserDefaults.standard`/`NSOpenPanel` directly everywhere. Next open steps are 3.2 (rename `NexusAPIService` → `LiveNexusAPIClient`, write `Stub*` conformances in `Tests/Stubs/`) and 3.3 (the `DependencyContainer` composition root) — 3.3 is what actually starts injecting these instead of just declaring them. Note: this doc was edited concurrently by multiple sessions working the same plan — always re-verify against `git log` before trusting these checkboxes blindly.
 
 **Correction for implementers of 2.5:** SWIFT_STANDARDS.md §2.4 names the SMAPI-ID wrapper `Mod.ID`. Don't use that name — `ModItem`/`Mod` conforms to `Identifiable` with `id` returning `FolderName` (§2.5 there), and a nested type literally named `ID` collides with `Identifiable`'s own associated type: Swift infers `Identifiable.ID` from the nested type's name rather than the `id` property's actual return type, and conformance fails with a misleading "does not conform to Identifiable" error pointing at an unrelated `var body`. Use `Mod.UniqueID` instead — this repo's implementation does.
 
