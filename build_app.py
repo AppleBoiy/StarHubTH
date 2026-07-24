@@ -54,6 +54,46 @@ def generate_localizable_strings():
                 file.write(f'"{strings_escape(key)}" = "{strings_escape(value)}";\n')
         print(f"[INFO] Generated {strings_path}")
 
+def concurrency_check_flags():
+    """Return the strictest concurrency-diagnostic flags this swiftc accepts.
+
+    Refactor Phase 0.4 (docs/REFACTOR_PLAN.md): the codebase currently relies on ~65
+    hand-written DispatchQueue.main.async hops for main-thread correctness, with no
+    @MainActor annotations, so the compiler cannot see a missed hop. These flags make
+    those visible as warnings. Phase 5 burns the count to zero, then they become errors.
+
+    The spelling of these flags changed across Swift releases (-warn-concurrency was
+    superseded by -strict-concurrency=), and an unrecognised flag makes swiftc fail
+    outright. So probe rather than assume, and degrade to no flags rather than break
+    the build on an unexpected toolchain.
+    """
+    if os.environ.get("STARHUB_NO_CONCURRENCY_CHECKS"):
+        return []
+
+    candidates = [
+        ["-strict-concurrency=complete"],
+        ["-Xfrontend", "-strict-concurrency=complete"],
+        ["-Xfrontend", "-warn-concurrency"],
+    ]
+
+    probe_dir = os.path.join(".build", "flag-probe")
+    os.makedirs(probe_dir, exist_ok=True)
+    probe_source = os.path.join(probe_dir, "probe.swift")
+    with open(probe_source, "w", encoding="utf-8") as file:
+        file.write("let probe = 0\n")
+
+    for flags in candidates:
+        probe = subprocess.run(
+            ["swiftc", probe_source, "-typecheck", "-target", "arm64-apple-macos13.0"] + flags,
+            capture_output=True,
+        )
+        if probe.returncode == 0:
+            print(f"[INFO] Concurrency checking enabled: {' '.join(flags)}")
+            return flags
+
+    print("[WARN] This swiftc accepts none of the known concurrency-check flags; continuing without.")
+    return []
+
 def create_app_bundle():
     print(f"[INFO] Starting build process for {APP_DIR}...")
     generate_localizable_strings()
@@ -118,7 +158,7 @@ def create_app_bundle():
         "-parse-as-library",
         "-module-cache-path", module_cache_dir,
         "-target", "arm64-apple-macos13.0",
-    ]
+    ] + concurrency_check_flags()
     
     # Run compiler
     result = subprocess.run(swiftc_cmd)
