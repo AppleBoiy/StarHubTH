@@ -24,9 +24,9 @@ struct ModListFilterTests {
         modified: Date? = nil
     ) -> ModItem {
         ModItem(
-            uniqueId: uniqueId.isEmpty ? "id.\(name.lowercased())" : uniqueId,
+            uniqueId: ModItem.UniqueID(rawValue: uniqueId.isEmpty ? "id.\(name.lowercased())" : uniqueId),
             name: name,
-            folderName: name,
+            folderName: ModItem.FolderName(rawValue: name),
             version: version,
             author: author,
             description: "",
@@ -44,7 +44,7 @@ struct ModListFilterTests {
         ModItem(
             uniqueId: "",
             name: name,
-            folderName: name,
+            folderName: ModItem.FolderName(rawValue: name),
             version: "",
             author: "Author",
             description: "\(children.count)",

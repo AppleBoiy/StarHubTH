@@ -29,9 +29,9 @@ enum ModGraph {
     // MARK: - Dependency resolution
 
     /// Resolves whether the mod providing `uniqueId` is present and enabled.
-    static func dependencyStatus(for uniqueId: String, in mods: [ModItem]) -> DependencyStatus {
+    static func dependencyStatus(for uniqueId: ModItem.UniqueID, in mods: [ModItem]) -> DependencyStatus {
         let candidates = flattened(mods)
-        if let found = candidates.first(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
+        if let found = candidates.first(where: { $0.uniqueId.rawValue.caseInsensitiveCompare(uniqueId.rawValue) == .orderedSame }) {
             return found.isEnabled ? .active : .disabled(found)
         }
         return .missing
@@ -41,15 +41,15 @@ enum ModGraph {
     ///
     /// Optional dependencies are ignored. Comparison is case-insensitive because SMAPI
     /// treats manifest unique IDs case-insensitively.
-    static func missingDependencies(for mod: ModItem, in mods: [ModItem]) -> [String] {
+    static func missingDependencies(for mod: ModItem, in mods: [ModItem]) -> [ModItem.UniqueID] {
         // `Mod.Kind` (Phase 2.3) makes a group-with-no-children unrepresentable, so a group
         // can never contribute its own (empty) unique ID here the way it could before —
         // `flattened` only ever contributes real mod IDs.
-        let installedIDs = Set(flattened(mods).map { $0.uniqueId.lowercased() })
+        let installedIDs = Set(flattened(mods).map { $0.uniqueId.rawValue.lowercased() })
 
         return mod.dependencies.compactMap { dependency in
             guard dependency.isRequired else { return nil }
-            return installedIDs.contains(dependency.uniqueId.lowercased()) ? nil : dependency.uniqueId
+            return installedIDs.contains(dependency.uniqueId.rawValue.lowercased()) ? nil : dependency.uniqueId
         }
     }
 
@@ -59,14 +59,14 @@ enum ModGraph {
     ///
     /// Matches on the Nexus numeric ID first (parsed from each installed mod's `nexusUrl`),
     /// then falls back to the SMAPI unique ID.
-    static func packModStatus(nexusID: Int?, uniqueId: String, in mods: [ModItem]) -> PackModStatus {
+    static func packModStatus(nexusID: ModItem.NexusID?, uniqueId: ModItem.UniqueID, in mods: [ModItem]) -> PackModStatus {
         let candidates = flattened(mods)
 
         if let nexusID {
             let matchedByNexusID = candidates.first { candidate in
                 guard let url = URL(string: candidate.nexusUrl),
                       let id = Int(url.lastPathComponent) else { return false }
-                return id == nexusID
+                return id == nexusID.rawValue
             }
             if let matchedByNexusID {
                 return matchedByNexusID.isEnabled ? .installed : .disabled
@@ -74,7 +74,7 @@ enum ModGraph {
         }
 
         if let matchedByUniqueID = candidates.first(where: {
-            $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame
+            $0.uniqueId.rawValue.caseInsensitiveCompare(uniqueId.rawValue) == .orderedSame
         }) {
             return matchedByUniqueID.isEnabled ? .installed : .disabled
         }
@@ -100,21 +100,21 @@ enum ModGraph {
     static func enabledIDs(
         after mod: ModItem,
         enabling: Bool,
-        from currentEnabled: Set<String>,
+        from currentEnabled: Set<ModItem.UniqueID>,
         in mods: [ModItem],
         chainingDependencies: Bool
-    ) -> Set<String> {
+    ) -> Set<ModItem.UniqueID> {
         var result = currentEnabled
 
-        func topLevelMod(providing uniqueId: String) -> ModItem? {
+        func topLevelMod(providing uniqueId: ModItem.UniqueID) -> ModItem? {
             for candidate in mods {
                 switch candidate.kind {
                 case .single:
-                    if candidate.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame {
+                    if candidate.uniqueId.rawValue.caseInsensitiveCompare(uniqueId.rawValue) == .orderedSame {
                         return candidate
                     }
                 case .group(let children):
-                    if children.contains(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
+                    if children.contains(where: { $0.uniqueId.rawValue.caseInsensitiveCompare(uniqueId.rawValue) == .orderedSame }) {
                         return candidate
                     }
                 }
@@ -130,7 +130,7 @@ enum ModGraph {
         }
 
         /// Every unique ID a top-level entry provides — for a group, that's all its children.
-        func providedIDs(of topMod: ModItem) -> [String] {
+        func providedIDs(of topMod: ModItem) -> [ModItem.UniqueID] {
             if case .group(let children) = topMod.kind {
                 return children.map { $0.uniqueId }
             }
@@ -147,7 +147,7 @@ enum ModGraph {
 
             // Walk down: enable everything the starting mod requires.
             var queue = [startingMod]
-            var visited = Set<String>([startingMod.folderName])
+            var visited = Set<ModItem.FolderName>([startingMod.folderName])
             while !queue.isEmpty {
                 let current = queue.removeFirst()
                 for dependency in dependencies(of: current) where dependency.isRequired {
@@ -165,7 +165,7 @@ enum ModGraph {
 
             // Walk up: disable everything that requires the starting mod.
             var queue = [startingMod]
-            var visited = Set<String>([startingMod.folderName])
+            var visited = Set<ModItem.FolderName>([startingMod.folderName])
             while !queue.isEmpty {
                 let current = queue.removeFirst()
                 let currentIDs = providedIDs(of: current)
@@ -173,7 +173,7 @@ enum ModGraph {
                     guard !visited.contains(candidate.folderName) else { continue }
                     let requiresCurrent = dependencies(of: candidate).contains { dependency in
                         dependency.isRequired && currentIDs.contains {
-                            $0.caseInsensitiveCompare(dependency.uniqueId) == .orderedSame
+                            $0.rawValue.caseInsensitiveCompare(dependency.uniqueId.rawValue) == .orderedSame
                         }
                     }
                     guard requiresCurrent else { continue }

@@ -199,9 +199,9 @@ extension HomeView {
     func coreModStatusThai() -> (CoreModStatus, ModItem?) {
         let allMods = vm.mods.flatMap { $0.allMods }
         // Match by folder name first (exact), then by name containing "thai"
-        let mod = allMods.first { $0.folderName.lowercased() == "stardew valley - thai" && $0.isEnabled }
+        let mod = allMods.first { $0.folderName.rawValue.lowercased() == "stardew valley - thai" && $0.isEnabled }
             ?? allMods.first { $0.name.localizedCaseInsensitiveContains("thai") && $0.isEnabled }
-            ?? allMods.first { $0.folderName.lowercased() == "stardew valley - thai" }
+            ?? allMods.first { $0.folderName.rawValue.lowercased() == "stardew valley - thai" }
             ?? allMods.first { $0.name.localizedCaseInsensitiveContains("thai") }
         guard let mod = mod else { return (.notInstalled, nil) }
         return (mod.isEnabled ? .enabledAndInstalled : .installedButDisabled, mod)

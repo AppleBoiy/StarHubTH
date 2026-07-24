@@ -52,7 +52,7 @@ struct DependencyGraphView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.orange)
                         .font(.system(size: 16))
-                    Text(String(format: vm.L(L10n.Mods.missingDependencies), missingDeps.map(\.uniqueId).joined(separator: ", ")))
+                    Text(String(format: vm.L(L10n.Mods.missingDependencies), missingDeps.map { $0.uniqueId.rawValue }.joined(separator: ", ")))
                         .font(.system(size: 13, weight: .semibold))
                     Spacer()
                     Button {
@@ -79,7 +79,7 @@ struct DependencyGraphView: View {
     
     private func downloadMissing() {
         for dep in missingDeps {
-            if let url = URL(string: "https://www.nexusmods.com/stardewvalley/search/?gsearch=\(dep.uniqueId)") {
+            if let url = URL(string: "https://www.nexusmods.com/stardewvalley/search/?gsearch=\(dep.uniqueId.rawValue)") {
                 NSWorkspace.shared.open(url)
             }
         }
@@ -129,7 +129,7 @@ struct DependencyNodeView: View {
     
     var body: some View {
         let status = vm.resolveDependencyStatus(for: dep.uniqueId)
-        let targetMod = vm.mods.first(where: { $0.uniqueId.caseInsensitiveCompare(dep.uniqueId) == .orderedSame })
+        let targetMod = vm.mods.first(where: { $0.uniqueId.rawValue.caseInsensitiveCompare(dep.uniqueId.rawValue) == .orderedSame })
         
         HStack(spacing: 12) {
             // Icon based on status
@@ -144,13 +144,13 @@ struct DependencyNodeView: View {
             }
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(targetMod?.name ?? dep.uniqueId)
+                Text(targetMod?.name ?? dep.uniqueId.rawValue)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.primary)
                     .lineLimit(1)
-                
+
                 if targetMod == nil {
-                    Text(dep.uniqueId)
+                    Text(dep.uniqueId.rawValue)
                         .font(.system(size: 9, design: .monospaced))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -175,7 +175,7 @@ struct DependencyNodeView: View {
             
             if status == .missing {
                 Button {
-                    if let url = URL(string: "https://www.nexusmods.com/stardewvalley/search/?gsearch=\(dep.uniqueId)") {
+                    if let url = URL(string: "https://www.nexusmods.com/stardewvalley/search/?gsearch=\(dep.uniqueId.rawValue)") {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {

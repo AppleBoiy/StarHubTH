@@ -19,11 +19,11 @@ enum NexusDownloaderError: Error, LocalizedError {
 }
 
 struct NexusDownloader {
-    static func downloadUpdate(nexusId: Int, apiKey: String, completion: @escaping (Result<URL, NexusDownloaderError>) -> Void) {
+    static func downloadUpdate(nexusId: ModItem.NexusID, apiKey: String, completion: @escaping (Result<URL, NexusDownloaderError>) -> Void) {
         guard !apiKey.isEmpty else { return }
-        
+
         // Step 1: get files list to find latest file ID
-        NexusAPIService.shared.getModFiles(modId: nexusId, apiKey: apiKey) { result in
+        NexusAPIService.shared.getModFiles(modId: nexusId.rawValue, apiKey: apiKey) { result in
             switch result {
             case .success(let fileList):
                 let mainFiles = fileList.files.filter { $0.categoryId == 1 }
@@ -33,9 +33,9 @@ struct NexusDownloader {
                     completion(.failure(.noValidFile))
                     return
                 }
-                
+
                 // Step 2: get download link
-                NexusAPIService.shared.getDownloadLink(modId: nexusId, fileId: fileId, apiKey: apiKey) { linkResult in
+                NexusAPIService.shared.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, apiKey: apiKey) { linkResult in
                     switch linkResult {
                     case .success(let links):
                         guard let downloadLink = links.first?.URI, let url = URL(string: downloadLink) else {

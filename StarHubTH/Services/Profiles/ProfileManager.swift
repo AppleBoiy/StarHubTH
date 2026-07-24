@@ -45,12 +45,12 @@ final class ProfileManager {
             }
             return profile.enabledModIds.contains(mod.uniqueId)
         }
-        
+
         // Disable mods not in profile
         for mod in mods.filter({ $0.isEnabled }) {
             if !isCoveredByProfile(mod) {
-                let src = (modsPath as NSString).appendingPathComponent(mod.folderName)
-                let dst = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
+                let src = (modsPath as NSString).appendingPathComponent(mod.folderName.rawValue)
+                let dst = (disabledModsPath as NSString).appendingPathComponent(mod.folderName.rawValue)
                 let dstBackup = "\(dst)_profile_backup_temp"
                 do {
                     try fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
@@ -83,8 +83,8 @@ final class ProfileManager {
         // Enable mods in profile
         for mod in mods.filter({ !$0.isEnabled }) {
             if isCoveredByProfile(mod) {
-                let src = (disabledModsPath as NSString).appendingPathComponent(mod.folderName)
-                let dst = (modsPath as NSString).appendingPathComponent(mod.folderName)
+                let src = (disabledModsPath as NSString).appendingPathComponent(mod.folderName.rawValue)
+                let dst = (modsPath as NSString).appendingPathComponent(mod.folderName.rawValue)
                 let dstBackup = "\(dst)_profile_backup_temp"
                 do {
                     try fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
@@ -120,7 +120,7 @@ final class ProfileManager {
     func exportProfile(_ profile: ModProfile, mods: [ModItem], to url: URL) throws {
         let allMods = mods.flatMap { $0.allMods }
         let activeMods = allMods.filter { profile.enabledModIds.contains($0.uniqueId) }
-        
+
         let collectionMods = activeMods.map { mod in
             let nId: String? = {
                 if let u = URL(string: mod.nexusUrl), let id = u.pathComponents.last, Int(id) != nil {
@@ -128,7 +128,7 @@ final class ProfileManager {
                 }
                 return nil
             }()
-            return CollectionModItem(uniqueID: mod.uniqueId, nexusID: nId, name: mod.name, version: mod.version)
+            return CollectionModItem(uniqueID: mod.uniqueId.rawValue, nexusID: nId, name: mod.name, version: mod.version)
         }
         
         let collection = ModCollection(name: profile.name, author: NSUserName(), mods: collectionMods)
@@ -146,7 +146,7 @@ final class ProfileManager {
         let newProfile = ModProfile(
             id: UUID(),
             name: "\(collection.name) (Imported)",
-            enabledModIds: collection.mods.map { $0.uniqueID }
+            enabledModIds: collection.mods.map { ModItem.UniqueID(rawValue: $0.uniqueID) }
         )
         return (collection, newProfile)
     }

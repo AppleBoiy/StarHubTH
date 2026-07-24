@@ -43,7 +43,7 @@ struct ModConfigEditorView: View {
     
     var configPath: String {
         let basePath = (vm.gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
-        let modPath = (basePath as NSString).appendingPathComponent(mod.folderName)
+        let modPath = (basePath as NSString).appendingPathComponent(mod.folderName.rawValue)
         return (modPath as NSString).appendingPathComponent("config.json")
     }
     

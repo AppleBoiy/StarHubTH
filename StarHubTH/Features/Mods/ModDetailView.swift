@@ -20,7 +20,7 @@ struct ModDetailView: View {
     
     var localChangelog: String? {
         let basePath = (vm.gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
-        let modPath = (basePath as NSString).appendingPathComponent(mod.folderName)
+        let modPath = (basePath as NSString).appendingPathComponent(mod.folderName.rawValue)
         let mdPath = (modPath as NSString).appendingPathComponent("CHANGELOG.md")
         let txtPath = (modPath as NSString).appendingPathComponent("changelog.txt")
         
@@ -77,7 +77,7 @@ struct ModDetailView: View {
                                     .foregroundColor(.secondary)
                                 
                                 HStack(spacing: 8) {
-                                    Text("ID: \(mod.uniqueId)")
+                                    Text("ID: \(mod.uniqueId.rawValue)")
                                         .font(.system(size: 11, design: .monospaced))
                                         .foregroundColor(.secondary.opacity(0.8))
                                         .textSelection(.enabled)
@@ -269,7 +269,7 @@ struct DependencyRow: View {
         
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(dependency.uniqueId)
+                Text(dependency.uniqueId.rawValue)
                     .font(.system(size: 13, weight: .bold))
                 if dependency.isRequired {
                     Text(vm.L(L10n.ModDetailExtra.required))
@@ -311,7 +311,7 @@ struct DependencyRow: View {
                 .cornerRadius(6)
             case .missing:
                 Button {
-                    if let url = URL(string: "https://www.nexusmods.com/stardewvalley/search/?gsearch=\(dependency.uniqueId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                    if let url = URL(string: "https://www.nexusmods.com/stardewvalley/search/?gsearch=\(dependency.uniqueId.rawValue.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {

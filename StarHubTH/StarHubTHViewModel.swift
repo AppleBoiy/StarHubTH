@@ -29,32 +29,32 @@ final class StarHubTHViewModel: ObservableObject {
     
     // Dependency Resolution Helper
     // Logic lives in ModGraph (Models/ModGraph.swift) so it is testable without a view model.
-    func resolveDependencyStatus(for uniqueId: String) -> DependencyStatus {
+    func resolveDependencyStatus(for uniqueId: ModItem.UniqueID) -> DependencyStatus {
         ModGraph.dependencyStatus(for: uniqueId, in: mods)
     }
 
     /// Resolves install status for a mod pack mod.
     /// Tries Nexus ID match first (via nexusUrl), then falls back to SMAPI uniqueId.
-    func resolvePackModStatus(nexusId: Int?, uniqueId: String) -> PackModStatus {
+    func resolvePackModStatus(nexusId: ModItem.NexusID?, uniqueId: ModItem.UniqueID) -> PackModStatus {
         ModGraph.packModStatus(nexusID: nexusId, uniqueId: uniqueId, in: mods)
     }
-    
+
     // Custom Tags
     var customModTags: [String: String] {
         get { UserDefaults.standard.dictionary(forKey: "customModTags") as? [String: String] ?? [:] }
         set { UserDefaults.standard.set(newValue, forKey: "customModTags") }
     }
-    
-    func setCustomTag(for modId: String, tag: String, shouldRefresh: Bool = true) {
+
+    func setCustomTag(for modId: ModItem.UniqueID, tag: String, shouldRefresh: Bool = true) {
         var tags = customModTags
-        tags[modId] = tag
+        tags[modId.rawValue] = tag
         customModTags = tags
         if shouldRefresh { refresh() }
     }
-    
-    func resetCustomTag(for modId: String) {
+
+    func resetCustomTag(for modId: ModItem.UniqueID) {
         var tags = customModTags
-        tags.removeValue(forKey: modId)
+        tags.removeValue(forKey: modId.rawValue)
         customModTags = tags
         refresh()
     }
@@ -279,7 +279,7 @@ final class StarHubTHViewModel: ObservableObject {
             switch result {
             case .mod(let modId, let fileId):
                 log("Downloading from NXM: Mod \(modId), File \(fileId)", level: .info)
-                self.downloadModFromNexus(nexusId: modId, fileId: fileId) { success in
+                self.downloadModFromNexus(nexusId: ModItem.NexusID(rawValue: modId), fileId: fileId) { success in
                     if success {
                         self.scanMods()
                         self.showModal(message: self.L(L10n.VM.nxmDownloadSuccess))
@@ -457,7 +457,7 @@ final class StarHubTHViewModel: ObservableObject {
                 self.selectedMod = first
             }
             self.isThaiTranslationInstalled = scannedMods.contains {
-                ($0.folderName.lowercased() == "stardew valley - thai" ||
+                ($0.folderName.rawValue.lowercased() == "stardew valley - thai" ||
                 $0.name.localizedCaseInsensitiveContains("thai")) && $0.isEnabled
             }
         }
@@ -487,31 +487,31 @@ final class StarHubTHViewModel: ObservableObject {
     }
     
     // Returns missing required unique IDs for a given mod
-    func getMissingDependencies(for mod: ModItem) -> [String] {
+    func getMissingDependencies(for mod: ModItem) -> [ModItem.UniqueID] {
         ModGraph.missingDependencies(for: mod, in: mods)
     }
-    
+
     // Toggle Mod Status (Enabled / Disabled)
     func toggleMod(_ mod: ModItem) {
         // Helper to find the top-level folder that contains a given uniqueId
-        func getTopLevelFolder(for uniqueId: String) -> String? {
+        func getTopLevelFolder(for uniqueId: ModItem.UniqueID) -> ModItem.FolderName? {
             for m in self.mods {
                 switch m.kind {
                 case .single:
-                    if m.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame {
+                    if m.uniqueId.rawValue.caseInsensitiveCompare(uniqueId.rawValue) == .orderedSame {
                         return m.folderName
                     }
                 case .group(let children):
-                    if children.contains(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
+                    if children.contains(where: { $0.uniqueId.rawValue.caseInsensitiveCompare(uniqueId.rawValue) == .orderedSame }) {
                         return m.folderName
                     }
                 }
             }
             return nil
         }
-        
+
         // Helper to get all dependencies of a top-level folder (including its children)
-        func getDependencies(for folderName: String) -> [ModDependency] {
+        func getDependencies(for folderName: ModItem.FolderName) -> [ModDependency] {
             guard let m = self.mods.first(where: { $0.folderName == folderName }) else { return [] }
             if case .group(let children) = m.kind {
                 return children.flatMap { $0.dependencies }
@@ -519,10 +519,10 @@ final class StarHubTHViewModel: ObservableObject {
                 return m.dependencies
             }
         }
-        
-        var foldersToToggle: Set<String> = [mod.folderName]
+
+        var foldersToToggle: Set<ModItem.FolderName> = [mod.folderName]
         let targetState = !mod.isEnabled // True if we are enabling, false if disabling
-        
+
         if chainToggleDependencies {
             if targetState == true {
                 // Enabling: recursively enable all REQUIRED dependencies
@@ -530,7 +530,7 @@ final class StarHubTHViewModel: ObservableObject {
                 while !queue.isEmpty {
                     let currentFolder = queue.removeFirst()
                     let deps = getDependencies(for: currentFolder)
-                    
+
                     for dep in deps where dep.isRequired {
                         if let depFolder = getTopLevelFolder(for: dep.uniqueId) {
                             let isDepFolderEnabled = self.mods.first(where: { $0.folderName == depFolder })?.isEnabled ?? false
@@ -546,8 +546,8 @@ final class StarHubTHViewModel: ObservableObject {
                 var queue = [mod.folderName]
                 while !queue.isEmpty {
                     let currentFolder = queue.removeFirst()
-                    
-                    var providedUniqueIds: [String] = []
+
+                    var providedUniqueIds: [ModItem.UniqueID] = []
                     if let m = self.mods.first(where: { $0.folderName == currentFolder }) {
                         if case .group(let children) = m.kind {
                             providedUniqueIds = children.map { $0.uniqueId }
@@ -555,11 +555,11 @@ final class StarHubTHViewModel: ObservableObject {
                             providedUniqueIds = [m.uniqueId]
                         }
                     }
-                    
+
                     for otherMod in self.mods where otherMod.isEnabled && !foldersToToggle.contains(otherMod.folderName) {
                         let otherDeps = getDependencies(for: otherMod.folderName)
                         let requiresCurrent = otherDeps.contains { dep in
-                            dep.isRequired && providedUniqueIds.contains { $0.caseInsensitiveCompare(dep.uniqueId) == .orderedSame }
+                            dep.isRequired && providedUniqueIds.contains { $0.rawValue.caseInsensitiveCompare(dep.uniqueId.rawValue) == .orderedSame }
                         }
                         if requiresCurrent {
                             foldersToToggle.insert(otherMod.folderName)
@@ -570,19 +570,19 @@ final class StarHubTHViewModel: ObservableObject {
             }
         }
         // else: chainToggleDependencies == false → only toggle the single mod itself
-        
+
         let fm = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
         let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
         var anyMoved = false
-        
+
         for folderName in foldersToToggle {
             guard let m = self.mods.first(where: { $0.folderName == folderName }) else { continue }
             if m.isEnabled == targetState { continue }
-            
-            let srcPath = ((m.isEnabled ? modsPath : disabledModsPath) as NSString).appendingPathComponent(m.folderName)
+
+            let srcPath = ((m.isEnabled ? modsPath : disabledModsPath) as NSString).appendingPathComponent(m.folderName.rawValue)
             let destFolder = m.isEnabled ? disabledModsPath : modsPath
-            let destPath = ((destFolder as NSString).appendingPathComponent(m.folderName) as String)
+            let destPath = ((destFolder as NSString).appendingPathComponent(m.folderName.rawValue) as String)
             
             let destBackup = "\(destPath)_toggle_backup_temp"
             do {
@@ -706,7 +706,7 @@ final class StarHubTHViewModel: ObservableObject {
 
     // MARK: - Nexus Auto-Download
     
-    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: Int) {
+    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: ModItem.NexusID) {
         DispatchQueue.main.async {
             self.downloadingMods.insert(mod.name)
         }
@@ -756,7 +756,7 @@ final class StarHubTHViewModel: ObservableObject {
             }
         }
     }
-    @Published var selectedModID: String? = nil {
+    @Published var selectedModID: ModItem.FolderName? = nil {
         didSet {
             if let id = selectedModID, selectedMod?.folderName != id {
                 selectedMod = mods.first { $0.folderName == id }
@@ -1155,9 +1155,9 @@ final class StarHubTHViewModel: ObservableObject {
             return
         }
         let basePath = (gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
-        let modDir = (basePath as NSString).appendingPathComponent(mod.folderName)
+        let modDir = (basePath as NSString).appendingPathComponent(mod.folderName.rawValue)
         let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium).replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "")
-        let defaultFileName = "\(mod.folderName)_Backup_\(timestamp).zip"
+        let defaultFileName = "\(mod.folderName.rawValue)_Backup_\(timestamp).zip"
         
         DispatchQueue.main.async {
             let panel = NSSavePanel()
@@ -1199,8 +1199,8 @@ final class StarHubTHViewModel: ObservableObject {
             return
         }
         let basePath = (gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
-        let modDir = (basePath as NSString).appendingPathComponent(mod.folderName)
-        
+        let modDir = (basePath as NSString).appendingPathComponent(mod.folderName.rawValue)
+
         DispatchQueue.main.async {
             let panel = NSOpenPanel()
             panel.title = "Select Mod Backup (.zip)"
@@ -1474,13 +1474,13 @@ final class StarHubTHViewModel: ObservableObject {
     func createProfile(name: String) {
         // Snapshot the currently enabled mods into the new profile
         let currentEnabledIds = mods
-            .flatMap { mod -> [String] in
+            .flatMap { mod -> [ModItem.UniqueID] in
                 if case .group(let children) = mod.kind {
                     return children.filter { $0.isEnabled }.map { $0.uniqueId }
                 }
                 return mod.isEnabled ? [mod.uniqueId] : []
             }
-            .filter { !$0.isEmpty }
+            .filter { !$0.rawValue.isEmpty }
 
         let newProfile = ModProfile(name: name, enabledModIds: currentEnabledIds)
         modProfiles.append(newProfile)
@@ -1498,7 +1498,7 @@ final class StarHubTHViewModel: ObservableObject {
         saveProfiles()
     }
     
-    func updateProfile(id: UUID, newName: String, enabledModIds: [String]) {
+    func updateProfile(id: UUID, newName: String, enabledModIds: [ModItem.UniqueID]) {
         if let index = modProfiles.firstIndex(where: { $0.id == id }) {
             modProfiles[index].name = newName
             modProfiles[index].enabledModIds = enabledModIds
@@ -1550,7 +1550,7 @@ final class StarHubTHViewModel: ObservableObject {
     ///   - enable: true = enabling, false = disabling
     ///   - currentEnabled: the current set of enabled uniqueIds in the profile
     /// - Returns: A new set with the chain applied
-    func applyChainToSet(mod: ModItem, enable: Bool, currentEnabled: Set<String>) -> Set<String> {
+    func applyChainToSet(mod: ModItem, enable: Bool, currentEnabled: Set<ModItem.UniqueID>) -> Set<ModItem.UniqueID> {
         ModGraph.enabledIDs(
             after: mod,
             enabling: enable,
@@ -1566,13 +1566,13 @@ final class StarHubTHViewModel: ObservableObject {
               let index = modProfiles.firstIndex(where: { $0.id == id }) else { return }
 
         let actualEnabledIds = mods
-            .flatMap { mod -> [String] in
+            .flatMap { mod -> [ModItem.UniqueID] in
                 if case .group(let children) = mod.kind {
                     return children.filter { $0.isEnabled }.map { $0.uniqueId }
                 }
                 return mod.isEnabled ? [mod.uniqueId] : []
             }
-            .filter { !$0.isEmpty }
+            .filter { !$0.rawValue.isEmpty }
 
         modProfiles[index].enabledModIds = actualEnabledIds
         saveProfiles()
@@ -1585,12 +1585,12 @@ final class StarHubTHViewModel: ObservableObject {
         let packMods = mods.flatMap { mod -> [StarHubPackMod] in
             if case .group(let children) = mod.kind {
                 return children.filter { $0.isEnabled }.map {
-                    let nexusId = Int($0.nexusUrl.components(separatedBy: "/").last ?? "")
+                    let nexusId = Int($0.nexusUrl.components(separatedBy: "/").last ?? "").map { ModItem.NexusID(rawValue: $0) }
                     return StarHubPackMod(name: $0.name, uniqueId: $0.uniqueId, version: $0.version, nexusId: nexusId)
                 }
             }
             if mod.isEnabled {
-                let nexusId = Int(mod.nexusUrl.components(separatedBy: "/").last ?? "")
+                let nexusId = Int(mod.nexusUrl.components(separatedBy: "/").last ?? "").map { ModItem.NexusID(rawValue: $0) }
                 return [StarHubPackMod(name: mod.name, uniqueId: mod.uniqueId, version: mod.version, nexusId: nexusId)]
             }
             return []
@@ -1676,9 +1676,9 @@ final class StarHubTHViewModel: ObservableObject {
                         }
                         return StarHubPackMod(
                             name: modDetail.name,
-                            uniqueId: "nexus_\(modDetail.modId)",
+                            uniqueId: ModItem.UniqueID(rawValue: "nexus_\(modDetail.modId)"),
                             version: detail.version ?? "",
-                            nexusId: modDetail.modId,
+                            nexusId: ModItem.NexusID(rawValue: modDetail.modId),
                             modAuthor: modDetail.author,
                             modDownloads: modDetail.downloads,
                             modUpdatedAt: modUpdated,
@@ -1721,25 +1721,25 @@ final class StarHubTHViewModel: ObservableObject {
         }
     }
     
-    func downloadModFromNexus(nexusId: Int, fileId: Int? = nil, completion: @escaping (Bool) -> Void) {
+    func downloadModFromNexus(nexusId: ModItem.NexusID, fileId: Int? = nil, completion: @escaping (Bool) -> Void) {
         let apiKey = nexusApiKey
         if apiKey.isEmpty {
             completion(false)
             return
         }
-        
+
         let targetFileId: Int
-        
+
         if let fId = fileId {
             targetFileId = fId
             startDownload(nexusId: nexusId, fileId: targetFileId, apiKey: apiKey, completion: completion)
         } else {
-            self.log("Fetching latest file for Nexus Mod #\(nexusId)...")
-            NexusAPIService.shared.getModFiles(modId: nexusId, apiKey: apiKey) { result in
+            self.log("Fetching latest file for Nexus Mod #\(nexusId.rawValue)...")
+            NexusAPIService.shared.getModFiles(modId: nexusId.rawValue, apiKey: apiKey) { result in
                 switch result {
                 case .success(let response):
                     guard let latestFile = response.files.first else {
-                        self.log("No files found for Nexus Mod #\(nexusId).")
+                        self.log("No files found for Nexus Mod #\(nexusId.rawValue).")
                         completion(false)
                         return
                     }
@@ -1751,10 +1751,10 @@ final class StarHubTHViewModel: ObservableObject {
             }
         }
     }
-    
-    private func startDownload(nexusId: Int, fileId: Int, apiKey: String, completion: @escaping (Bool) -> Void) {
+
+    private func startDownload(nexusId: ModItem.NexusID, fileId: Int, apiKey: String, completion: @escaping (Bool) -> Void) {
         self.log("Requesting download link for file #\(fileId)...")
-        NexusAPIService.shared.getDownloadLink(modId: nexusId, fileId: fileId, apiKey: apiKey) { linkResult in
+        NexusAPIService.shared.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, apiKey: apiKey) { linkResult in
                     switch linkResult {
                     case .success(let links):
                         guard let firstLink = links.first, let downloadURL = URL(string: firstLink.URI) else {
@@ -1762,8 +1762,8 @@ final class StarHubTHViewModel: ObservableObject {
                             completion(false)
                             return
                         }
-                        
-                        self.log("Starting download for Nexus Mod #\(nexusId)...")
+
+                        self.log("Starting download for Nexus Mod #\(nexusId.rawValue)...")
                         let task = URLSession.shared.downloadTask(with: downloadURL) { localURL, response, error in
                             if let error = error {
                                 self.log("Download failed: \(error.localizedDescription)")

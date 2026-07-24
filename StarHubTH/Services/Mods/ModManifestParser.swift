@@ -47,7 +47,7 @@ struct ModManifestParser {
                 for dep in deps {
                     if let depId = dep.caseInsensitiveValue(forKey: "UniqueID") as? String {
                         let isReq = dep.caseInsensitiveValue(forKey: "IsRequired") as? Bool ?? true
-                        dependencies.append(ModDependency(uniqueId: depId, isRequired: isReq))
+                        dependencies.append(ModDependency(uniqueId: ModItem.UniqueID(rawValue: depId), isRequired: isReq))
                     }
                 }
             }
@@ -77,9 +77,9 @@ struct ModManifestParser {
         }
         
         return ModItem(
-            uniqueId: uniqueId,
+            uniqueId: ModItem.UniqueID(rawValue: uniqueId),
             name: name,
-            folderName: relativePath.isEmpty ? (path as NSString).lastPathComponent : relativePath,
+            folderName: ModItem.FolderName(rawValue: relativePath.isEmpty ? (path as NSString).lastPathComponent : relativePath),
             version: version,
             author: author,
             description: description,

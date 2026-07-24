@@ -34,12 +34,12 @@ struct ModListFilter: Equatable {
         guard !query.isEmpty else { return true }
 
         if mod.name.lowercased().contains(query) { return true }
-        if mod.uniqueId.lowercased().contains(query) { return true }
+        if mod.uniqueId.rawValue.lowercased().contains(query) { return true }
         if mod.author.lowercased().contains(query) { return true }
 
         if case .group(let children) = mod.kind {
             return children.contains {
-                $0.name.lowercased().contains(query) || $0.uniqueId.lowercased().contains(query)
+                $0.name.lowercased().contains(query) || $0.uniqueId.rawValue.lowercased().contains(query)
             }
         }
         return false

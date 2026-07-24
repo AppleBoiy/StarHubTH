@@ -48,7 +48,7 @@
 - [x] 2.2 Move `LogLevel.color`/`.icon` out of Models
 - [x] 2.3 Introduce `Mod.Kind` (`.single` / `.group`)
 - [x] 2.4 Fix empty-`uniqueId` group latent bug + regression test
-- [ ] 2.5 Add `Mod.ID` / `Mod.NexusID` / `Mod.FolderName` wrapper types
+- [x] 2.5 Add `Mod.UniqueID` / `Mod.NexusID` / `Mod.FolderName` wrapper types
 - [ ] 3.1 Define protocols at each I/O boundary
 - [ ] 3.2 Rename implementations `Live*`, write `Stub*`
 - [ ] 3.3 Composition root (`App/DependencyContainer.swift`)
@@ -89,7 +89,9 @@
 - [ ] 9.3 SwiftLint / swift-format config (optional)
 - [ ] 9.4 Update `CHANGELOG.md`
 
-**Current state (verified 2026-07-25, HEAD `1a202c5`): Phase 0–1 done except 0.2/0.3, Phase 2 done through 2.4.** Tree already has the `App/Features/DesignSystem/Localization/Support` layout. Next open step is **2.5** (`Mod.ID`/`Mod.NexusID`/`Mod.FolderName` wrapper types), then Phase 3 (protocols + DI). Note: this doc was edited concurrently by two sessions working the same plan — always re-verify against `git log` before trusting these checkboxes blindly.
+**Current state (verified 2026-07-25): Phase 0–2 done except 0.2/0.3 (partial characterization coverage).** Tree already has the `App/Features/DesignSystem/Localization/Support` layout. Next open step is **Phase 3** (protocols + DI). Note: this doc was edited concurrently by two sessions working the same plan — always re-verify against `git log` before trusting these checkboxes blindly.
+
+**Correction for implementers of 2.5:** SWIFT_STANDARDS.md §2.4 names the SMAPI-ID wrapper `Mod.ID`. Don't use that name — `ModItem`/`Mod` conforms to `Identifiable` with `id` returning `FolderName` (§2.5 there), and a nested type literally named `ID` collides with `Identifiable`'s own associated type: Swift infers `Identifiable.ID` from the nested type's name rather than the `id` property's actual return type, and conformance fails with a misleading "does not conform to Identifiable" error pointing at an unrelated `var body`. Use `Mod.UniqueID` instead — this repo's implementation does.
 
 ---
 

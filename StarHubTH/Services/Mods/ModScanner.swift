@@ -55,7 +55,7 @@ struct ModScanner {
                     let groupMod = ModItem(
                         uniqueId: "",
                         name: groupName,
-                        folderName: groupName,
+                        folderName: ModItem.FolderName(rawValue: groupName),
                         version: "",
                         author: groupAuthor,
                         description: "\(modsInGroup.count)",

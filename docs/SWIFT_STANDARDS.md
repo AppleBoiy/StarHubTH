@@ -184,11 +184,13 @@ This also deletes the `mods.flatMap { $0.isGroup ? ($0.children ?? []) : [$0] }`
 ```swift
 // ✓
 extension Mod {
-    struct ID: Hashable, RawRepresentable { let rawValue: String }        // SMAPI UniqueID
+    struct UniqueID: Hashable, RawRepresentable { let rawValue: String }   // SMAPI UniqueID
     struct NexusID: Hashable, RawRepresentable { let rawValue: Int }
     struct FolderName: Hashable, RawRepresentable { let rawValue: String }
 }
 ```
+
+**Do not name the first one `ID`.** §2.5 below has `Mod.id` return `FolderName`, not this type — but a nested type literally named `ID` collides with `Identifiable`'s own associated type `ID`. Swift infers `Identifiable.ID` from the nested type's name rather than from what `id` actually returns, so conformance silently fails with "type 'Mod' does not conform to protocol 'Identifiable'," reported against `var body`, nowhere near the real cause. `UniqueID` avoids the collision. (Found the hard way during Phase 2.5 — see `REFACTOR_PLAN.md`.)
 
 ### 2.5 `Equatable`/`Hashable`/`Identifiable` conformance is deliberate
 

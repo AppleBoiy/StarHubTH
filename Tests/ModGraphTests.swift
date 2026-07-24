@@ -16,9 +16,9 @@ struct ModGraphTests {
         dependencies: [ModDependency] = []
     ) -> ModItem {
         ModItem(
-            uniqueId: uniqueId,
+            uniqueId: ModItem.UniqueID(rawValue: uniqueId),
             name: name ?? uniqueId,
-            folderName: folder ?? uniqueId,
+            folderName: ModItem.FolderName(rawValue: folder ?? uniqueId),
             version: "1.0.0",
             author: "Author",
             description: "",
@@ -36,7 +36,7 @@ struct ModGraphTests {
         ModItem(
             uniqueId: "",
             name: folder,
-            folderName: folder,
+            folderName: ModItem.FolderName(rawValue: folder),
             version: "",
             author: "Author",
             description: "\(children.count)",
@@ -51,11 +51,11 @@ struct ModGraphTests {
     }
 
     private static func required(_ uniqueId: String) -> ModDependency {
-        ModDependency(uniqueId: uniqueId, isRequired: true)
+        ModDependency(uniqueId: ModItem.UniqueID(rawValue: uniqueId), isRequired: true)
     }
 
     private static func optional(_ uniqueId: String) -> ModDependency {
-        ModDependency(uniqueId: uniqueId, isRequired: false)
+        ModDependency(uniqueId: ModItem.UniqueID(rawValue: uniqueId), isRequired: false)
     }
 
     // MARK: -
@@ -222,7 +222,7 @@ struct ModGraphTests {
             mod("optional.dependent", dependencies: [optional("core.framework")]),
             mod("unrelated.mod")
         ]
-        let current: Set<String> = ["core.framework", "dependent.mod", "optional.dependent", "unrelated.mod"]
+        let current: Set<ModItem.UniqueID> = ["core.framework", "dependent.mod", "optional.dependent", "unrelated.mod"]
 
         let result = ModGraph.enabledIDs(
             after: mods[0], enabling: false, from: current, in: mods, chainingDependencies: true

@@ -173,23 +173,23 @@ struct ProfileDetailSheet: View {
     @Binding var isPresented: Bool
     
     @State private var editName: String = ""
-    @State private var editedEnabledMods: Set<String> = []
+    @State private var editedEnabledMods: Set<ModItem.UniqueID> = []
     @State private var isShowingModsPopover = false
 
     /// Mods for the checklist — top-level groups and standalone mods only.
     /// Groups show as a single row; toggling a group toggles all its children.
     private var flatMods: [ModItem] {
         vm.mods
-            .filter { !$0.uniqueId.isEmpty || $0.isGroup }
+            .filter { !$0.uniqueId.rawValue.isEmpty || $0.isGroup }
             .sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
 
     /// All uniqueIds covered by a ModItem (group = all children's ids, single mod = its own id).
-    private func idsFor(_ mod: ModItem) -> [String] {
+    private func idsFor(_ mod: ModItem) -> [ModItem.UniqueID] {
         if case .group(let children) = mod.kind {
-            return children.map { $0.uniqueId }.filter { !$0.isEmpty }
+            return children.map { $0.uniqueId }.filter { !$0.rawValue.isEmpty }
         }
-        return mod.uniqueId.isEmpty ? [] : [mod.uniqueId]
+        return mod.uniqueId.rawValue.isEmpty ? [] : [mod.uniqueId]
     }
 
     /// Whether a mod (or group) is fully checked in the current selection.
@@ -284,7 +284,7 @@ struct ProfileDetailSheet: View {
                                                 if vm.chainToggleDependencies {
                                                     // For groups, chain-apply each child
                                                     if case .group(let children) = mod.kind {
-                                                        for child in children where !child.uniqueId.isEmpty {
+                                                        for child in children where !child.uniqueId.rawValue.isEmpty {
                                                             applyChain(mod: child, enable: isOn)
                                                         }
                                                     } else {
@@ -405,12 +405,12 @@ struct ProfileDetailSheet: View {
             // If this is the active profile, reflect actual filesystem state
             if vm.activeProfileId == profile.id {
                 editedEnabledMods = Set(
-                    vm.mods.flatMap { mod -> [String] in
+                    vm.mods.flatMap { mod -> [ModItem.UniqueID] in
                         if case .group(let children) = mod.kind {
                             return children.filter { $0.isEnabled }.map { $0.uniqueId }
                         }
                         return mod.isEnabled ? [mod.uniqueId] : []
-                    }.filter { !$0.isEmpty }
+                    }.filter { !$0.rawValue.isEmpty }
                 )
             } else {
                 editedEnabledMods = Set(profile.enabledModIds)

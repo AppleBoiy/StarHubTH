@@ -9,7 +9,7 @@ final class CollectionInstaller {
         var missingNexusIds: [String] = []
         
         for mod in collection.mods {
-            let found = allMods.contains { $0.uniqueId.caseInsensitiveCompare(mod.uniqueID) == .orderedSame }
+            let found = allMods.contains { $0.uniqueId.rawValue.caseInsensitiveCompare(mod.uniqueID) == .orderedSame }
             if !found {
                 if let nId = mod.nexusID, !nId.isEmpty {
                     missingNexusIds.append(nId)

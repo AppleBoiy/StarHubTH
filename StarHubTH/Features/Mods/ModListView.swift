@@ -514,7 +514,7 @@ struct ModSectionGroup: View {
     let mods: [ModItem]
     @ObservedObject var vm: StarHubTHViewModel
     @AppStorage("modListViewMode") private var viewMode: String = "list"
-    @State private var expandedGroups: [String: Bool] = [:]
+    @State private var expandedGroups: [ModItem.FolderName: Bool] = [:]
 
     let columns = [GridItem(.adaptive(minimum: 280, maximum: 400), spacing: 16)]
 
@@ -619,7 +619,7 @@ struct ModListRow: View {
         let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
         let path = URL(fileURLWithPath: vm.gameDir)
             .appendingPathComponent(baseFolder)
-            .appendingPathComponent(mod.folderName)
+            .appendingPathComponent(mod.folderName.rawValue)
             .appendingPathComponent("config.json")
             .path
         return FileManager.default.fileExists(atPath: path)
@@ -670,7 +670,7 @@ struct ModListRow: View {
                         .lineLimit(1)
                     
                     if hasMissingDependencies {
-                        let names = mod.dependencies.filter { $0.isRequired && vm.resolveDependencyStatus(for: $0.uniqueId) != .active }.map(\.uniqueId).joined(separator: ", ")
+                        let names = mod.dependencies.filter { $0.isRequired && vm.resolveDependencyStatus(for: $0.uniqueId) != .active }.map { $0.uniqueId.rawValue }.joined(separator: ", ")
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
                             .help(String(format: vm.L(L10n.Mods.missingDependencies), names))
@@ -703,8 +703,8 @@ struct ModListRow: View {
                     }
                 }
                 
-                if mod.name != mod.folderName {
-                    Text(mod.folderName)
+                if mod.name != mod.folderName.rawValue {
+                    Text(mod.folderName.rawValue)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary.opacity(0.7))
                         .lineLimit(1)
@@ -734,7 +734,7 @@ struct ModListRow: View {
                     HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.yellow)
-                        Text(String(format: vm.L(L10n.Mods.missingDependencies), missingDeps.joined(separator: ", ")))
+                        Text(String(format: vm.L(L10n.Mods.missingDependencies), missingDeps.map { $0.rawValue }.joined(separator: ", ")))
                             .foregroundColor(.yellow)
                     }
                     .font(.system(size: 11))
@@ -750,7 +750,7 @@ struct ModListRow: View {
                 if let update = pendingUpdate {
                     Button {
                         if !vm.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
-                            vm.downloadAndInstallUpdate(for: update, nexusId: nId)
+                            vm.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId))
                         } else if let url = URL(string: update.url) {
                             NSWorkspace.shared.open(url)
                         }
@@ -785,7 +785,7 @@ struct ModListRow: View {
                     let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
                     let url = URL(fileURLWithPath: vm.gameDir)
                         .appendingPathComponent(baseFolder)
-                        .appendingPathComponent(mod.folderName)
+                        .appendingPathComponent(mod.folderName.rawValue)
                     NSWorkspace.shared.open(url)
                 } label: {
                     Image(systemName: "folder")
@@ -863,14 +863,14 @@ struct ModListRow: View {
                     } label: {
                         HStack {
                             Text(vm.localizedTag(tag))
-                            if vm.customModTags[mod.uniqueId] == tag {
+                            if vm.customModTags[mod.uniqueId.rawValue] == tag {
                                 Image(systemName: "checkmark")
                             }
                         }
                     }
                 }
                 
-                if vm.customModTags[mod.uniqueId] != nil {
+                if vm.customModTags[mod.uniqueId.rawValue] != nil {
                     Divider()
                     Button(role: .destructive) {
                         vm.resetCustomTag(for: mod.uniqueId)
@@ -888,7 +888,7 @@ struct ModListRow: View {
                 let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
                 let url = URL(fileURLWithPath: vm.gameDir)
                     .appendingPathComponent(baseFolder)
-                    .appendingPathComponent(mod.folderName)
+                    .appendingPathComponent(mod.folderName.rawValue)
                 NSWorkspace.shared.open(url)
             }
             if !mod.nexusUrl.isEmpty {
@@ -941,7 +941,7 @@ struct ModCardView: View {
         let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
         let path = URL(fileURLWithPath: vm.gameDir)
             .appendingPathComponent(baseFolder)
-            .appendingPathComponent(mod.folderName)
+            .appendingPathComponent(mod.folderName.rawValue)
             .appendingPathComponent("config.json")
             .path
         return FileManager.default.fileExists(atPath: path)
@@ -978,15 +978,15 @@ struct ModCardView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         
                         if hasMissingDependencies {
-                            let names = mod.dependencies.filter { $0.isRequired && vm.resolveDependencyStatus(for: $0.uniqueId) != .active }.map(\.uniqueId).joined(separator: ", ")
+                            let names = mod.dependencies.filter { $0.isRequired && vm.resolveDependencyStatus(for: $0.uniqueId) != .active }.map { $0.uniqueId.rawValue }.joined(separator: ", ")
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.orange)
                                 .help(String(format: vm.L(L10n.Mods.missingDependencies), names))
                         }
                     }
                     
-                    if mod.name != mod.folderName {
-                        Text(mod.folderName)
+                    if mod.name != mod.folderName.rawValue {
+                        Text(mod.folderName.rawValue)
                             .font(.system(size: 10))
                             .foregroundColor(.secondary.opacity(0.7))
                             .lineLimit(1)
@@ -1107,7 +1107,7 @@ struct ModCardView: View {
     private func updateButton(update: ModUpdateInfo) -> some View {
         Button {
             if !vm.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
-                vm.downloadAndInstallUpdate(for: update, nexusId: nId)
+                vm.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId))
             } else if let url = URL(string: update.url) {
                 NSWorkspace.shared.open(url)
             }
@@ -1127,7 +1127,7 @@ struct ModCardView: View {
             let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
             let url = URL(fileURLWithPath: vm.gameDir)
                 .appendingPathComponent(baseFolder)
-                .appendingPathComponent(mod.folderName)
+                .appendingPathComponent(mod.folderName.rawValue)
             NSWorkspace.shared.open(url)
         } label: {
             Image(systemName: "folder")
