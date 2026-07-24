@@ -45,7 +45,10 @@ struct ModScanner {
                 if modsInGroup.count == 1 {
                     scannedMods.append(modsInGroup[0])
                 } else {
-                    let groupAuthor = modsInGroup.first(where: { $0.author != "Unknown" })?.author ?? "Unknown"
+                    let firstAuthor = modsInGroup.first(where: { $0.author != "Unknown" })?.author ?? "Unknown"
+                    let allSame = modsInGroup.allSatisfy { $0.author == firstAuthor || $0.author == "Unknown" }
+                    let groupAuthor = allSame ? firstAuthor : NSLocalizedString("mods_multiple_authors", comment: "")
+                    
                     let groupInstallDate = modsInGroup.compactMap { $0.installDate }.min()
                     let groupLastModifiedDate = modsInGroup.compactMap { $0.lastModifiedDate }.max()
                     

@@ -153,6 +153,13 @@ enum L10n {
         static let filterDisabled       = "mods_filter_disabled"
         static let filterType           = "mods_filter_type"
         static let filterTypeAll        = "mods_filter_type_all"
+        static let filterDateAll        = "mods_filter_date_all"
+        static let filterDate24h        = "mods_filter_date_24h"
+        static let filterDate7d         = "mods_filter_date_7d"
+        static let filterDate30d        = "mods_filter_date_30d"
+        
+        // General
+        static let multipleAuthors      = "mods_multiple_authors"
         // Sort
         static let sortBy               = "mods_sort_by"
         static let sortName             = "mods_sort_name"
@@ -160,6 +167,8 @@ enum L10n {
         static let sortAuthor           = "mods_sort_author"
         static let sortVersion          = "mods_sort_version"
         static let sortStatus           = "mods_sort_status"
+        static let sortDateAdded        = "mods_sort_date_added"
+        static let sortDateModified     = "mods_sort_date_modified"
         static let sortUpdateAsc        = "mods_sort_update_asc"
         static let sortUpdateDesc       = "mods_sort_update_desc"
         // Update

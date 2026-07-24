@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1-preview] - 2026-07-23
 
 ### Added
+- **Mod List View**: Added comprehensive date tracking for mods, including "Date Added" and "Date Modified".
+- **Mod List View**: Added a new date filter dropdown (e.g., Past 24 Hours, Past 7 Days) and new sorting options for sorting by Date Added and Date Modified.
+- **Mod Detail View**: Moved the date information into the Mod Detail View to reduce clutter in the Mod List row.
+- **Mod Scanning**: Enhanced the Mod Scanner to intelligently group mods by Nexus ID and properly display "Multiple Authors" when a mod group contains mods from different creators.
 - **Mod Details**: Replaced the modal popup sheet with a fully native, inline detail pane that matches the style of macOS system settings.
 - **Dependency Graph**: Replaced the simple Mod Dependencies text list with a new, fully visual horizontal Node Tree.
 - **Dependency Resolution**: Added Auto-Resolve for missing dependencies. The Dependency Graph now highlights missing required mods in red and provides a one-click "Download Missing" button to instantly search Nexus Mods.

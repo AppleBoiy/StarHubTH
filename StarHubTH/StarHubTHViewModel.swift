@@ -185,6 +185,13 @@ enum ModFilterStatus: String, CaseIterable {
     case disabled
 }
 
+enum ModFilterDate: String, CaseIterable {
+    case all
+    case past24Hours
+    case past7Days
+    case past30Days
+}
+
 enum ModSortOption: String, CaseIterable {
     case name
     case nameDesc
@@ -217,6 +224,7 @@ class StarHubTHViewModel: ObservableObject {
     // Current filter options
     @Published var modFilterStatus: ModFilterStatus = .all
     @Published var modFilterTag: String = ""
+    @Published var modFilterDate: ModFilterDate = .all
     @Published var modSortOption: ModSortOption = .name
     
     // Dependency Resolution Helper

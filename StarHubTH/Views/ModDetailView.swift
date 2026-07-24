@@ -37,6 +37,13 @@ struct ModDetailView: View {
         return Int(url.lastPathComponent)
     }
     
+    private var shortDateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        return formatter
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -93,6 +100,22 @@ struct ModDetailView: View {
                                         }
                                     }
                                 }
+                                
+                                // Dates
+                                HStack(spacing: 8) {
+                                    if let added = mod.installDate {
+                                        Text("\(vm.L(L10n.Mods.sortDateAdded)): \(shortDateFormatter.string(from: added))")
+                                    }
+                                    if let modified = mod.lastModifiedDate, modified != mod.installDate {
+                                        if mod.installDate != nil {
+                                            Text("•")
+                                                .foregroundColor(.secondary.opacity(0.5))
+                                        }
+                                        Text("\(vm.L(L10n.Mods.sortDateModified)): \(shortDateFormatter.string(from: modified))")
+                                    }
+                                }
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary.opacity(0.8))
                             }
                                 
                             if isLoading {

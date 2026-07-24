@@ -55,7 +55,21 @@ struct ModListView: View {
                 }
                 return mod.modTag == vm.modFilterTag
             }
-            // 4. Sort
+            // 4. Date filter
+            .filter { mod in
+                guard vm.modFilterDate != .all else { return true }
+                
+                let dateToCheck = mod.lastModifiedDate ?? mod.installDate ?? Date.distantPast
+                let timeInterval = Date().timeIntervalSince(dateToCheck)
+                
+                switch vm.modFilterDate {
+                case .all: return true
+                case .past24Hours: return timeInterval <= 24 * 3600
+                case .past7Days: return timeInterval <= 7 * 24 * 3600
+                case .past30Days: return timeInterval <= 30 * 24 * 3600
+                }
+            }
+            // 5. Sort
             .sorted { a, b in
                 // Groups always float to the top
                 if a.isGroup != b.isGroup { return a.isGroup }
@@ -305,7 +319,49 @@ struct ModControlsBar: View {
                 )
             }
             .menuStyle(BorderlessButtonMenuStyle())
-
+            
+            // Date Filter menu
+            Menu {
+                ForEach([
+                    (ModFilterDate.all,         L10n.Mods.filterDateAll),
+                    (.past24Hours,              L10n.Mods.filterDate24h),
+                    (.past7Days,                L10n.Mods.filterDate7d),
+                    (.past30Days,               L10n.Mods.filterDate30d),
+                ], id: \.0) { option, key in
+                    Button {
+                        vm.modFilterDate = option
+                    } label: {
+                        HStack {
+                            Text(vm.L(key))
+                            if vm.modFilterDate == option {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 11))
+                    Text(vm.modFilterDate == .all ? vm.L(L10n.Mods.filterDateAll) :
+                            (vm.modFilterDate == .past24Hours ? vm.L(L10n.Mods.filterDate24h) :
+                                (vm.modFilterDate == .past7Days ? vm.L(L10n.Mods.filterDate7d) : vm.L(L10n.Mods.filterDate30d))))
+                        .font(.system(size: 12))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                .foregroundColor(vm.modFilterDate == .all ? .secondary : .accentColor)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(vm.modFilterDate == .all
+                              ? Color.primary.opacity(0.06)
+                              : Color.accentColor.opacity(0.12))
+                )
+            }
+            .menuStyle(BorderlessButtonMenuStyle())
+            
             // Sort menu
             Menu {
                 ForEach([
@@ -711,10 +767,11 @@ struct ModListRow: View {
                             .foregroundColor(.secondary)
                     }
                 } else {
-                    Text(mod.description)
+                    Text("\(mod.author) • \(mod.description)")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
+                
                 let missingDeps = vm.getMissingDependencies(for: mod)
                 if !missingDeps.isEmpty {
                     HStack(spacing: 4) {
@@ -905,6 +962,13 @@ struct ModListRow: View {
             }
         }
     }
+    
+    private var shortDateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        return formatter
+    }
 }
 
 // MARK: - Grid Card Views
@@ -1035,7 +1099,7 @@ struct ModCardView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             } else {
-                Text(mod.description)
+                Text("\(mod.author) • \(mod.description)")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .lineLimit(2)
@@ -1142,5 +1206,12 @@ struct ModCardView: View {
         .buttonStyle(PlainButtonStyle())
         .help(vm.L(L10n.Settings.nexusModDetails))
         .pointingHandCursor()
+    }
+    
+    private var shortDateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        return formatter
     }
 }
