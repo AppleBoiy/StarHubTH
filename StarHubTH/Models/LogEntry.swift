@@ -1,29 +1,10 @@
 import Foundation
-import SwiftUI
 
 enum LogLevel: String, CaseIterable {
     case info    = "INFO"
     case warning = "WARN"
     case error   = "ERROR"
     case smapi   = "SMAPI"   // TRACE/DEBUG from SMAPI file
-
-    var color: Color {
-        switch self {
-        case .info:    return .primary
-        case .warning: return .orange
-        case .error:   return .red
-        case .smapi:   return .blue
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .info:    return "info.circle"
-        case .warning: return "exclamationmark.triangle"
-        case .error:   return "xmark.octagon"
-        case .smapi:   return "terminal"
-        }
-    }
 }
 
 enum LogSource {
