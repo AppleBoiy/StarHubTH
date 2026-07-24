@@ -243,6 +243,19 @@ enum L10n {
         static let copyLine             = "logs_copy_line"
     }
 
+    // MARK: - Mod Packs
+    enum ModPacks {
+        static let title                = "modpack_title"
+        static let exportPack           = "modpack_export"
+        static let importPack           = "modpack_import"
+        static let importHint           = "modpack_import_hint"
+        static let installed            = "modpack_installed"
+        static let missing              = "modpack_missing"
+        static let downloadAll          = "modpack_download_all"
+        static let getFromNexus         = "modpack_get_nexus"
+        static let packName             = "modpack_pack_name"
+    }
+
     // MARK: - Settings
     enum Settings {
         static let launchOptions        = "settings_launch_options"
@@ -337,6 +350,9 @@ enum L10n {
         static let notFound             = "smapi_not_found"
         static let uninstallSuccess     = "smapi_uninstall_success"
         static let uninstallFailed      = "smapi_uninstall_failed"
+        static let releaseLookupFailed  = "smapi_release_lookup_failed"
+        static let downloadHttpError    = "smapi_download_http_error"
+        static let extractFailed        = "smapi_extract_failed"
     }
 
     // MARK: - Updates

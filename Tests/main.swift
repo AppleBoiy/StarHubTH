@@ -6,5 +6,6 @@ ModTagInferenceTests.run()
 ModManifestParserTests.run()
 SaveFileParserTests.run()
 SmapiLogParserTests.run()
+SmapiInstallerTests.run()
 
 SimpleTestFramework.report()

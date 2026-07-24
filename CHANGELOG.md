@@ -13,7 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependency Resolution**: Added Auto-Resolve for missing dependencies. The Dependency Graph now highlights missing required mods in red and provides a one-click "Download Missing" button to instantly search Nexus Mods.
 - **Nexus Integration**: Added quick-access Nexus links and Sync buttons directly to the ModDetailView header.
 - **Collections**: Implemented native parsing and installation support for Nexus Collections (`collection.json`), paving the way for 1-click modpack imports.
+- **Mod Packs**: Introduced the ability to export and import your own mod collections as `.starhubpack` files. Includes a dedicated Mod Packs management interface for bulk sharing and downloading.
+- **Nexus Premium Integration**: Added support for direct mod downloads from Nexus Mods using a Premium API key, enabling 1-click "Download All" functionality for Mod Packs.
 - **Testing**: Introduced a comprehensive, standalone, scriptable Unit Test suite (`run_tests.py`) and wrote extensive tests for `ModTagInference`, `ModManifestParser`, `SaveFileParser`, and `SmapiLogParser` to guarantee stability.
+- **Testing**: Added unit test coverage for the `SmapiInstaller` to verify GitHub API parsing and robust error extraction.
 
 ### Changed
 - **Architecture**: Performed major architectural refactoring of the main ViewModel, offloading extensive business logic into specialized, stateless services (`ModInstaller`, `NexusDownloader`, `ProfileManager`, `ModScanner`, and `SmapiLogParser`).
@@ -21,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - **Technical Debt**: Eliminated hundreds of lines of dead code, including unused methods, variables, obsolete UI state (`isShowingDetails`, `isShowingDependencies`), and deprecated/orphaned UI views (`CodeEditorView`, `ModCoverView`, `NexusLinkView`, `SpriteSlice`).
+
+### Fixed
+- **SMAPI Installer**: Fixed a critical bug where installing SMAPI would fail due to the `smapi.io/get/latest` endpoint returning a 404 error. The installer now dynamically resolves the latest release via the GitHub API.
+- **SMAPI Installer**: Adapted the installation logic to run the new interactive `.NET` based `SMAPI.Installer` program via standard input, accommodating SMAPI's structural packaging changes.
 
 ## [1.1.0] - 2026-07-23
 

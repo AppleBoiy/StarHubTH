@@ -843,19 +843,21 @@ class StarHubTHViewModel: ObservableObject {
 
     // Install SMAPI via Installer Helper
     func installSmapi() {
-        smapiInstaller.install(gameDir: gameDir) { success, msg in
+        smapiInstaller.install(gameDir: gameDir) { success, msgKey, detail in
             self.checkSmapiVersion()
-            self.showModal(message: self.L(msg))
-            self.log(self.L(msg))
+            let message = detail != nil ? "\(self.L(msgKey))\n\(detail!)" : self.L(msgKey)
+            self.showModal(message: message)
+            self.log(message)
         }
     }
     
     // Uninstall SMAPI
     func uninstallSmapi() {
-        smapiInstaller.uninstall(gameDir: gameDir) { success, msg in
+        smapiInstaller.uninstall(gameDir: gameDir) { success, msgKey, detail in
             self.checkSmapiVersion()
-            self.showModal(message: self.L(msg))
-            self.log(self.L(msg))
+            let message = detail != nil ? "\(self.L(msgKey))\n\(detail!)" : self.L(msgKey)
+            self.showModal(message: message)
+            self.log(message)
         }
     }
     
@@ -1733,5 +1735,125 @@ class StarHubTHViewModel: ObservableObject {
 
         modProfiles[index].enabledModIds = actualEnabledIds
         saveProfiles()
+    }
+
+
+    // MARK: - Mod Pack Sharing
+    
+    func exportModPack(name: String) -> URL? {
+        let packMods = mods.flatMap { mod -> [StarHubPackMod] in
+            if mod.isGroup, let children = mod.children {
+                return children.filter { $0.isEnabled }.map {
+                    let nexusId = Int($0.nexusUrl.components(separatedBy: "/").last ?? "")
+                    return StarHubPackMod(name: $0.name, uniqueId: $0.uniqueId, version: $0.version, nexusId: nexusId)
+                }
+            }
+            if mod.isEnabled {
+                let nexusId = Int(mod.nexusUrl.components(separatedBy: "/").last ?? "")
+                return [StarHubPackMod(name: mod.name, uniqueId: mod.uniqueId, version: mod.version, nexusId: nexusId)]
+            }
+            return []
+        }
+        
+        let pack = StarHubPack(packName: name, author: steamUsername.isEmpty ? "Player" : steamUsername, description: nil, mods: packMods)
+        
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        
+        guard let data = try? encoder.encode(pack) else { return nil }
+        
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.json]
+        savePanel.nameFieldStringValue = "\(name.replacingOccurrences(of: " ", with: "_")).starhubpack"
+        savePanel.canCreateDirectories = true
+        
+        if savePanel.runModal() == .OK, let url = savePanel.url {
+            do {
+                try data.write(to: url)
+                return url
+            } catch {
+                self.showModal(message: "Failed to save Mod Pack: \(error.localizedDescription)")
+            }
+        }
+        return nil
+    }
+    
+    func importModPack(from url: URL) -> StarHubPack? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        let decoder = JSONDecoder()
+        do {
+            return try decoder.decode(StarHubPack.self, from: data)
+        } catch {
+            print("Failed to decode Mod Pack: \(error)")
+            return nil
+        }
+    }
+    
+    func downloadModFromNexus(nexusId: Int, completion: @escaping (Bool) -> Void) {
+        let apiKey = nexusApiKey
+        if apiKey.isEmpty {
+            completion(false)
+            return
+        }
+        
+        self.log("Fetching latest file for Nexus Mod #\(nexusId)...")
+        NexusAPIService.shared.getModFiles(modId: nexusId, apiKey: apiKey) { result in
+            switch result {
+            case .success(let response):
+                guard let latestFile = response.files.first else {
+                    self.log("No files found for Nexus Mod #\(nexusId).")
+                    completion(false)
+                    return
+                }
+                self.log("Found file #\(latestFile.fileId). Requesting download link...")
+                
+                NexusAPIService.shared.getDownloadLink(modId: nexusId, fileId: latestFile.fileId, apiKey: apiKey) { linkResult in
+                    switch linkResult {
+                    case .success(let links):
+                        guard let firstLink = links.first, let downloadURL = URL(string: firstLink.URI) else {
+                            self.log("No valid download links found.")
+                            completion(false)
+                            return
+                        }
+                        
+                        self.log("Starting download for Nexus Mod #\(nexusId)...")
+                        let task = URLSession.shared.downloadTask(with: downloadURL) { localURL, response, error in
+                            if let error = error {
+                                self.log("Download failed: \(error.localizedDescription)")
+                                completion(false)
+                                return
+                            }
+                            
+                            guard let localURL = localURL else {
+                                completion(false)
+                                return
+                            }
+                            
+                            // Move to a temp zip file
+                            let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).zip")
+                            do {
+                                try FileManager.default.moveItem(at: localURL, to: tempZipURL)
+                                DispatchQueue.main.async {
+                                    self.installModFromZip(url: tempZipURL)
+                                    completion(true)
+                                }
+                            } catch {
+                                self.log("Failed to process downloaded file: \(error.localizedDescription)")
+                                completion(false)
+                            }
+                        }
+                        task.resume()
+                        
+                    case .failure(let error):
+                        self.log("Failed to get download link (Premium required?): \(error.localizedDescription)")
+                        completion(false)
+                    }
+                }
+                
+            case .failure(let error):
+                self.log("Failed to get mod files: \(error.localizedDescription)")
+                completion(false)
+            }
+        }
     }
 }

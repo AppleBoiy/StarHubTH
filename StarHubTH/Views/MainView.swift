@@ -183,6 +183,16 @@ struct MainView: View {
                             currentTab: $currentTab
                         )
                     }
+                    
+                    if matchesSearch(vm.L(L10n.ModPacks.title)) {
+                        SidebarNavItem(
+                            icon: "shippingbox.fill",
+                            iconColor: .teal,
+                            label: vm.L(L10n.ModPacks.title),
+                            tab: "ModPacks",
+                            currentTab: $currentTab
+                        )
+                    }
                 }
                 
                 // System & Settings Section
@@ -249,7 +259,9 @@ struct MainView: View {
         } detail: {
             // ── CONTENT AREA ─────────────────────────────────────────
             Group {
-                if currentTab == "Mods" {
+                if currentTab == "ModPacks" {
+                    ModPacksView(vm: vm)
+                } else if currentTab == "Mods" {
                     if let mod = vm.editingModConfig {
                         ModConfigEditorView(vm: vm, mod: mod)
                     } else if let mod = vm.viewingModDetails {

@@ -153,8 +153,18 @@
 "logs_entry_count" = "%d / %d รายการ";
 "logs_refresh_hint" = "โหลด SMAPI-latest.txt ใหม่";
 "logs_copy_line" = "คัดลอกบรรทัดนี้";
-"settings_launch_options" = "การเปิดเกม";
-"settings_backup" = "สำรองข้อมูล";
+"settings_launch_options" = "ตัวเลือกการเปิดเกม";
+"settings_discord" = "เข้าร่วม Discord";
+"modpack_title" = "ม็อดแพ็ค";
+"modpack_export" = "ส่งออกม็อดแพ็ค";
+"modpack_import" = "นำเข้าม็อดแพ็ค";
+"modpack_import_hint" = "ลากไฟล์ .starhubpack มาวางที่นี่";
+"modpack_installed" = "ติดตั้งแล้ว";
+"modpack_missing" = "ขาดหาย";
+"modpack_download_all" = "ดาวน์โหลดทั้งหมด";
+"modpack_get_nexus" = "โหลดจาก Nexus";
+"modpack_pack_name" = "ชื่อม็อดแพ็ค";
+"settings_backup" = "การสำรองข้อมูล";
 "settings_appearance" = "การแสดงผล";
 "settings_management" = "การจัดการ";
 "settings_default_launch_mode" = "โหมดเข้าเกมเริ่มต้น";
@@ -235,6 +245,9 @@
 "smapi_not_found" = "ไม่พบข้อมูลการติดตั้ง SMAPI ในโฟลเดอร์นี้";
 "smapi_uninstall_success" = "ถอนการติดตั้ง SMAPI สำเร็จ! คืนค่าตัวเกมหลักเรียบร้อย";
 "smapi_uninstall_failed" = "ถอนการติดตั้งล้มเหลว: %@";
+"smapi_release_lookup_failed" = "ไม่สามารถตรวจสอบการอัปเดต SMAPI ล่าสุดได้";
+"smapi_download_http_error" = "เซิร์ฟเวอร์ขัดข้องขณะดาวน์โหลด SMAPI";
+"smapi_extract_failed" = "การแตกไฟล์ SMAPI ล้มเหลว";
 "updates_new_update" = "มีการอัปเดตใหม่ในเว็บไซต์ Nexus Mods";
 "updates_download" = "ดาวน์โหลด";
 "updates_update_description" = "อัปเดตนี้เพิ่มคุณสมบัติใหม่และแก้ไขข้อบกพร่องสำหรับม็อดของคุณ";
@@ -401,4 +414,4 @@
 "mods_sort_update_asc" = "อัปเดตเก่าสุด";
 "mods_sort_update_desc" = "อัปเดตล่าสุด";
 "tags_spoiler" = "สปอยล์";
-"vm_no_dependencies_found" = "ไม่พบม็อดที่ต้องการ";
+"vm_no_dependencies_found" = "ไม่พบม็อดที่ต้องการ (Dependencies)";
