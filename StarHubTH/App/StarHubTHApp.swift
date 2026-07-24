@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct StarHubTHApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var urlDispatcher = URLDispatcher.shared
+    @ObservedObject private var urlDispatcher = URLDispatcher.shared
     
     init() {
         if let currentLang = UserDefaults.standard.string(forKey: "currentLanguage") {
