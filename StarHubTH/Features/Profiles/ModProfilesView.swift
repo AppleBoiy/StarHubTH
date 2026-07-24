@@ -186,7 +186,7 @@ struct ProfileDetailSheet: View {
 
     /// All uniqueIds covered by a ModItem (group = all children's ids, single mod = its own id).
     private func idsFor(_ mod: ModItem) -> [String] {
-        if mod.isGroup, let children = mod.children {
+        if case .group(let children) = mod.kind {
             return children.map { $0.uniqueId }.filter { !$0.isEmpty }
         }
         return mod.uniqueId.isEmpty ? [] : [mod.uniqueId]
@@ -283,7 +283,7 @@ struct ProfileDetailSheet: View {
                                             set: { isOn in
                                                 if vm.chainToggleDependencies {
                                                     // For groups, chain-apply each child
-                                                    if mod.isGroup, let children = mod.children {
+                                                    if case .group(let children) = mod.kind {
                                                         for child in children where !child.uniqueId.isEmpty {
                                                             applyChain(mod: child, enable: isOn)
                                                         }
@@ -406,7 +406,7 @@ struct ProfileDetailSheet: View {
             if vm.activeProfileId == profile.id {
                 editedEnabledMods = Set(
                     vm.mods.flatMap { mod -> [String] in
-                        if mod.isGroup, let children = mod.children {
+                        if case .group(let children) = mod.kind {
                             return children.filter { $0.isEnabled }.map { $0.uniqueId }
                         }
                         return mod.isEnabled ? [mod.uniqueId] : []

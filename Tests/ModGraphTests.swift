@@ -25,8 +25,7 @@ struct ModGraphTests {
             nexusUrl: nexusUrl,
             isEnabled: enabled,
             dependencies: dependencies,
-            children: nil,
-            isGroup: false,
+            kind: .single,
             modTag: "",
             installDate: nil,
             lastModifiedDate: nil
@@ -44,8 +43,7 @@ struct ModGraphTests {
             nexusUrl: "",
             isEnabled: enabled,
             dependencies: [],
-            children: children,
-            isGroup: true,
+            kind: .group(children: children),
             modTag: "",
             installDate: nil,
             lastModifiedDate: nil
@@ -126,6 +124,16 @@ struct ModGraphTests {
         } else {
             SimpleTestFramework.assertTrue(false, "installed + disabled dependency resolves .disabled")
         }
+
+        // Regression (Phase 2.4): a group's synthetic uniqueId is "". Before Mod.Kind, a
+        // group with nil children fell into a code path that could contribute that empty
+        // ID to the installed set, so a manifest declaring an empty dependency ID wrongly
+        // resolved to .active. Mod.Kind makes that state unrepresentable — a group is never
+        // itself a candidate, only its real children are.
+        SimpleTestFramework.assertEqual(
+            ModGraph.dependencyStatus(for: "", in: mods), .missing,
+            "an empty-string dependency ID resolves .missing, not .active, even with a group present"
+        )
     }
 
     // MARK: - missingDependencies

@@ -23,7 +23,7 @@ enum ModGraph {
     /// A group row is a synthetic entry produced by `ModScanner` for a folder containing
     /// several mods; it is never itself an installable mod.
     static func flattened(_ mods: [ModItem]) -> [ModItem] {
-        mods.flatMap { $0.isGroup ? ($0.children ?? []) : [$0] }
+        mods.flatMap { $0.allMods }
     }
 
     // MARK: - Dependency resolution
@@ -42,21 +42,10 @@ enum ModGraph {
     /// Optional dependencies are ignored. Comparison is case-insensitive because SMAPI
     /// treats manifest unique IDs case-insensitively.
     static func missingDependencies(for mod: ModItem, in mods: [ModItem]) -> [String] {
-        // Deliberately mirrors the original control flow rather than reusing `flattened`:
-        // a group with `children == nil` falls into the `else` branch and contributes its
-        // own (empty) unique ID to the set, whereas `flattened` would contribute nothing.
-        // `ModScanner` never produces that shape, but Phase 0 preserves behaviour exactly.
-        // Phase 2.3 removes the possibility entirely via `Mod.Kind`.
-        var installedIDs = Set<String>()
-        for candidate in mods {
-            if candidate.isGroup, let children = candidate.children {
-                for child in children {
-                    installedIDs.insert(child.uniqueId.lowercased())
-                }
-            } else {
-                installedIDs.insert(candidate.uniqueId.lowercased())
-            }
-        }
+        // `Mod.Kind` (Phase 2.3) makes a group-with-no-children unrepresentable, so a group
+        // can never contribute its own (empty) unique ID here the way it could before —
+        // `flattened` only ever contributes real mod IDs.
+        let installedIDs = Set(flattened(mods).map { $0.uniqueId.lowercased() })
 
         return mod.dependencies.compactMap { dependency in
             guard dependency.isRequired else { return nil }
@@ -119,20 +108,22 @@ enum ModGraph {
 
         func topLevelMod(providing uniqueId: String) -> ModItem? {
             for candidate in mods {
-                if !candidate.isGroup,
-                   candidate.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame {
-                    return candidate
-                }
-                if candidate.isGroup, let children = candidate.children,
-                   children.contains(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
-                    return candidate
+                switch candidate.kind {
+                case .single:
+                    if candidate.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame {
+                        return candidate
+                    }
+                case .group(let children):
+                    if children.contains(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
+                        return candidate
+                    }
                 }
             }
             return nil
         }
 
         func dependencies(of topMod: ModItem) -> [ModDependency] {
-            if topMod.isGroup, let children = topMod.children {
+            if case .group(let children) = topMod.kind {
                 return children.flatMap { $0.dependencies }
             }
             return topMod.dependencies
@@ -140,7 +131,7 @@ enum ModGraph {
 
         /// Every unique ID a top-level entry provides — for a group, that's all its children.
         func providedIDs(of topMod: ModItem) -> [String] {
-            if topMod.isGroup, let children = topMod.children {
+            if case .group(let children) = topMod.kind {
                 return children.map { $0.uniqueId }
             }
             return [topMod.uniqueId]

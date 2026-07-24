@@ -40,7 +40,7 @@ final class ProfileManager {
         var hasError = false
         
         func isCoveredByProfile(_ mod: ModItem) -> Bool {
-            if mod.isGroup, let children = mod.children {
+            if case .group(let children) = mod.kind {
                 return children.contains { profile.enabledModIds.contains($0.uniqueId) }
             }
             return profile.enabledModIds.contains(mod.uniqueId)
@@ -118,7 +118,7 @@ final class ProfileManager {
     }
     
     func exportProfile(_ profile: ModProfile, mods: [ModItem], to url: URL) throws {
-        let allMods = mods.flatMap { $0.isGroup ? ($0.children ?? []) : [$0] }
+        let allMods = mods.flatMap { $0.allMods }
         let activeMods = allMods.filter { profile.enabledModIds.contains($0.uniqueId) }
         
         let collectionMods = activeMods.map { mod in

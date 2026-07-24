@@ -371,7 +371,7 @@ struct MainView: View {
         .onReceive(NotificationCenter.default.publisher(for: .jumpToMod)) { notification in
             if let modName = notification.object as? String {
                 vm.selectedModID = vm.mods
-                    .flatMap { m -> [ModItem] in m.isGroup ? (m.children ?? []) : [m] }
+                    .flatMap { $0.allMods }
                     .first { $0.name.localizedCaseInsensitiveContains(modName) }?
                     .folderName
                 currentTab = "Mods"

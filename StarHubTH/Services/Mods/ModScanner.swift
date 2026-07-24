@@ -62,8 +62,7 @@ struct ModScanner {
                         nexusUrl: "",
                         isEnabled: isEnabled,
                         dependencies: [],
-                        children: modsInGroup,
-                        isGroup: true,
+                        kind: .group(children: modsInGroup),
                         modTag: modsInGroup.first(where: { !$0.modTag.isEmpty })?.modTag ?? "",
                         installDate: groupInstallDate,
                         lastModifiedDate: groupLastModifiedDate

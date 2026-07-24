@@ -33,8 +33,7 @@ struct ModListFilterTests {
             nexusUrl: "",
             isEnabled: enabled,
             dependencies: [],
-            children: nil,
-            isGroup: false,
+            kind: .single,
             modTag: tag,
             installDate: installed,
             lastModifiedDate: modified
@@ -52,8 +51,7 @@ struct ModListFilterTests {
             nexusUrl: "",
             isEnabled: true,
             dependencies: [],
-            children: children,
-            isGroup: true,
+            kind: .group(children: children),
             modTag: "",
             installDate: nil,
             lastModifiedDate: nil

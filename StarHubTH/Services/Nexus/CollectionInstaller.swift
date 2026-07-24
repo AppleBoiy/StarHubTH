@@ -5,7 +5,7 @@ final class CollectionInstaller {
     private init() {}
     
     func install(collection: ModCollection, currentMods: [ModItem], nexusApiKey: String, onMissingQueue: @escaping ([String]) -> Void) {
-        let allMods = currentMods.flatMap { $0.isGroup ? ($0.children ?? []) : [$0] }
+        let allMods = currentMods.flatMap { $0.allMods }
         var missingNexusIds: [String] = []
         
         for mod in collection.mods {

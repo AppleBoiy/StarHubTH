@@ -496,9 +496,12 @@ final class StarHubTHViewModel: ObservableObject {
         // Helper to find the top-level folder that contains a given uniqueId
         func getTopLevelFolder(for uniqueId: String) -> String? {
             for m in self.mods {
-                if !m.isGroup && m.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame {
-                    return m.folderName
-                } else if m.isGroup, let children = m.children {
+                switch m.kind {
+                case .single:
+                    if m.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame {
+                        return m.folderName
+                    }
+                case .group(let children):
                     if children.contains(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
                         return m.folderName
                     }
@@ -510,7 +513,7 @@ final class StarHubTHViewModel: ObservableObject {
         // Helper to get all dependencies of a top-level folder (including its children)
         func getDependencies(for folderName: String) -> [ModDependency] {
             guard let m = self.mods.first(where: { $0.folderName == folderName }) else { return [] }
-            if m.isGroup, let children = m.children {
+            if case .group(let children) = m.kind {
                 return children.flatMap { $0.dependencies }
             } else {
                 return m.dependencies
@@ -546,7 +549,7 @@ final class StarHubTHViewModel: ObservableObject {
                     
                     var providedUniqueIds: [String] = []
                     if let m = self.mods.first(where: { $0.folderName == currentFolder }) {
-                        if m.isGroup, let children = m.children {
+                        if case .group(let children) = m.kind {
                             providedUniqueIds = children.map { $0.uniqueId }
                         } else {
                             providedUniqueIds = [m.uniqueId]
@@ -1337,8 +1340,8 @@ final class StarHubTHViewModel: ObservableObject {
                     
                     if fm.fileExists(atPath: thJsonPath) || fm.fileExists(atPath: cpThJsonPath) {
                         foundTranslation = true
-                    } else if mod.isGroup {
-                        for child in mod.children ?? [] {
+                    } else if case .group(let children) = mod.kind {
+                        for child in children {
                             let childThJsonPath = (modsDir as NSString).appendingPathComponent("\(child.folderName)/i18n/th.json")
                             let childCpThJsonPath = (modsDir as NSString).appendingPathComponent("\(child.folderName)/[CP] \(child.folderName)/i18n/th.json")
                             if fm.fileExists(atPath: childThJsonPath) || fm.fileExists(atPath: childCpThJsonPath) {
@@ -1472,7 +1475,7 @@ final class StarHubTHViewModel: ObservableObject {
         // Snapshot the currently enabled mods into the new profile
         let currentEnabledIds = mods
             .flatMap { mod -> [String] in
-                if mod.isGroup, let children = mod.children {
+                if case .group(let children) = mod.kind {
                     return children.filter { $0.isEnabled }.map { $0.uniqueId }
                 }
                 return mod.isEnabled ? [mod.uniqueId] : []
@@ -1564,7 +1567,7 @@ final class StarHubTHViewModel: ObservableObject {
 
         let actualEnabledIds = mods
             .flatMap { mod -> [String] in
-                if mod.isGroup, let children = mod.children {
+                if case .group(let children) = mod.kind {
                     return children.filter { $0.isEnabled }.map { $0.uniqueId }
                 }
                 return mod.isEnabled ? [mod.uniqueId] : []
@@ -1580,7 +1583,7 @@ final class StarHubTHViewModel: ObservableObject {
     
     func exportModPack(name: String) -> URL? {
         let packMods = mods.flatMap { mod -> [StarHubPackMod] in
-            if mod.isGroup, let children = mod.children {
+            if case .group(let children) = mod.kind {
                 return children.filter { $0.isEnabled }.map {
                     let nexusId = Int($0.nexusUrl.components(separatedBy: "/").last ?? "")
                     return StarHubPackMod(name: $0.name, uniqueId: $0.uniqueId, version: $0.version, nexusId: nexusId)

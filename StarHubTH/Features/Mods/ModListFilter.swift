@@ -37,7 +37,7 @@ struct ModListFilter: Equatable {
         if mod.uniqueId.lowercased().contains(query) { return true }
         if mod.author.lowercased().contains(query) { return true }
 
-        if mod.isGroup, let children = mod.children {
+        if case .group(let children) = mod.kind {
             return children.contains {
                 $0.name.lowercased().contains(query) || $0.uniqueId.lowercased().contains(query)
             }
@@ -58,7 +58,7 @@ struct ModListFilter: Equatable {
     /// A group matches if any of its children carries the tag.
     private func matchesTag(_ mod: ModItem) -> Bool {
         guard !tag.isEmpty else { return true }
-        if mod.isGroup, let children = mod.children {
+        if case .group(let children) = mod.kind {
             return children.contains { $0.modTag == tag }
         }
         return mod.modTag == tag

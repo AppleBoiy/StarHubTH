@@ -11,7 +11,7 @@ struct ModListView: View {
     private var availableTags: [String] {
         var tags = Set<String>()
         for mod in vm.mods {
-            if mod.isGroup, let children = mod.children {
+            if case .group(let children) = mod.kind {
                 for c in children where !c.modTag.isEmpty { tags.insert(c.modTag) }
             } else if !mod.modTag.isEmpty {
                 tags.insert(mod.modTag)
@@ -21,7 +21,7 @@ struct ModListView: View {
     }
 
     // ── Full filtering + sorting pipeline ────────────────────────────
-    // Pipeline lives in ModListFilter (Models/ModListFilter.swift) so it is unit-tested.
+    // Pipeline lives in ModListFilter (Features/Mods/ModListFilter.swift) so it is unit-tested.
     private var processedMods: [ModItem] {
         ModListFilter(
             searchText: searchText,
@@ -523,7 +523,7 @@ struct ModSectionGroup: View {
             if viewMode == "grid" {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(mods, id: \.id) { mod in
-                        if mod.isGroup, let children = mod.children {
+                        if case .group(let children) = mod.kind {
                             ModCardView(mod: mod, vm: vm, isChild: false, isGroupHeader: true, isExpanded: Binding(
                                 get: { expandedGroups[mod.id, default: false] },
                                 set: { expandedGroups[mod.id] = $0 }
@@ -548,7 +548,7 @@ struct ModSectionGroup: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(mods.enumerated()), id: \.element.id) { idx, mod in
-                        if mod.isGroup, let children = mod.children {
+                        if case .group(let children) = mod.kind {
                             ModGroupRow(mod: mod, children: children, vm: vm)
                         } else {
                             ModListRow(mod: mod, vm: vm, isChild: false, isGroupHeader: false, isExpanded: .constant(false))

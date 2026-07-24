@@ -183,10 +183,7 @@ enum CoreModStatus {
 
 extension HomeView {
     func coreModStatus(matching keyword: String) -> (CoreModStatus, ModItem?) {
-        let allMods = vm.mods.flatMap { mod -> [ModItem] in
-            if mod.isGroup, let children = mod.children { return children }
-            return [mod]
-        }
+        let allMods = vm.mods.flatMap { $0.allMods }
         let matches = allMods.filter { $0.name.lowercased().contains(keyword) }
         guard !matches.isEmpty else { return (.notInstalled, nil) }
 
@@ -200,10 +197,7 @@ extension HomeView {
     }
 
     func coreModStatusThai() -> (CoreModStatus, ModItem?) {
-        let allMods = vm.mods.flatMap { mod -> [ModItem] in
-            if mod.isGroup, let children = mod.children { return children }
-            return [mod]
-        }
+        let allMods = vm.mods.flatMap { $0.allMods }
         // Match by folder name first (exact), then by name containing "thai"
         let mod = allMods.first { $0.folderName.lowercased() == "stardew valley - thai" && $0.isEnabled }
             ?? allMods.first { $0.name.localizedCaseInsensitiveContains("thai") && $0.isEnabled }
