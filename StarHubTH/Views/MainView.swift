@@ -593,5 +593,8 @@ struct UpdatesView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
+        .onOpenURL { url in
+            vm.handleOpenURL(url)
+        }
     }
 }

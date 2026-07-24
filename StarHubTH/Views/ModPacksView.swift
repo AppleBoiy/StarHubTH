@@ -5,6 +5,7 @@ struct ModPacksView: View {
     @ObservedObject var vm: StarHubTHViewModel
     @State private var isHoveringDrop = false
     @State private var importedPack: StarHubPack? = nil
+    @State private var collectionURL = ""
     
     var body: some View {
         VStack(spacing: 20) {
@@ -101,7 +102,6 @@ struct ModPacksView: View {
                     .background(Color(nsColor: .textBackgroundColor))
                     .cornerRadius(8)
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
             } else {
                 // Drop Zone
                 VStack(spacing: 20) {
@@ -112,6 +112,25 @@ struct ModPacksView: View {
                     Text(vm.L(L10n.ModPacks.importHint))
                         .font(.headline)
                         .foregroundColor(.secondary)
+                    
+                    Text("Or enter a Nexus Collection URL:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 10)
+                    
+                    HStack {
+                        TextField("https://next.nexusmods.com/stardewvalley/collections/...", text: $collectionURL)
+                            .textFieldStyle(.roundedBorder)
+                        Button("Import") {
+                            guard !collectionURL.isEmpty else { return }
+                            vm.importCollectionFromURL(collectionURL) { pack in
+                                if let p = pack {
+                                    withAnimation { self.importedPack = p }
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxWidth: 400)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(isHoveringDrop ? Color.accentColor.opacity(0.1) : Color(nsColor: .textBackgroundColor))

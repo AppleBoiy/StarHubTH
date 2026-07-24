@@ -93,6 +93,60 @@ class NexusAPIService {
         }
     }
     
+    // MARK: - GraphQL Models
+    
+    struct GraphQLResponse<T: Decodable>: Decodable {
+        let data: T?
+        let errors: [GraphQLError]?
+    }
+    
+    struct GraphQLError: Decodable {
+        let message: String
+    }
+    
+    struct CollectionData: Decodable {
+        let collection: CollectionGraph?
+    }
+    
+    struct CollectionGraph: Decodable {
+        let id: String
+        let slug: String
+        let name: String
+        let summary: String?
+        let latestPublishedRevision: CollectionRevision?
+        let game: CollectionGame?
+    }
+    
+    struct CollectionRevision: Decodable {
+        let revisionNumber: Int
+        let downloadLink: String?
+        let modFiles: [CollectionModFile]?
+    }
+    
+    struct CollectionModFile: Decodable {
+        let fileId: Int?
+        let optional: Bool?
+        let file: CollectionFileDetail?
+    }
+    
+    struct CollectionFileDetail: Decodable {
+        let fileId: Int
+        let name: String
+        let version: String?
+        let sizeInBytes: Int?
+        let mod: CollectionModDetail?
+    }
+    
+    struct CollectionModDetail: Decodable {
+        let modId: Int
+        let name: String
+        let pictureUrl: String?
+    }
+    
+    struct CollectionGame: Decodable {
+        let domainName: String
+    }
+    
     private init() {}
     
     // MARK: - Core Fetch Method
@@ -164,6 +218,59 @@ class NexusAPIService {
         task.resume()
     }
     
+    private func postGraphQL<T: Decodable>(query: String, variables: [String: Any], apiKey: String, completion: @escaping (Result<T, Error>) -> Void) {
+        let graphqlURL = "https://api.nexusmods.com/v2/graphql"
+        guard let url = URL(string: graphqlURL) else {
+            completion(.failure(NSError(domain: "NexusAPI", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(apiKey, forHTTPHeaderField: "apikey")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "query": query,
+            "variables": variables
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
+                let statusError = NSError(domain: "NexusAPI", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP Error: \(httpResponse.statusCode)"])
+                completion(.failure(statusError))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "NexusAPI", code: 204, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                let result = try decoder.decode(T.self, from: data)
+                completion(.success(result))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+        task.resume()
+    }
+    
     // MARK: - Endpoints
     
     func getModInfo(modId: Int, apiKey: String, completion: @escaping (Result<ModInfo, Error>) -> Void) {
@@ -190,6 +297,58 @@ class NexusAPIService {
             }
         }
         post(endpoint: endpoint, apiKey: apiKey, completion: completion)
+    }
+    
+    func getCollectionGraph(slug: String, apiKey: String, completion: @escaping (Result<CollectionGraph, Error>) -> Void) {
+        let query = """
+        query GetCollection($slug: String!) {
+            collection(slug: $slug) {
+                id
+                slug
+                name
+                summary
+                latestPublishedRevision {
+                    revisionNumber
+                    downloadLink
+                    modFiles {
+                        fileId
+                        optional
+                        file {
+                            fileId
+                            name
+                            version
+                            sizeInBytes
+                            mod {
+                                modId
+                                name
+                                pictureUrl
+                            }
+                        }
+                    }
+                }
+                game {
+                    domainName
+                }
+            }
+        }
+        """
+        postGraphQL(query: query, variables: ["slug": slug], apiKey: apiKey) { (result: Result<GraphQLResponse<CollectionData>, Error>) in
+            switch result {
+            case .success(let response):
+                if let errors = response.errors, !errors.isEmpty {
+                    let errStr = errors.map { $0.message }.joined(separator: ", ")
+                    completion(.failure(NSError(domain: "NexusAPI", code: 400, userInfo: [NSLocalizedDescriptionKey: "GraphQL Errors: \(errStr)"])))
+                    return
+                }
+                guard let collection = response.data?.collection else {
+                    completion(.failure(NSError(domain: "NexusAPI", code: 404, userInfo: [NSLocalizedDescriptionKey: "Collection not found"])))
+                    return
+                }
+                completion(.success(collection))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
     }
     
     enum DescriptionBlock: Hashable {

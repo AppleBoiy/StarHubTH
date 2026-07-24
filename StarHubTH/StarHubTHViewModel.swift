@@ -428,6 +428,30 @@ class StarHubTHViewModel: ObservableObject {
         return ""
     }
     
+    func handleOpenURL(_ url: URL) {
+        log("Opened with URL: \(url.absoluteString)", level: .info)
+        guard url.scheme?.lowercased() == "nxm" else { return }
+        
+        // Check if we have API key
+        if self.nexusApiKey.isEmpty {
+            self.showModal(message: "Cannot download from Nexus: Premium API Key is required.")
+            return
+        }
+        
+        if let (modId, fileId) = NXMParser.parse(url: url) {
+            log("Downloading from NXM: Mod \(modId), File \(fileId)", level: .info)
+            self.downloadModFromNexus(nexusId: modId, fileId: fileId) { success in
+                if success {
+                    self.scanMods()
+                    self.showModal(message: "Successfully downloaded and installed mod from NXM link!")
+                }
+            }
+        } else {
+            self.showModal(message: "Unsupported or unrecognized NXM link format.")
+        }
+    }
+    
+    
     func selectGameDir() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
@@ -1801,25 +1825,96 @@ class StarHubTHViewModel: ObservableObject {
         }
     }
     
-    func downloadModFromNexus(nexusId: Int, completion: @escaping (Bool) -> Void) {
+    func importCollectionFromURL(_ urlString: String, completion: @escaping (StarHubPack?) -> Void) {
+        guard let url = URL(string: urlString) else {
+            completion(nil)
+            return
+        }
+        
+        let path = url.path
+        let components = path.components(separatedBy: "/")
+        // Extract slug from e.g. /stardewvalley/collections/tckf0m
+        var slug = ""
+        if let idx = components.firstIndex(of: "collections"), idx + 1 < components.count {
+            slug = components[idx + 1]
+        }
+        
+        if slug.isEmpty {
+            completion(nil)
+            return
+        }
+        
+        let apiKey = nexusApiKey
+        if apiKey.isEmpty {
+            self.showModal(message: "A Premium API Key is required to fetch collections.")
+            completion(nil)
+            return
+        }
+        
+        self.log("Fetching collection metadata for slug: \(slug)...")
+        NexusAPIService.shared.getCollectionGraph(slug: slug, apiKey: apiKey) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let collection):
+                    let packMods = collection.latestPublishedRevision?.modFiles?.compactMap { modFile -> StarHubPackMod? in
+                        guard let detail = modFile.file, let modDetail = detail.mod else { return nil }
+                        return StarHubPackMod(
+                            name: modDetail.name,
+                            uniqueId: "nexus_\(modDetail.modId)",
+                            version: detail.version ?? "",
+                            nexusId: modDetail.modId
+                        )
+                    } ?? []
+                    
+                    let pack = StarHubPack(
+                        packName: collection.name,
+                        author: "Nexus Collection",
+                        description: collection.summary,
+                        mods: packMods
+                    )
+                    completion(pack)
+                case .failure(let error):
+                    self.showModal(message: "Failed to fetch collection: \(error.localizedDescription)")
+                    completion(nil)
+                }
+            }
+        }
+    }
+    
+    func downloadModFromNexus(nexusId: Int, fileId: Int? = nil, completion: @escaping (Bool) -> Void) {
         let apiKey = nexusApiKey
         if apiKey.isEmpty {
             completion(false)
             return
         }
         
-        self.log("Fetching latest file for Nexus Mod #\(nexusId)...")
-        NexusAPIService.shared.getModFiles(modId: nexusId, apiKey: apiKey) { result in
-            switch result {
-            case .success(let response):
-                guard let latestFile = response.files.first else {
-                    self.log("No files found for Nexus Mod #\(nexusId).")
+        let targetFileId: Int
+        
+        if let fId = fileId {
+            targetFileId = fId
+            startDownload(nexusId: nexusId, fileId: targetFileId, apiKey: apiKey, completion: completion)
+        } else {
+            self.log("Fetching latest file for Nexus Mod #\(nexusId)...")
+            NexusAPIService.shared.getModFiles(modId: nexusId, apiKey: apiKey) { result in
+                switch result {
+                case .success(let response):
+                    guard let latestFile = response.files.first else {
+                        self.log("No files found for Nexus Mod #\(nexusId).")
+                        completion(false)
+                        return
+                    }
+                    self.startDownload(nexusId: nexusId, fileId: latestFile.fileId, apiKey: apiKey, completion: completion)
+                case .failure(let error):
+                    self.log("Failed to fetch mod files: \(error.localizedDescription)")
                     completion(false)
-                    return
                 }
-                self.log("Found file #\(latestFile.fileId). Requesting download link...")
-                
-                NexusAPIService.shared.getDownloadLink(modId: nexusId, fileId: latestFile.fileId, apiKey: apiKey) { linkResult in
+            }
+        }
+    }
+    
+    private func startDownload(nexusId: Int, fileId: Int, apiKey: String, completion: @escaping (Bool) -> Void) {
+        self.log("Requesting download link for file #\(fileId)...")
+        NexusAPIService.shared.getDownloadLink(modId: nexusId, fileId: fileId, apiKey: apiKey) { linkResult in
                     switch linkResult {
                     case .success(let links):
                         guard let firstLink = links.first, let downloadURL = URL(string: firstLink.URI) else {
@@ -1860,12 +1955,6 @@ class StarHubTHViewModel: ObservableObject {
                         self.log("Failed to get download link (Premium required?): \(error.localizedDescription)")
                         completion(false)
                     }
-                }
-                
-            case .failure(let error):
-                self.log("Failed to get mod files: \(error.localizedDescription)")
-                completion(false)
-            }
         }
     }
 }
