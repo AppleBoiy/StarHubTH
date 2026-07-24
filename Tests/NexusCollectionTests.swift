@@ -7,9 +7,11 @@ class NexusCollectionTests {
     }
     
     static func testFetchCollectionWithRealData() {
-        let apiKey = UserDefaults.standard.string(forKey: "NexusAPIKey") ?? ""
+        let defaults = UserDefaults(suiteName: "com.appleboiy.StarHubTH")
+        let apiKey = defaults?.string(forKey: "nexusApiKey") ?? ""
+        
         if apiKey.isEmpty {
-            print("⚠️ SKIPPING testFetchCollectionWithRealData: No Nexus API Key found in UserDefaults.")
+            print("⚠️ SKIPPING testFetchCollectionWithRealData: No Nexus API Key found in com.appleboiy.StarHubTH defaults.")
             SimpleTestFramework.assertTrue(true, "Skipped due to missing API key")
             return
         }
@@ -33,6 +35,7 @@ class NexusCollectionTests {
                     SimpleTestFramework.assertTrue(false, "Collection modFiles were nil")
                 }
             case .failure(let error):
+                print("DECODING ERROR DETAILED: \(error)")
                 SimpleTestFramework.assertTrue(false, "Failed to fetch actual collection data: \(error.localizedDescription)")
             }
             expectation.signal()

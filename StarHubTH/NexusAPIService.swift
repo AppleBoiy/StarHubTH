@@ -109,7 +109,7 @@ class NexusAPIService {
     }
     
     struct CollectionGraph: Decodable {
-        let id: String
+        let id: Int
         let slug: String
         let name: String
         let summary: String?
@@ -133,7 +133,7 @@ class NexusAPIService {
         let fileId: Int
         let name: String
         let version: String?
-        let sizeInBytes: Int?
+        let sizeInBytes: String?
         let mod: CollectionModDetail?
     }
     
@@ -261,6 +261,9 @@ class NexusAPIService {
             }
             
             do {
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("GraphQL Data: \(jsonString)")
+                }
                 let decoder = JSONDecoder()
                 let result = try decoder.decode(T.self, from: data)
                 completion(.success(result))
