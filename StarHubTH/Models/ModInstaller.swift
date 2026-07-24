@@ -37,7 +37,9 @@ struct ModInstaller {
                 }
                 
                 let fallback = url.deletingPathExtension().lastPathComponent
-                installExtractedContent(from: tempDir, gameDir: gameDir, fallbackRootName: fallback, cleanup: true, completion: completion)
+                // Resolve symlinks so /var and /private/var paths are consistent
+                let resolvedTempDir = tempDir.resolvingSymlinksInPath()
+                installExtractedContent(from: resolvedTempDir, gameDir: gameDir, fallbackRootName: fallback, cleanup: true, completion: completion)
             } catch {
                 try? fm.removeItem(at: tempDir)
                 DispatchQueue.main.async { completion(.failure(.unzipFailed(error.localizedDescription))) }
@@ -67,7 +69,7 @@ struct ModInstaller {
             ) {
                 for case let fileURL as URL in enumerator {
                     if fileURL.lastPathComponent.lowercased() == "manifest.json" {
-                        manifestDirs.append(fileURL.deletingLastPathComponent())
+                        manifestDirs.append(fileURL.deletingLastPathComponent().resolvingSymlinksInPath())
                     }
                 }
             }

@@ -812,11 +812,11 @@ class StarHubTHViewModel: ObservableObject {
     }
 
     /// Installs a mod from a .zip file
-    func installModFromZip(url: URL) {
+    func installModFromZip(url: URL, completion: ((Bool) -> Void)? = nil) {
         DispatchQueue.main.async { self.isInstallingMod = true }
         ModInstaller.installFromZip(url: url, gameDir: gameDir) { [weak self] result in
-            guard let self = self else { return }
-            self.handleInstallResult(result)
+            guard let self = self else { completion?(false); return }
+            self.handleInstallResult(result, completion: completion)
         }
     }
 
@@ -829,7 +829,7 @@ class StarHubTHViewModel: ObservableObject {
         }
     }
     
-    private func handleInstallResult(_ result: Result<[String], ModInstallerError>) {
+    private func handleInstallResult(_ result: Result<[String], ModInstallerError>, completion: ((Bool) -> Void)? = nil) {
         DispatchQueue.main.async {
             self.isInstallingMod = false
             switch result {
@@ -839,15 +839,20 @@ class StarHubTHViewModel: ObservableObject {
                 self.showModal(message: msg)
                 self.log(msg)
                 self.scanMods()
+                completion?(true)
             case .failure(let error):
                 switch error {
                 case .noModFound:
+                    self.log("Install failed: No manifest.json found in extracted content (gameDir: \(self.gameDir))")
                     self.showModal(message: self.L(L10n.Mods.installNoModFound))
                 case .unzipProcessError:
+                    self.log("Install failed: unzip process error")
                     self.showModal(message: self.L(L10n.VM.unzipError))
                 case .unzipFailed(let msg), .other(let msg):
+                    self.log("Install failed: \(msg)")
                     self.showModal(message: String(format: self.L(L10n.VM.unzipFailed), msg))
                 }
+                completion?(false)
             }
         }
     }
@@ -1941,8 +1946,8 @@ class StarHubTHViewModel: ObservableObject {
                             do {
                                 try FileManager.default.moveItem(at: localURL, to: tempZipURL)
                                 DispatchQueue.main.async {
-                                    self.installModFromZip(url: tempZipURL)
-                                    completion(true)
+                                    // Pass completion into installModFromZip so it fires AFTER extraction finishes
+                                    self.installModFromZip(url: tempZipURL, completion: completion)
                                 }
                             } catch {
                                 self.log("Failed to process downloaded file: \(error.localizedDescription)")

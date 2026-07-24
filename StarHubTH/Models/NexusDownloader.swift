@@ -26,7 +26,9 @@ struct NexusDownloader {
         NexusAPIService.shared.getModFiles(modId: nexusId, apiKey: apiKey) { result in
             switch result {
             case .success(let fileList):
-                let targetFile = fileList.files.first { $0.categoryId == 1 } ?? fileList.files.first
+                let mainFiles = fileList.files.filter { $0.categoryId == 1 }
+                let newest = mainFiles.sorted { $0.fileId > $1.fileId }.first
+                let targetFile = newest ?? fileList.files.sorted { $0.fileId > $1.fileId }.first
                 guard let fileId = targetFile?.fileId else {
                     completion(.failure(.noValidFile))
                     return
