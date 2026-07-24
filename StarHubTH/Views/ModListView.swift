@@ -21,72 +21,16 @@ struct ModListView: View {
     }
 
     // ── Full filtering + sorting pipeline ────────────────────────────
+    // Pipeline lives in ModListFilter (Models/ModListFilter.swift) so it is unit-tested.
     private var processedMods: [ModItem] {
-        let lowerSearch = searchText.lowercased()
-
-        return vm.mods
-            // 1. Search
-            .filter { mod in
-                guard !lowerSearch.isEmpty else { return true }
-                if mod.name.lowercased().contains(lowerSearch) { return true }
-                if mod.uniqueId.lowercased().contains(lowerSearch) { return true }
-                if mod.author.lowercased().contains(lowerSearch) { return true }
-                if mod.isGroup, let children = mod.children {
-                    return children.contains {
-                        $0.name.lowercased().contains(lowerSearch) ||
-                        $0.uniqueId.lowercased().contains(lowerSearch)
-                    }
-                }
-                return false
-            }
-            // 2. Status filter
-            .filter { mod in
-                switch vm.modFilterStatus {
-                case .all:      return true
-                case .enabled:  return mod.isEnabled
-                case .disabled: return !mod.isEnabled
-                }
-            }
-            // 3. Type tag filter
-            .filter { mod in
-                guard !vm.modFilterTag.isEmpty else { return true }
-                if mod.isGroup, let children = mod.children {
-                    return children.contains { $0.modTag == vm.modFilterTag }
-                }
-                return mod.modTag == vm.modFilterTag
-            }
-            // 4. Date filter
-            .filter { mod in
-                guard vm.modFilterDate != .all else { return true }
-                
-                let dateToCheck = mod.lastModifiedDate ?? mod.installDate ?? Date.distantPast
-                let timeInterval = Date().timeIntervalSince(dateToCheck)
-                
-                switch vm.modFilterDate {
-                case .all: return true
-                case .past24Hours: return timeInterval <= 24 * 3600
-                case .past7Days: return timeInterval <= 7 * 24 * 3600
-                case .past30Days: return timeInterval <= 30 * 24 * 3600
-                }
-            }
-            // 5. Sort
-            .sorted { a, b in
-                // Groups always float to the top
-                if a.isGroup != b.isGroup { return a.isGroup }
-                switch vm.modSortOption {
-                case .name:     return a.name.lowercased() < b.name.lowercased()
-                case .nameDesc: return a.name.lowercased() > b.name.lowercased()
-                case .author:   return a.author.lowercased() < b.author.lowercased()
-                case .version:  return a.version.lowercased() < b.version.lowercased()
-                case .dateAddedDesc:
-                    return (a.installDate ?? Date.distantPast) > (b.installDate ?? Date.distantPast)
-                case .dateModifiedDesc:
-                    return (a.lastModifiedDate ?? Date.distantPast) > (b.lastModifiedDate ?? Date.distantPast)
-                case .status:
-                    if a.isEnabled != b.isEnabled { return a.isEnabled }
-                    return a.name.lowercased() < b.name.lowercased()
-                }
-            }
+        ModListFilter(
+            searchText: searchText,
+            status: vm.modFilterStatus,
+            tag: vm.modFilterTag,
+            date: vm.modFilterDate,
+            sort: vm.modSortOption
+        )
+        .apply(to: vm.mods)
     }
 
     var body: some View {

@@ -228,37 +228,15 @@ class StarHubTHViewModel: ObservableObject {
     @Published var modSortOption: ModSortOption = .name
     
     // Dependency Resolution Helper
+    // Logic lives in ModGraph (Models/ModGraph.swift) so it is testable without a view model.
     func resolveDependencyStatus(for uniqueId: String) -> DependencyStatus {
-        let allMods = mods.flatMap { $0.isGroup ? ($0.children ?? []) : [$0] }
-        if let found = allMods.first(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
-            return found.isEnabled ? .active : .disabled(found)
-        }
-        return .missing
+        ModGraph.dependencyStatus(for: uniqueId, in: mods)
     }
-    
+
     /// Resolves install status for a mod pack mod.
     /// Tries Nexus ID match first (via nexusUrl), then falls back to SMAPI uniqueId.
-    enum PackModStatus { case installed, disabled, missing }
-    
     func resolvePackModStatus(nexusId: Int?, uniqueId: String) -> PackModStatus {
-        let allMods = mods.flatMap { $0.isGroup ? ($0.children ?? []) : [$0] }
-        
-        // 1. Try match by Nexus ID from nexusUrl
-        if let nexusId = nexusId {
-            if let found = allMods.first(where: {
-                guard let url = URL(string: $0.nexusUrl), let id = Int(url.lastPathComponent) else { return false }
-                return id == nexusId
-            }) {
-                return found.isEnabled ? .installed : .disabled
-            }
-        }
-        
-        // 2. Fall back to SMAPI uniqueId match
-        if let found = allMods.first(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
-            return found.isEnabled ? .installed : .disabled
-        }
-        
-        return .missing
+        ModGraph.packModStatus(nexusID: nexusId, uniqueId: uniqueId, in: mods)
     }
     
     // Custom Tags
@@ -710,21 +688,7 @@ class StarHubTHViewModel: ObservableObject {
     
     // Returns missing required unique IDs for a given mod
     func getMissingDependencies(for mod: ModItem) -> [String] {
-        var allUniqueIds = Set<String>()
-        for m in mods {
-            if m.isGroup, let children = m.children {
-                for c in children {
-                    allUniqueIds.insert(c.uniqueId.lowercased())
-                }
-            } else {
-                allUniqueIds.insert(m.uniqueId.lowercased())
-            }
-        }
-        
-        return mod.dependencies.compactMap { dep in
-            guard dep.isRequired else { return nil }
-            return allUniqueIds.contains(dep.uniqueId.lowercased()) ? nil : dep.uniqueId
-        }
+        ModGraph.missingDependencies(for: mod, in: mods)
     }
     
     // Toggle Mod Status (Enabled / Disabled)
@@ -1787,81 +1751,15 @@ class StarHubTHViewModel: ObservableObject {
     ///   - currentEnabled: the current set of enabled uniqueIds in the profile
     /// - Returns: A new set with the chain applied
     func applyChainToSet(mod: ModItem, enable: Bool, currentEnabled: Set<String>) -> Set<String> {
-        var result = currentEnabled
-
-        // Build helpers identical to toggleMod
-        func getTopLevelMod(for uniqueId: String) -> ModItem? {
-            for m in mods {
-                if !m.isGroup && m.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame { return m }
-                if m.isGroup, let children = m.children,
-                   children.contains(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) { return m }
-            }
-            return nil
-        }
-
-        func getDependencies(for topMod: ModItem) -> [ModDependency] {
-            if topMod.isGroup, let children = topMod.children { return children.flatMap { $0.dependencies } }
-            return topMod.dependencies
-        }
-
-        // Collect all uniqueIds provided by the target mod (single or group)
-        func providedIds(for topMod: ModItem) -> [String] {
-            if topMod.isGroup, let children = topMod.children { return children.map { $0.uniqueId } }
-            return [topMod.uniqueId]
-        }
-
-        // All top-level mods to process — for a group, start with the group itself
-        let startingMod = mod.isGroup ? mod : (getTopLevelMod(for: mod.uniqueId) ?? mod)
-        let startingIds = providedIds(for: startingMod)
-
-        if enable {
-            // Enable starting mod's ids
-            startingIds.forEach { result.insert($0) }
-
-            if chainToggleDependencies {
-                // BFS: enable all required dependencies
-                var queue = [startingMod]
-                var visited = Set<String>([startingMod.folderName])
-                while !queue.isEmpty {
-                    let current = queue.removeFirst()
-                    for dep in getDependencies(for: current) where dep.isRequired {
-                        if let depMod = getTopLevelMod(for: dep.uniqueId), !visited.contains(depMod.folderName) {
-                            visited.insert(depMod.folderName)
-                            providedIds(for: depMod).forEach { result.insert($0) }
-                            queue.append(depMod)
-                        }
-                    }
-                }
-            }
-        } else {
-            // Disable starting mod's ids
-            startingIds.forEach { result.remove($0) }
-
-            if chainToggleDependencies {
-                // BFS: disable any mod that requires the now-disabled mod
-                var queue = [startingMod]
-                var visited = Set<String>([startingMod.folderName])
-                while !queue.isEmpty {
-                    let current = queue.removeFirst()
-                    let currentIds = providedIds(for: current)
-                    for candidate in mods {
-                        guard !visited.contains(candidate.folderName) else { continue }
-                        let candidateDeps = getDependencies(for: candidate)
-                        let requiresCurrent = candidateDeps.contains { dep in
-                            dep.isRequired && currentIds.contains { $0.caseInsensitiveCompare(dep.uniqueId) == .orderedSame }
-                        }
-                        if requiresCurrent {
-                            visited.insert(candidate.folderName)
-                            providedIds(for: candidate).forEach { result.remove($0) }
-                            queue.append(candidate)
-                        }
-                    }
-                }
-            }
-        }
-
-        return result
+        ModGraph.enabledIDs(
+            after: mod,
+            enabling: enable,
+            from: currentEnabled,
+            in: mods,
+            chainingDependencies: chainToggleDependencies
+        )
     }
+
     /// Call this after any toggleMod so the profile stays up to date.
     func syncActiveProfileIds() {
         guard let id = activeProfileId,
