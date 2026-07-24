@@ -1,7 +1,7 @@
 import Foundation
 
 /// A service to interact with the Nexus Mods API (v1).
-class NexusAPIService {
+final class NexusAPIService {
     static let shared = NexusAPIService()
     private let baseURL = "https://api.nexusmods.com/v1"
     private let gameName = "stardewvalley"

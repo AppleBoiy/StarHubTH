@@ -1,6 +1,6 @@
 import Foundation
 
-class CollectionInstaller {
+final class CollectionInstaller {
     static let shared = CollectionInstaller()
     private init() {}
     

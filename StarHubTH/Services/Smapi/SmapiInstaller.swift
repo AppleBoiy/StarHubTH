@@ -1,6 +1,6 @@
 import Foundation
 
-class SmapiInstaller: ObservableObject {
+final class SmapiInstaller: ObservableObject {
     @Published var isInstalling = false
     @Published var statusMessage = ""   // holds an L10n key, translated by caller via vm.L()
     @Published var progress: Double = 0.0

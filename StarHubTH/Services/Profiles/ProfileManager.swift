@@ -1,6 +1,6 @@
 import Foundation
 
-class ProfileManager {
+final class ProfileManager {
     static let shared = ProfileManager()
     private init() {}
     

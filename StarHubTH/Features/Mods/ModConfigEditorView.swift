@@ -16,7 +16,7 @@ struct ConfigItem: Identifiable {
     var originalValue: Any? // Keep nested arrays/objects unmodified
 }
 
-class ConfigTreeNode: Identifiable {
+final class ConfigTreeNode: Identifiable {
     let id: String
     let title: String
     let item: ConfigItem?
