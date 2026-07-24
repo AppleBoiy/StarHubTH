@@ -29,6 +29,70 @@
 
 ---
 
+## Progress tracker
+
+**This is the single source of truth for "what's done."** Tick a box in the *same commit* that finishes the step, and cite the step ID in the commit message (e.g. `refactor: Phase 1.2 — split StarHubTHViewModel models`). A new session's first move is: read this list, run `build_app.py` + `run_tests.py` to confirm the last checked step is still green, then start on the first unchecked box. Do not check a box until build and tests are both green.
+
+- [ ] 0.1 Tag `pre-refactor-baseline`
+- [ ] 0.2 Record baseline build log
+- [ ] 0.3 Characterization tests (dependency resolution, pack status, ModListView filter/sort, profile chain resolution)
+- [ ] 0.4 Add `-Xfrontend -warn-concurrency`, record baseline warning count
+- [ ] 0.5 Docs link block in README.md / README_EN.md
+- [ ] 1.1 Create folder skeleton
+- [ ] 1.2 Split `StarHubTHViewModel.swift`
+- [ ] 1.3 Split `SaveManager.swift`
+- [ ] 1.4 Relocate remaining files per PROJECT_STRUCTURE.md
+- [ ] 1.5 Mark all 10 classes `final`
+- [ ] 1.6 Fix `URLDispatcher` `@StateObject` → `@ObservedObject`
+- [ ] 2.1 Replace `ThaiTranslationMod` bool pair with `TranslationAvailability`
+- [ ] 2.2 Move `LogLevel.color`/`.icon` out of Models
+- [ ] 2.3 Introduce `Mod.Kind` (`.single` / `.group`)
+- [ ] 2.4 Fix empty-`uniqueId` group latent bug + regression test
+- [ ] 2.5 Add `Mod.ID` / `Mod.NexusID` / `Mod.FolderName` wrapper types
+- [ ] 3.1 Define protocols at each I/O boundary
+- [ ] 3.2 Rename implementations `Live*`, write `Stub*`
+- [ ] 3.3 Composition root (`App/DependencyContainer.swift`)
+- [ ] 3.4 Confine AppKit (`FilePicking`)
+- [ ] 3.5 Wrap `UserDefaults` (`PreferenceStoring`)
+- [ ] 4.1 `LocalizationStore`
+- [ ] 4.2 `LogStore`
+- [ ] 4.3 `ThaiHubStore`
+- [ ] 4.4 `ProfilesStore`
+- [ ] 4.5 `ModPacksStore`
+- [ ] 4.6 `SavesStore`
+- [ ] 4.7 `ModsStore`
+- [ ] 4.8 `AppEnvironment`
+- [ ] 4.9 Delete `StarHubTHViewModel`
+- [ ] 5.1 `NexusAPIClient` → `async throws`
+- [ ] 5.2 Convert remaining `@escaping` completion handlers
+- [ ] 5.3 Annotate every store `@MainActor`
+- [ ] 5.4 Filesystem services → `actor`
+- [ ] 5.5 Conform models to `Sendable`
+- [ ] 5.6 SMAPI log tailing → `AsyncStream`
+- [ ] 5.7 Burn down `-warn-concurrency` warnings to zero
+- [ ] 6.1 `vm` → store name at all call sites
+- [ ] 6.2 Drop `get` prefix / convert to properties
+- [ ] 6.3 Argument label sweep
+- [ ] 6.4 Type renames (`ModItem` → `Mod`, etc.)
+- [ ] 6.5 Member renames (`uniqueId` → `id`, etc.)
+- [ ] 6.6 Boolean renames (`showAlert` → `isAlertPresented`, etc.)
+- [ ] 6.7 Local `fm` → `fileManager`
+- [ ] 7.1 Typed error enum per service
+- [ ] 7.2 Audit all `try?`
+- [ ] 7.3 Audit all bare `catch {}`
+- [ ] 7.4 Replace `-> Bool` status returns with `throws`
+- [ ] 7.5 Route `print(` calls into `LogStore`
+- [ ] 7.6 Surface typed errors in UI + localization keys
+- [ ] 8 View decomposition (`ModListView`, `SavesView`, `MainView`, `ModConfigEditorView`, `ModProfilesView`, `ModDetailView`, `ModPacksView`)
+- [ ] 9.1 `scripts/check_standards.py`
+- [ ] 9.2 Wire into `build_app.py` + GitHub Action
+- [ ] 9.3 SwiftLint / swift-format config (optional)
+- [ ] 9.4 Update `CHANGELOG.md`
+
+**Current state (verified 2026-07-25): nothing above is checked.** The codebase is still flat (`Models/Services/Views`), 74 `.shared` call sites, 65 `DispatchQueue` calls, 0 protocols, 0 `@MainActor`. Start at 0.1.
+
+---
+
 ## Sequencing principle
 
 Phases are ordered so each one **makes the next one cheaper and is independently shippable**. Nothing here requires a long-lived branch. Rough order of risk:
