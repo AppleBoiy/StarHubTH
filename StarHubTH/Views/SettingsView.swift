@@ -71,14 +71,14 @@ struct SettingsView: View {
                 
                 // ── Nexus Protocol Handler ──
                 StandardSection(
-                    title: "Nexus Download Handler",
-                    footer: "Allows StarHubTH to automatically intercept and handle 'Mod Manager Download' links (nxm://) from the Nexus Mods website."
+                    title: vm.L(L10n.SettingsExtra.nexusHandlerTitle),
+                    footer: vm.L(L10n.SettingsExtra.nexusHandlerDesc)
                 ) {
                     HStack(spacing: 12) {
-                        Text("Register as default handler for Nexus Mods links")
+                        Text(vm.L(L10n.SettingsExtra.nexusHandlerTitle))
                             .font(.system(size: 13))
                         Spacer()
-                        Button("Set as Default") {
+                        Button(vm.L(L10n.SettingsExtra.setAsDefault)) {
                             #if os(macOS)
                             let scheme = "nxm" as CFString
                             let bundleID = "com.appleboiy.StarHubTH" as CFString

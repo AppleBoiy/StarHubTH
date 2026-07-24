@@ -160,6 +160,7 @@ enum L10n {
         
         // General
         static let multipleAuthors      = "mods_multiple_authors"
+        static let groupCount           = "mods_group_count"
         // Sort
         static let sortBy               = "mods_sort_by"
         static let sortName             = "mods_sort_name"
@@ -492,5 +493,40 @@ enum L10n {
         static let unzipError           = "vm_unzip_error"
         static let unzipFailed          = "vm_unzip_failed"
         static let switchProfile        = "vm_switch_profile"
+        static let modExported          = "vm_mod_exported"
+        static let nexusPremiumRequired = "vm_nexus_premium_required"
+        static let nxmDownloadSuccess   = "vm_nxm_download_success"
+        static let modZipRestoreSuccess = "vm_mod_zip_restore_success"
+        static let modZipRestoreFailed  = "vm_mod_zip_restore_failed"
+        static let modZipRestoreError   = "vm_mod_zip_restore_error"
+        static let profileApplyError    = "vm_profile_apply_error"
+        static let packSaveFailed       = "vm_pack_save_failed"
+        static let collectionApiKeyRequired = "vm_collection_api_key_required"
+        static let collectionFetchFailed = "vm_collection_fetch_failed"
+    }
+    
+    // MARK: - ModDetail Extra
+    enum ModDetailExtra {
+        static let installedAndEnabled  = "moddetail_installed_and_enabled"
+        static let enableMod            = "moddetail_enable_mod"
+        static let searchNexus          = "moddetail_search_nexus"
+        static let required             = "moddetail_required"
+        static let optional             = "moddetail_optional"
+        static let failedToLoadImage    = "moddetail_failed_to_load_image"
+    }
+    
+    // MARK: - Settings Extra
+    enum SettingsExtra {
+        static let nexusHandlerTitle    = "settings_nexus_handler_title"
+        static let nexusHandlerDesc     = "settings_nexus_handler_desc"
+        static let setAsDefault         = "settings_set_as_default"
+    }
+    
+    // MARK: - ModPacks Extra
+    enum ModPacksExtra {
+        static let disabled             = "modpacks_disabled"
+        static let enterCollectionURL   = "modpacks_enter_collection_url"
+        static let addApiKeyHint        = "modpacks_add_api_key_hint"
+        static let downloadMissing      = "modpacks_download_missing"
     }
 }

@@ -47,7 +47,7 @@ struct ModScanner {
                 } else {
                     let firstAuthor = modsInGroup.first(where: { $0.author != "Unknown" })?.author ?? "Unknown"
                     let allSame = modsInGroup.allSatisfy { $0.author == firstAuthor || $0.author == "Unknown" }
-                    let groupAuthor = allSame ? firstAuthor : NSLocalizedString("mods_multiple_authors", comment: "")
+                    let groupAuthor = allSame ? firstAuthor : L10n.Mods.multipleAuthors
                     
                     let groupInstallDate = modsInGroup.compactMap { $0.installDate }.min()
                     let groupLastModifiedDate = modsInGroup.compactMap { $0.lastModifiedDate }.max()
@@ -58,7 +58,7 @@ struct ModScanner {
                         folderName: groupName,
                         version: "",
                         author: groupAuthor,
-                        description: "\(modsInGroup.count) mods",
+                        description: "\(modsInGroup.count)",
                         nexusUrl: "",
                         isEnabled: isEnabled,
                         dependencies: [],

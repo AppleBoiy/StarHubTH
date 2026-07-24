@@ -52,7 +52,7 @@ struct DependencyGraphView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.orange)
                         .font(.system(size: 16))
-                    Text(vm.L(L10n.Mods.missingDependencies))
+                    Text(String(format: vm.L(L10n.Mods.missingDependencies), missingDeps.map(\.uniqueId).joined(separator: ", ")))
                         .font(.system(size: 13, weight: .semibold))
                     Spacer()
                     Button {
@@ -60,7 +60,7 @@ struct DependencyGraphView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.down.app.fill")
-                            Text("Download Missing")
+                            Text(vm.L(L10n.ModPacksExtra.downloadMissing))
                         }
                     }
                     .buttonStyle(.borderedProminent)

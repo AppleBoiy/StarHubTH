@@ -305,6 +305,8 @@ struct ModControlsBar: View {
                         .font(.system(size: 11))
                     Text(vm.modFilterTag.isEmpty ? vm.L(L10n.Mods.filterTypeAll) : vm.localizedTag(vm.modFilterTag))
                         .font(.system(size: 12))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: true)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9, weight: .semibold))
                 }
@@ -347,6 +349,8 @@ struct ModControlsBar: View {
                             (vm.modFilterDate == .past24Hours ? vm.L(L10n.Mods.filterDate24h) :
                                 (vm.modFilterDate == .past7Days ? vm.L(L10n.Mods.filterDate7d) : vm.L(L10n.Mods.filterDate30d))))
                         .font(.system(size: 12))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: true)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9, weight: .semibold))
                 }
@@ -390,6 +394,8 @@ struct ModControlsBar: View {
                         .font(.system(size: 11))
                     Text(vm.L(L10n.Mods.sortBy))
                         .font(.system(size: 12))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: true)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9, weight: .semibold))
                 }
@@ -424,6 +430,8 @@ struct ModControlsBar: View {
                         .font(.system(size: 12))
                     Text(vm.L(L10n.Mods.installMod))
                         .font(.system(size: 12, weight: .medium))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: true)
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 10)
@@ -459,6 +467,8 @@ struct StatusFilterPills: View {
                 } label: {
                     Text(label)
                         .font(.system(size: 12, weight: vm.modFilterStatus == status ? .semibold : .regular))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: true)
                         .foregroundColor(vm.modFilterStatus == status ? .white : .primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
@@ -716,9 +726,10 @@ struct ModListRow: View {
                         .lineLimit(1)
                     
                     if hasMissingDependencies {
+                        let names = mod.dependencies.filter { $0.isRequired && vm.resolveDependencyStatus(for: $0.uniqueId) != .active }.map(\.uniqueId).joined(separator: ", ")
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
-                            .help(vm.L(L10n.Mods.missingDependencies))
+                            .help(String(format: vm.L(L10n.Mods.missingDependencies), names))
                     }
 
                     // Type tag badge
@@ -767,7 +778,9 @@ struct ModListRow: View {
                             .foregroundColor(.secondary)
                     }
                 } else {
-                    Text("\(mod.author) • \(mod.description)")
+                    let displayAuthor = vm.L(mod.author)
+                    let countStr = Int(mod.description).map { String(format: vm.L(L10n.Mods.groupCount), $0) } ?? mod.description
+                    Text("\(displayAuthor) • \(countStr)")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
@@ -964,10 +977,7 @@ struct ModListRow: View {
     }
     
     private var shortDateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .none
-        return formatter
+        vm.makeDateFormatter()
     }
 }
 
@@ -1024,9 +1034,10 @@ struct ModCardView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         
                         if hasMissingDependencies {
+                            let names = mod.dependencies.filter { $0.isRequired && vm.resolveDependencyStatus(for: $0.uniqueId) != .active }.map(\.uniqueId).joined(separator: ", ")
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.orange)
-                                .help(vm.L(L10n.Mods.missingDependencies))
+                                .help(String(format: vm.L(L10n.Mods.missingDependencies), names))
                         }
                     }
                     
@@ -1099,7 +1110,9 @@ struct ModCardView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             } else {
-                Text("\(mod.author) • \(mod.description)")
+                let displayAuthor = vm.L(mod.author)
+                let countStr = Int(mod.description).map { String(format: vm.L(L10n.Mods.groupCount), $0) } ?? mod.description
+                Text("\(displayAuthor) • \(countStr)")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .lineLimit(2)
@@ -1209,9 +1222,6 @@ struct ModCardView: View {
     }
     
     private var shortDateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .none
-        return formatter
+        vm.makeDateFormatter()
     }
 }

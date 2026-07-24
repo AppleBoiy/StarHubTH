@@ -38,10 +38,7 @@ struct ModDetailView: View {
     }
     
     private var shortDateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .none
-        return formatter
+        vm.makeDateFormatter()
     }
     
     var body: some View {
@@ -75,7 +72,7 @@ struct ModDetailView: View {
                             
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("v\(mod.version) • \(mod.author)")
+                                Text("v\(mod.version) • \(vm.L(mod.author))")
                                     .font(.system(size: 14))
                                     .foregroundColor(.secondary)
                                 
@@ -275,7 +272,7 @@ struct DependencyRow: View {
                 Text(dependency.uniqueId)
                     .font(.system(size: 13, weight: .bold))
                 if dependency.isRequired {
-                    Text("Required")
+                    Text(vm.L(L10n.ModDetailExtra.required))
                         .font(.system(size: 10, weight: .bold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -283,7 +280,7 @@ struct DependencyRow: View {
                         .foregroundColor(.red)
                         .cornerRadius(4)
                 } else {
-                    Text("Optional")
+                    Text(vm.L(L10n.ModDetailExtra.optional))
                         .font(.system(size: 10, weight: .bold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -297,14 +294,14 @@ struct DependencyRow: View {
             
             switch status {
             case .active:
-                Label("Installed & Enabled", systemImage: "checkmark.circle.fill")
+                Label(vm.L(L10n.ModDetailExtra.installedAndEnabled), systemImage: "checkmark.circle.fill")
                     .foregroundColor(.green)
                     .font(.system(size: 12, weight: .medium))
             case .disabled(let mod):
                 Button {
                     vm.toggleMod(mod)
                 } label: {
-                    Label("Enable Mod", systemImage: "power")
+                    Label(vm.L(L10n.ModDetailExtra.enableMod), systemImage: "power")
                 }
                 .buttonStyle(PlainButtonStyle())
                 .padding(.horizontal, 8)
@@ -314,12 +311,11 @@ struct DependencyRow: View {
                 .cornerRadius(6)
             case .missing:
                 Button {
-                    // For now, redirect to Nexus search since we don't have UpdateKeys yet
                     if let url = URL(string: "https://www.nexusmods.com/stardewvalley/search/?gsearch=\(dependency.uniqueId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
-                    Label("Search Nexus", systemImage: "magnifyingglass")
+                    Label(vm.L(L10n.ModDetailExtra.searchNexus), systemImage: "magnifyingglass")
                 }
                 .buttonStyle(PlainButtonStyle())
                 .padding(.horizontal, 8)

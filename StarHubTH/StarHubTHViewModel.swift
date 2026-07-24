@@ -236,6 +236,31 @@ class StarHubTHViewModel: ObservableObject {
         return .missing
     }
     
+    /// Resolves install status for a mod pack mod.
+    /// Tries Nexus ID match first (via nexusUrl), then falls back to SMAPI uniqueId.
+    enum PackModStatus { case installed, disabled, missing }
+    
+    func resolvePackModStatus(nexusId: Int?, uniqueId: String) -> PackModStatus {
+        let allMods = mods.flatMap { $0.isGroup ? ($0.children ?? []) : [$0] }
+        
+        // 1. Try match by Nexus ID from nexusUrl
+        if let nexusId = nexusId {
+            if let found = allMods.first(where: {
+                guard let url = URL(string: $0.nexusUrl), let id = Int(url.lastPathComponent) else { return false }
+                return id == nexusId
+            }) {
+                return found.isEnabled ? .installed : .disabled
+            }
+        }
+        
+        // 2. Fall back to SMAPI uniqueId match
+        if let found = allMods.first(where: { $0.uniqueId.caseInsensitiveCompare(uniqueId) == .orderedSame }) {
+            return found.isEnabled ? .installed : .disabled
+        }
+        
+        return .missing
+    }
+    
     // Custom Tags
     var customModTags: [String: String] {
         get { UserDefaults.standard.dictionary(forKey: "customModTags") as? [String: String] ?? [:] }
@@ -372,6 +397,34 @@ class StarHubTHViewModel: ObservableObject {
         }
     }
     
+    /// Returns a locale- and calendar-aware DateFormatter for short dates.
+    /// - English → en_US + Gregorian → M/d/yyyy  (USA format, e.g. 3/25/2024)
+    /// - Thai    → th_TH + Buddhist  → d/M/yyyy  (Thai BE, e.g. 25/3/2569)
+    func makeDateFormatter(dateStyle: DateFormatter.Style = .short) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .none
+        if currentLanguage == "th" {
+            formatter.locale = Locale(identifier: "th_TH")
+            formatter.calendar = Calendar(identifier: .buddhist)
+            // Explicit format: day/month/year in Buddhist Era
+            if dateStyle == .medium {
+                formatter.dateFormat = "d MMM yyyy"
+            } else {
+                formatter.dateFormat = "d/M/yyyy"
+            }
+        } else {
+            formatter.locale = Locale(identifier: "en_US")
+            formatter.calendar = Calendar(identifier: .gregorian)
+            // USA format: month/day/year
+            if dateStyle == .medium {
+                formatter.dateFormat = "MMM d, yyyy"
+            } else {
+                formatter.dateFormat = "M/d/yyyy"
+            }
+        }
+        return formatter
+    }
+    
     
     @Published var modProfiles: [ModProfile] = []
     @Published var activeProfileId: UUID? = nil
@@ -440,7 +493,7 @@ class StarHubTHViewModel: ObservableObject {
         
         // Check if we have API key
         if self.nexusApiKey.isEmpty {
-            self.showModal(message: "Cannot download from Nexus: Premium API Key is required.")
+            showModal(message: L(L10n.VM.nexusPremiumRequired))
             return
         }
         
@@ -451,7 +504,7 @@ class StarHubTHViewModel: ObservableObject {
                 self.downloadModFromNexus(nexusId: modId, fileId: fileId) { success in
                     if success {
                         self.scanMods()
-                        self.showModal(message: "Successfully downloaded and installed mod from NXM link!")
+                        self.showModal(message: self.L(L10n.VM.nxmDownloadSuccess))
                     }
                 }
             case .collection(let slug):
@@ -1398,15 +1451,15 @@ class StarHubTHViewModel: ObservableObject {
                         process.waitUntilExit()
                         DispatchQueue.main.async {
                             if process.terminationStatus == 0 {
-                                self.showModal(message: "Restored \(mod.name) from zip backup successfully!")
+                                self.showModal(message: self.L(L10n.VM.modZipRestoreSuccess))
                                 self.scanMods()
                             } else {
-                                self.showModal(message: "Failed to extract zip backup.")
+                                self.showModal(message: self.L(L10n.VM.modZipRestoreFailed))
                             }
                         }
                     } catch {
                         DispatchQueue.main.async {
-                            self.showModal(message: "Error restoring mod zip: \(error.localizedDescription)")
+                            self.showModal(message: self.L(L10n.VM.modZipRestoreError))
                         }
                     }
                 }
@@ -1713,7 +1766,7 @@ class StarHubTHViewModel: ObservableObject {
             saveProfiles()
             self.log(String(format: L(L10n.VM.switchProfile), profile.name))
         } else {
-            showModal(message: "Failed to apply profile completely due to filesystem errors.")
+            showModal(message: L(L10n.VM.profileApplyError))
         }
     }
 
@@ -1862,7 +1915,7 @@ class StarHubTHViewModel: ObservableObject {
                 try data.write(to: url)
                 return url
             } catch {
-                self.showModal(message: "Failed to save Mod Pack: \(error.localizedDescription)")
+                showModal(message: L(L10n.VM.packSaveFailed))
             }
         }
         return nil
@@ -1900,7 +1953,7 @@ class StarHubTHViewModel: ObservableObject {
         
         let apiKey = nexusApiKey
         if apiKey.isEmpty {
-            self.showModal(message: "A Premium API Key is required to fetch collections.")
+            showModal(message: L(L10n.VM.collectionApiKeyRequired))
             completion(nil)
             return
         }
@@ -1912,23 +1965,58 @@ class StarHubTHViewModel: ObservableObject {
                 case .success(let collection):
                     let packMods = collection.latestPublishedRevision?.modFiles?.compactMap { modFile -> StarHubPackMod? in
                         guard let detail = modFile.file, let modDetail = detail.mod else { return nil }
+                        // Format mod's updatedAt as relative string
+                        var modUpdated: String? = nil
+                        if let rawDate = modDetail.updatedAt {
+                            let iso = ISO8601DateFormatter()
+                            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                            if let date = iso.date(from: rawDate) ?? ISO8601DateFormatter().date(from: rawDate) {
+                                let rel = RelativeDateTimeFormatter()
+                                rel.unitsStyle = .abbreviated
+                                modUpdated = rel.localizedString(for: date, relativeTo: Date())
+                            }
+                        }
                         return StarHubPackMod(
                             name: modDetail.name,
                             uniqueId: "nexus_\(modDetail.modId)",
                             version: detail.version ?? "",
-                            nexusId: modDetail.modId
+                            nexusId: modDetail.modId,
+                            modAuthor: modDetail.author,
+                            modDownloads: modDetail.downloads,
+                            modUpdatedAt: modUpdated,
+                            thumbnailUrl: modDetail.thumbnailUrl
                         )
                     } ?? []
                     
-                    let pack = StarHubPack(
+                    // Format updatedAt from ISO8601 to readable date string
+                    var updatedAtDisplay: String? = nil
+                    if let rawDate = collection.updatedAt {
+                        let iso = ISO8601DateFormatter()
+                        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                        if let date = iso.date(from: rawDate) ?? ISO8601DateFormatter().date(from: rawDate) {
+                            let rel = RelativeDateTimeFormatter()
+                            rel.unitsStyle = .abbreviated
+                            updatedAtDisplay = rel.localizedString(for: date, relativeTo: Date())
+                        }
+                    }
+                    
+                    let gameVersion = collection.latestPublishedRevision?.gameVersions?.first?.reference
+                    
+                    var pack = StarHubPack(
                         packName: collection.name,
-                        author: "Nexus Collection",
+                        author: collection.user?.name ?? "Unknown",
                         description: collection.summary,
                         mods: packMods
                     )
+                    pack.imageUrl = collection.tileImage?.url
+                    pack.revision = collection.latestPublishedRevision?.revisionNumber
+                    pack.updatedAt = updatedAtDisplay
+                    pack.gameVersion = gameVersion
+                    pack.totalDownloads = collection.totalDownloads
+                    pack.endorsements = collection.endorsements
                     completion(pack)
-                case .failure(let error):
-                    self.showModal(message: "Failed to fetch collection: \(error.localizedDescription)")
+                case .failure(_):
+                    self.showModal(message: self.L(L10n.VM.collectionFetchFailed))
                     completion(nil)
                 }
             }

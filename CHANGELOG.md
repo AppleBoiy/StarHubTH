@@ -5,7 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.2] - 2026-07-24
+## [1.1.3] - 2026-07-24
+
+### Added
+- **Mod Packs — Rich Collection Banner**: Redesigned the imported collection view with a Nexus Mods–inspired layout. Displays cover art, author name, endorsements, total downloads, game version, revision, and last updated date — fetched live from the Nexus GraphQL API.
+- **Mod Packs — Per-Mod Rich Rows**: Each mod in the collection list now shows a thumbnail image, author, Nexus ID (`#1234`), download count, last updated (relative), and file version — all fetched from Nexus in a single GraphQL call.
+- **Mod Packs — Export Toolbar Button**: "Export Mod Pack" moved to the native macOS toolbar, visible only when on the Mod Packs tab.
+- **Translation Audit**: Added 24 new localization keys (EN + TH) covering hardcoded strings found across `ModPacksView`, `ModDetailView`, `SettingsView`, `DependencyGraphView`, and `StarHubTHViewModel`.
+
+### Fixed
+- **Mod Packs — Wrong Install Status**: Fixed a critical bug where all mods in an imported Nexus Collection showed "Missing" even when they were already installed. The resolver now matches by Nexus mod ID (from `nexusUrl`) first, then falls back to SMAPI unique ID — correctly showing ✅ Installed, 🟠 Disabled, or ❌ Missing.
+- **Mod Packs — Wrong Author**: Fixed hardcoded "Nexus Collection" author — app now shows the real curator's username from the Nexus API.
+- **Mod Packs — GraphQL `thumbnailUrl` Error**: Fixed `size` argument error that broke collection imports; switched to `url` field for stable access.
+- **Mod Packs — Uneven Separators**: Replaced `List` with `ScrollView + LazyVStack + Divider()` for consistent separator lines regardless of row height (Missing rows with action buttons no longer shift lines).
+- **Navigation Titles**: All tabs now show their proper localized name in the macOS top bar (Mod Packs, Mod Profiles, Saves, Settings, Logs…) instead of always showing "Home".
+- **Duplicate View Titles**: Removed redundant in-view heading text that duplicated the navigation bar title (e.g. "Mod Profiles" appearing twice).
+- **Mod List — Responsive Layout**: Fixed filter pills and dropdown labels squishing or wrapping vertically at narrow window widths.
+- **Localization Coverage**: Replaced 23 hardcoded English strings in views and ViewModel with proper `vm.L(L10n.xxx)` calls so they now translate correctly in Thai.
+
+---
+
+## [1.1.2-preview-2] - 2026-07-24
+
+### Added
+- **Mod Packs — Rich Collection Banner**: Redesigned the imported collection view with a full-detail banner inspired by the Nexus Mods web layout. Displays cover art thumbnail, real author name, endorsements, total downloads, game version, revision number, and last updated date — all fetched live from the Nexus GraphQL API.
+- **Mod Packs — Export Toolbar Button**: Moved the "Export Mod Pack" button from inside the view content into the native macOS top toolbar, visible only when the Mod Packs tab is active.
+
+### Fixed
+- **Navigation Titles**: All tabs now show their proper name in the macOS top navigation bar (e.g., "Mod Packs", "Mod Profiles", "Logs") instead of always displaying "Home".
+- **Mod Packs — Wrong Author**: Fixed a bug where all Nexus Collections imported via URL always displayed "Nexus Collection" as the author. The app now fetches and shows the real curator's username from the Nexus API.
+- **Mod Packs — GraphQL Error**: Fixed a `thumbnailUrl is missing required arguments: size` API error that prevented collection imports after adding the tile image field.
+- **Mod List — Controls Bar Squish**: Fixed a responsive layout bug where filter pills and dropdown labels would squish or wrap into vertical stacks when the window was resized to a narrow width. Labels now use fixed horizontal sizing.
+- **Duplicate View Titles**: Removed redundant in-view title headings (e.g., "Mod Profiles") that were duplicating the navigation bar title.
+
+
 
 ### Added
 - **NXM Protocol Support**: Implemented `nxm://` URL handler, enabling 1-click "Vortex" mod installations directly from the Nexus Mods website. Rebuilt the URL routing mechanism using a robust `NSAppleEventManager` and `URLDispatcher` architecture to seamlessly intercept links on macOS and route them directly into the SwiftUI Mod Packs view, completely bypassing native single-window routing bugs.

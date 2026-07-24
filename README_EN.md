@@ -3,13 +3,18 @@
 </p>
 
 *   **Easy Game Launch**: Launch Stardew Valley in either Vanilla mode or through SMAPI for modded play.
-*   **Mod Manager**: 
+*   **Mod Manager**:
     *   Enable or disable mods effortlessly through a beautiful app interface.
     *   **NEW!** Install mods automatically by dragging and dropping `.zip` files or folders.
     *   **NEW!** Filter and tag system to quickly sort mods by category and status.
     *   **NEW!** 1-Click Mod Backup to zip your entire mods folder securely to your Desktop.
 *   **Mod Config Editor**: Edit mod settings directly within the app, complete with native nested menu layouts that mirror the in-game Generic Mod Config Menu.
 *   **Nexus Mods Integration**: View mod details, changelogs, and download mods directly from Nexus Mods without leaving the app.
+*   **Mod Packs (Nexus Collections)**:
+    *   **NEW!** Import Nexus Collections directly via `nxm://` links or URL.
+    *   **NEW!** Rich collection banner: cover art, curator name, download count, revision, and game version — fetched live.
+    *   **NEW!** Per-mod status: each mod shows ✅ Installed, 🟠 Disabled, or ❌ Missing with a direct Nexus download link.
+    *   **NEW!** Per-mod details: thumbnail, author, Nexus ID, download count, last updated, and file version in every row.
 *   **Mod Profiles**: Group mods into multiple profiles and switch between them instantly with a single click.
 *   **Thai Translation Hub**: A dedicated hub listing all Thai translation mods — browse, check status, download, and track updates in one place.
 *   **Save Manager**:
@@ -31,7 +36,7 @@
 | <img src="screenshots/en/5.png" width="400"> | <img src="screenshots/en/6.png" width="400"> |
 | <img src="screenshots/en/7.png" width="400"> | <img src="screenshots/en/8.png" width="400"> |
 | <img src="screenshots/en/9.png" width="400"> | <img src="screenshots/en/10.png" width="400"> |
-| <img src="screenshots/en/11.png" width="400"> | <img src="screenshots/en/12.png" width="400"> |
+| <img src="screenshots/en/11.png" width="400"> | |
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/install_banner.png" alt="Installation" width="300">
@@ -49,7 +54,7 @@
 This app is built with **Swift** and **SwiftUI** as a native macOS application.
 
 ### Requirements
-*   macOS 14.0 (Sonoma) or later
+*   macOS 13.0 (Ventura) or later
 *   Xcode 15.0 or later (for compiling from source)
 
 ### Running the Project

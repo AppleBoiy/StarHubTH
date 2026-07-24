@@ -113,14 +113,32 @@ class NexusAPIService {
         let slug: String
         let name: String
         let summary: String?
+        let endorsements: Int?
+        let totalDownloads: Int?
+        let updatedAt: String?
+        let tileImage: CollectionImage?
+        let user: CollectionUser?
         let latestPublishedRevision: CollectionRevision?
         let game: CollectionGame?
+    }
+    
+    struct CollectionUser: Decodable {
+        let name: String?
+    }
+    
+    struct CollectionImage: Decodable {
+        let url: String?
     }
     
     struct CollectionRevision: Decodable {
         let revisionNumber: Int
         let downloadLink: String?
         let modFiles: [CollectionModFile]?
+        let gameVersions: [CollectionGameVersion]?
+    }
+    
+    struct CollectionGameVersion: Decodable {
+        let reference: String?
     }
     
     struct CollectionModFile: Decodable {
@@ -141,6 +159,10 @@ class NexusAPIService {
         let modId: Int
         let name: String
         let pictureUrl: String?
+        let author: String?
+        let downloads: Int?
+        let updatedAt: String?
+        let thumbnailUrl: String?
     }
     
     struct CollectionGame: Decodable {
@@ -310,9 +332,21 @@ class NexusAPIService {
                 slug
                 name
                 summary
+                endorsements
+                totalDownloads
+                updatedAt
+                tileImage {
+                    url
+                }
+                user {
+                    name
+                }
                 latestPublishedRevision {
                     revisionNumber
                     downloadLink
+                    gameVersions {
+                        reference
+                    }
                     modFiles {
                         fileId
                         optional
@@ -324,7 +358,10 @@ class NexusAPIService {
                             mod {
                                 modId
                                 name
-                                pictureUrl
+                                author
+                                downloads
+                                updatedAt
+                                thumbnailUrl
                             }
                         }
                     }

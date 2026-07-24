@@ -9,12 +9,6 @@ struct ModProfilesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             
-            // Header
-            Text(vm.L(L10n.Profiles.titleFull))
-                .font(.title2)
-                .fontWeight(.semibold)
-                .padding(.top, 10)
-            
             // List Container
             VStack(spacing: 0) {
                 if vm.modProfiles.isEmpty {

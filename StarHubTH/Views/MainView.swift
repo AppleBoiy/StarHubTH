@@ -29,6 +29,8 @@ struct MainView: View {
         if currentTab == "Mods", let details = vm.viewingModDetails { return details.name }
         if currentTab == "ThaiHub", let thaiMod = vm.viewingThaiMod { return thaiMod.name }
         if currentTab == "Mods" { return vm.L(L10n.Mods.mods) }
+        if currentTab == "ModPacks" { return vm.L(L10n.ModPacks.title) }
+        if currentTab == "Profiles" { return vm.L(L10n.Profiles.title) }
         if currentTab == "Updates" { return vm.L(L10n.Main.softwareUpdate) }
         if currentTab == "ThaiHub" { return vm.L(L10n.ThaiHub.title) }
         if currentTab == "Saves" { return vm.L(L10n.Saves.saves) }
@@ -345,6 +347,20 @@ struct MainView: View {
                         Image(systemName: "chevron.right")
                     }
                     .disabled(forwardHistory.isEmpty)
+                }
+            }
+            
+            // Export Mod Pack button — shown only on the Mod Packs tab
+            if currentTab == "ModPacks" {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        let name = vm.modProfiles.first { $0.id == vm.activeProfileId }?.name ?? "My Pack"
+                        if let _ = vm.exportModPack(name: name) {
+                            vm.showModal(message: vm.L(L10n.VM.modExported))
+                        }
+                    } label: {
+                        Label(vm.L(L10n.ModPacks.exportPack), systemImage: "square.and.arrow.up")
+                    }
                 }
             }
         }

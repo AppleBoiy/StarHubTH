@@ -3,7 +3,7 @@
 [left]
 [list]
 [*] [b]Easy Game Launch[/b]: Launch Stardew Valley in either Vanilla mode or through SMAPI for modded play.
-[*] [b]Mod Manager[/b]: 
+[*] [b]Mod Manager[/b]:
     [list]
     [*] Enable or disable mods effortlessly through a beautiful app interface.
     [*] [b]NEW![/b] Install mods automatically by dragging and dropping .zip files or folders.
@@ -12,6 +12,13 @@
     [/list]
 [*] [b]Mod Config Editor[/b]: Edit mod settings directly within the app, complete with native nested menu layouts that mirror the in-game Generic Mod Config Menu.
 [*] [b]Nexus Mods Integration[/b]: View mod details, changelogs, and download mods directly from Nexus Mods without leaving the app.
+[*] [b]Mod Packs / Nexus Collections[/b]:
+    [list]
+    [*] [b]NEW![/b] Import Nexus Collections directly via nxm:// links or URL.
+    [*] [b]NEW![/b] Rich collection banner: cover art, curator name, download count, revision, and game version — fetched live.
+    [*] [b]NEW![/b] Per-mod status in collections: Installed / Disabled / Missing with a direct Nexus download button.
+    [*] [b]NEW![/b] Per-mod rich rows: thumbnail, author, Nexus ID, download count, last updated, and file version.
+    [/list]
 [*] [b]Mod Profiles[/b]: Group mods into multiple profiles and switch between them instantly with a single click.
 [*] [b]Thai Translation Hub[/b]: A dedicated hub listing all Thai translation mods — browse, check status, download, and track updates in one place.
 [*] [b]Save Manager[/b]:
@@ -40,7 +47,6 @@
 [img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/en/9.png[/img]
 [img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/en/10.png[/img]
 [img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/en/11.png[/img]
-[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/en/12.png[/img]
 [/center]
 
 [center][img width=300]https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/install_banner.png[/img][/center]
@@ -58,7 +64,7 @@ This app is built with [b]Swift[/b] and [b]SwiftUI[/b] as a native macOS applica
 
 [size=4][b]Requirements[/b][/size]
 [list]
-[*] macOS 14.0 (Sonoma) or later
+[*] macOS 13.0 (Ventura) or later
 [/list]
 
 [center][img width=300]https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/credits_banner.png[/img][/center]

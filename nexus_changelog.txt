@@ -1,4 +1,49 @@
+### Version 1.1.3 - English
+
+[b]Added[/b]
+[list]
+[*] [b]Mod Packs — Rich Collection Banner[/b]: Redesigned the imported collection view with a Nexus Mods–inspired layout. Displays cover art, curator name, endorsements, total downloads, game version, revision number, and last updated date — fetched live from the Nexus GraphQL API.
+[*] [b]Mod Packs — Per-Mod Rich Rows[/b]: Each mod in the collection list now shows a thumbnail, author, Nexus ID, download count, last updated (relative), and file version — all from a single GraphQL query.
+[*] [b]Mod Packs — Export Toolbar Button[/b]: "Export Mod Pack" moved to the native macOS toolbar, visible only on the Mod Packs tab.
+[*] [b]Translation Audit[/b]: Added 24 new localization keys (EN + TH) covering previously hardcoded strings across views and ViewModel.
+[/list]
+
+[b]Fixed[/b]
+[list]
+[*] [b]Mod Packs — Wrong Install Status[/b]: Fixed a critical bug where all mods in an imported Nexus Collection showed "Missing" even when already installed. The resolver now matches by Nexus mod ID first, then falls back to SMAPI unique ID — correctly showing Installed, Disabled, or Missing.
+[*] [b]Mod Packs — Wrong Author[/b]: Fixed hardcoded "Nexus Collection" author — app now shows the real curator's username from the Nexus API.
+[*] [b]Mod Packs — Uneven Separators[/b]: Replaced List with ScrollView + LazyVStack + Divider for consistent separator lines regardless of row height.
+[*] [b]Navigation Titles[/b]: All tabs now show their correct localized name in the macOS top bar.
+[*] [b]Mod List — Responsive Layout[/b]: Fixed filter pills and dropdowns squishing at narrow window widths.
+[*] [b]Localization[/b]: Replaced 23 hardcoded English strings with proper localized calls, so they now translate correctly in Thai.
+[/list]
+
+---
+
+### Version 1.1.3 - Thai (ภาษาไทย)
+
+[b]เพิ่มฟีเจอร์ใหม่ (Added)[/b]
+[list]
+[*] [b]มอดแพ็ค — แบนเนอร์คอลเลกชันแบบเต็ม[/b]: ปรับโฉมหน้าแสดงผลคอลเลกชันที่นำเข้าใหม่ทั้งหมด แสดงรูปหน้าปก, ชื่อผู้สร้าง, ยอดดาวน์โหลด, เวอร์ชันเกม, รีวิชัน และวันที่อัปเดต — ดึงข้อมูลจาก Nexus GraphQL API โดยตรง
+[*] [b]มอดแพ็ค — รายการม็อดแบบละเอียด[/b]: แต่ละม็อดในคอลเลกชันแสดงรูปภาพ, ชื่อผู้แต่ง, Nexus ID, จำนวนดาวน์โหลด, วันอัปเดต และเวอร์ชันไฟล์ — ดึงข้อมูลใน GraphQL query เดียว
+[*] [b]มอดแพ็ค — ปุ่ม Export ใน Toolbar[/b]: ย้ายปุ่ม "Export Mod Pack" ไปอยู่ใน macOS Toolbar ด้านบน แสดงเฉพาะเมื่ออยู่ในแท็บ Mod Packs
+[*] [b]ตรวจสอบการแปลภาษา[/b]: เพิ่ม 24 คีย์ล็อคไลเซชันใหม่ (EN + TH) ครอบคลุมข้อความที่เคย hardcode ไว้ในหลาย View และ ViewModel
+[/list]
+
+[b]แก้ไขบั๊ก (Fixed)[/b]
+[list]
+[*] [b]มอดแพ็ค — สถานะผิดพลาด[/b]: แก้ไขบั๊กสำคัญที่ทำให้ม็อดทุกตัวในคอลเลกชัน Nexus แสดงว่า "ขาดหาย" แม้จะติดตั้งแล้ว ตอนนี้ตรวจสอบโดย Nexus ID ก่อน แล้วค่อย fallback ไปที่ SMAPI unique ID — แสดง ติดตั้งแล้ว / ปิดใช้งาน / ขาดหาย ได้ถูกต้อง
+[*] [b]มอดแพ็ค — ชื่อผู้สร้างผิด[/b]: แก้ไขชื่อ "Nexus Collection" ที่ hardcode ไว้ ตอนนี้แสดงชื่อจริงของผู้สร้างคอลเลกชันจาก Nexus API
+[*] [b]มอดแพ็ค — เส้นคั่นไม่เสมอกัน[/b]: เปลี่ยนจาก List เป็น ScrollView + LazyVStack + Divider ทำให้เส้นคั่นระหว่างรายการเสมอกันทุกแถว
+[*] [b]ชื่อแท็บ Navigation[/b]: แต่ละแท็บแสดงชื่อที่ถูกต้องและแปลภาษาได้ใน macOS Top Bar
+[*] [b]รายการม็อด — Layout ไม่ Responsive[/b]: แก้ไขปุ่มกรองและ Dropdown ที่เบียดกันเมื่อหน้าต่างแคบ
+[*] [b]การแปลภาษา[/b]: แทนที่ข้อความภาษาอังกฤษ hardcode 23 จุดด้วยการเรียกใช้ L10n ที่ถูกต้อง ทำให้แปลเป็นภาษาไทยได้ครบถ้วน
+[/list]
+
+---
+
 ### Version 1.1.0 - English
+
 
 [b]Added[/b]
 [list]

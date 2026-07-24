@@ -270,10 +270,8 @@ struct BackupRow: View {
     }
     
     private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
+        let formatter = vm.makeDateFormatter(dateStyle: .medium)
         formatter.timeStyle = .short
-        formatter.locale = Locale(identifier: vm.currentLanguage)
         return formatter.string(from: backup.timestamp)
     }
     

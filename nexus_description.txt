@@ -3,7 +3,7 @@
 [left]
 [list]
 [*] [b]รันเกมได้ง่ายๆ[/b]: เลือกรันเกมได้ทั้งโหมดปกติ (Vanilla) และโหมดผ่าน SMAPI สำหรับเล่นม็อด
-[*] [b]จัดการส่วนเสริม (Mods Manager)[/b]: 
+[*] [b]จัดการส่วนเสริม (Mods Manager)[/b]:
     [list]
     [*] เปิด/ปิด ม็อดต่างๆ ได้อย่างง่ายดาย
     [*] [b]ใหม่![/b] ติดตั้งม็อดอัตโนมัติจากการลากไฟล์ .zip หรือโฟลเดอร์มาวาง
@@ -12,9 +12,16 @@
     [/list]
 [*] [b]แก้ไขตั้งค่าม็อด (Mod Config Editor)[/b]: แก้ไขไฟล์ตั้งค่าของม็อดได้จากในแอปโดยตรง รองรับรูปแบบเมนูซ้อนทับ (Nested Menu) เหมือนในเกมเป๊ะๆ
 [*] [b]เชื่อมต่อ Nexus Mods[/b]: ดูรายละเอียด อัปเดตข้อมูล และดาวน์โหลดม็อดจาก Nexus Mods ได้โดยตรงจากในแอป
+[*] [b]มอดแพ็ค / Nexus Collections[/b]:
+    [list]
+    [*] [b]ใหม่![/b] นำเข้าคอลเลกชัน Nexus ผ่านลิงก์ nxm:// หรือ URL โดยตรง
+    [*] [b]ใหม่![/b] แสดงรายละเอียดคอลเลกชันแบบครบถ้วน: รูปหน้าปก, ชื่อผู้สร้าง, จำนวนดาวน์โหลด, รีวิชัน, เวอร์ชันเกม
+    [*] [b]ใหม่![/b] ตรวจสอบสถานะม็อดแต่ละตัวในคอลเลกชัน: ติดตั้งแล้ว / ปิดใช้งาน / ขาดหาย พร้อมลิงก์ดาวน์โหลดทันที
+    [*] [b]ใหม่![/b] แสดงรูปภาพ, ชื่อผู้แต่ง, Nexus ID, จำนวนดาวน์โหลด, วันอัปเดต และเวอร์ชันของแต่ละม็อด
+    [/list]
 [*] [b]ระบบโปรไฟล์ม็อด (Mod Profiles)[/b]: จัดกลุ่มม็อดเป็นหลายๆ ชุด แล้วสลับใช้งานได้ทันทีเพียงแค่คลิกเดียว
 [*] [b]ศูนย์รวมม็อดแปลไทย (Thai Translation Hub)[/b]: หน้าต่างที่รวบรวมม็อดแปลภาษาไทยทั้งหมด ค้นหา ตรวจสอบ ดาวน์โหลด และติดตามสถานะอัปเดตได้จากที่นี่ที่เดียว
-[*] [b]จัดการเซฟเกม (Save Manager)[/b]: 
+[*] [b]จัดการเซฟเกม (Save Manager)[/b]:
     [list]
     [*] ดูรายละเอียดเซฟเกมทั้งหมด (จำนวนเงิน, เวลาในเกม, ฤดูกาล, รูปแบบฟาร์ม)
     [*] ทำสำเนา (Duplicate) หรือลบเซฟเกม
@@ -25,6 +32,7 @@
 [*] [b]UI สไตล์ Native macOS[/b]: หน้าตาแอปพลิเคชันที่สวยงาม ใช้งานง่าย ออกแบบมาให้กลมกลืนกับระบบ macOS อย่างสมบูรณ์แบบ
 [/list]
 [/left]
+
 [center][img width=300]https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/screenshots_banner.png[/img][/center]
 
 [center]
@@ -40,6 +48,9 @@
 [img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/th/10.png[/img]
 [img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/th/11.png[/img]
 [img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/th/12.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/th/13.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/th/14.png[/img]
+[img width=500]https://raw.githubusercontent.com/AppleBoiy/StarHubTH/main/screenshots/th/15.png[/img]
 [/center]
 
 [center][img width=300]https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/install_banner.png[/img][/center]
@@ -57,7 +68,7 @@
 
 [size=4][b]ความต้องการของระบบ (Requirements)[/b][/size]
 [list]
-[*] macOS 14.0 (Sonoma) หรือใหม่กว่า
+[*] macOS 13.0 (Ventura) หรือใหม่กว่า
 [/list]
 
 [center][img width=300]https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/credits_banner.png[/img][/center]
