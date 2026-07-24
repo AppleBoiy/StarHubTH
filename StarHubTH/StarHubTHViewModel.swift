@@ -1301,9 +1301,7 @@ final class StarHubTHViewModel: ObservableObject {
                             version: version,
                             status: status,
                             url: url,
-                            nexusUrl: nexusUrl,
-                            isInstalled: false,
-                            isOriginalModInstalled: false
+                            nexusUrl: nexusUrl
                         )
                         newTranslations.append(mod)
                     }
@@ -1351,8 +1349,7 @@ final class StarHubTHViewModel: ObservableObject {
                     }
                 }
             }
-            thaiTranslations[i].isOriginalModInstalled = foundOriginal
-            thaiTranslations[i].isInstalled = foundTranslation
+            thaiTranslations[i].availability = foundTranslation ? .installed : (foundOriginal ? .downloadable : .baseModMissing)
         }
         
         // Sort installed mods first, then alphabetically

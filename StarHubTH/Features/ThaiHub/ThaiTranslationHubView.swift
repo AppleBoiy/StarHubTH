@@ -171,7 +171,7 @@ struct ThaiModDetailView: View {
                                 Text(vm.L(L10n.ThaiHub.status))
                                     .font(.system(size: 13))
                                 Spacer()
-                                Text(mod.installationStatusText(vm: vm))
+                                Text(vm.L(mod.availability.localizationKey))
                                     .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                             }
