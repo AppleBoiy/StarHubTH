@@ -66,12 +66,12 @@ final class StarHubTHViewModel: ObservableObject {
             return
         }
         
-        NexusAPIService.shared.getModInfo(modId: modId, apiKey: apiKey) { [weak self] result in
+        LiveNexusAPIClient.shared.getModInfo(modId: modId, apiKey: apiKey) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let info):
                     if let categoryId = info.categoryId {
-                        let newTag = NexusAPIService.categoryTag(from: categoryId)
+                        let newTag = LiveNexusAPIClient.categoryTag(from: categoryId)
                         self?.setCustomTag(for: mod.uniqueId, tag: newTag, shouldRefresh: shouldRefresh)
                         completion(true)
                     } else {
@@ -1657,7 +1657,7 @@ final class StarHubTHViewModel: ObservableObject {
         }
         
         self.log("Fetching collection metadata for slug: \(slug)...")
-        NexusAPIService.shared.getCollectionGraph(slug: slug, apiKey: apiKey) { result in
+        LiveNexusAPIClient.shared.getCollectionGraph(slug: slug, apiKey: apiKey) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let collection):
@@ -1735,7 +1735,7 @@ final class StarHubTHViewModel: ObservableObject {
             startDownload(nexusId: nexusId, fileId: targetFileId, apiKey: apiKey, completion: completion)
         } else {
             self.log("Fetching latest file for Nexus Mod #\(nexusId.rawValue)...")
-            NexusAPIService.shared.getModFiles(modId: nexusId.rawValue, apiKey: apiKey) { result in
+            LiveNexusAPIClient.shared.getModFiles(modId: nexusId.rawValue, apiKey: apiKey) { result in
                 switch result {
                 case .success(let response):
                     guard let latestFile = response.files.first else {
@@ -1754,7 +1754,7 @@ final class StarHubTHViewModel: ObservableObject {
 
     private func startDownload(nexusId: ModItem.NexusID, fileId: Int, apiKey: String, completion: @escaping (Bool) -> Void) {
         self.log("Requesting download link for file #\(fileId)...")
-        NexusAPIService.shared.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, apiKey: apiKey) { linkResult in
+        LiveNexusAPIClient.shared.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, apiKey: apiKey) { linkResult in
                     switch linkResult {
                     case .success(let links):
                         guard let firstLink = links.first, let downloadURL = URL(string: firstLink.URI) else {

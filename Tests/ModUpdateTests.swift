@@ -28,7 +28,7 @@ class ModUpdateTests {
         let filesSemaphore = DispatchSemaphore(value: 0)
         var latestFileId: Int? = nil
         
-        NexusAPIService.shared.getModFiles(modId: modId, apiKey: apiKey) { result in
+        LiveNexusAPIClient.shared.getModFiles(modId: modId, apiKey: apiKey) { result in
             switch result {
             case .success(let response):
                 // Filter for main files (category 1) and sort by fileId descending to get the newest,
@@ -55,7 +55,7 @@ class ModUpdateTests {
         let linkSemaphore = DispatchSemaphore(value: 0)
         var downloadURL: URL? = nil
         
-        NexusAPIService.shared.getDownloadLink(modId: modId, fileId: targetFileId, apiKey: apiKey) { result in
+        LiveNexusAPIClient.shared.getDownloadLink(modId: modId, fileId: targetFileId, apiKey: apiKey) { result in
             switch result {
             case .success(let links):
                 downloadURL = URL(string: links.first?.URI ?? "")

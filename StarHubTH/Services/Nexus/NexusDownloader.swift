@@ -23,7 +23,7 @@ struct NexusDownloader {
         guard !apiKey.isEmpty else { return }
 
         // Step 1: get files list to find latest file ID
-        NexusAPIService.shared.getModFiles(modId: nexusId.rawValue, apiKey: apiKey) { result in
+        LiveNexusAPIClient.shared.getModFiles(modId: nexusId.rawValue, apiKey: apiKey) { result in
             switch result {
             case .success(let fileList):
                 let mainFiles = fileList.files.filter { $0.categoryId == 1 }
@@ -35,7 +35,7 @@ struct NexusDownloader {
                 }
 
                 // Step 2: get download link
-                NexusAPIService.shared.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, apiKey: apiKey) { linkResult in
+                LiveNexusAPIClient.shared.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, apiKey: apiKey) { linkResult in
                     switch linkResult {
                     case .success(let links):
                         guard let downloadLink = links.first?.URI, let url = URL(string: downloadLink) else {

@@ -6,8 +6,8 @@ struct ModDetailView: View {
     
     @State private var selectedTab: Int
     @State private var coverUrl: URL? = nil
-    @State private var nexusDescription: [NexusAPIService.DescriptionBlock]? = nil
-    @State private var nexusChangelog: [NexusAPIService.DescriptionBlock]? = nil
+    @State private var nexusDescription: [LiveNexusAPIClient.DescriptionBlock]? = nil
+    @State private var nexusChangelog: [LiveNexusAPIClient.DescriptionBlock]? = nil
     @State private var isLoading: Bool = false
     
     @Environment(\.presentationMode) var presentationMode
@@ -229,25 +229,25 @@ struct ModDetailView: View {
         let dispatchGroup = DispatchGroup()
         
         dispatchGroup.enter()
-        NexusAPIService.shared.getModInfo(modId: nId, apiKey: apiKey) { result in
+        LiveNexusAPIClient.shared.getModInfo(modId: nId, apiKey: apiKey) { result in
             DispatchQueue.main.async {
                 if case .success(let info) = result {
                     if let pic = info.pictureUrl {
                         self.coverUrl = URL(string: pic)
                     }
-                    self.nexusDescription = NexusAPIService.parseBlocks(info.description)
+                    self.nexusDescription = LiveNexusAPIClient.parseBlocks(info.description)
                 }
                 dispatchGroup.leave()
             }
         }
         
         dispatchGroup.enter()
-        NexusAPIService.shared.getModFiles(modId: nId, apiKey: apiKey) { result in
+        LiveNexusAPIClient.shared.getModFiles(modId: nId, apiKey: apiKey) { result in
             DispatchQueue.main.async {
                 if case .success(let files) = result {
                     // Combine changelogs from files, or just take the latest file's changelog
                     if let latestChangelog = files.files.first(where: { !($0.changelogHtml?.isEmpty ?? true) })?.changelogHtml {
-                        self.nexusChangelog = NexusAPIService.parseBlocks(latestChangelog)
+                        self.nexusChangelog = LiveNexusAPIClient.parseBlocks(latestChangelog)
                     }
                 }
                 dispatchGroup.leave()
@@ -383,7 +383,7 @@ struct SpoilerView: View {
 
 struct BBCodeView: View {
     @ObservedObject var vm: StarHubTHViewModel
-    let blocks: [NexusAPIService.DescriptionBlock]
+    let blocks: [LiveNexusAPIClient.DescriptionBlock]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

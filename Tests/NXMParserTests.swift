@@ -72,11 +72,11 @@ class NXMParserTests {
         try? FileManager.default.createDirectory(at: tempModsDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempGameDir) }
         
-        // Step 1: Fetch download link directly from NexusAPIService
+        // Step 1: Fetch download link directly from LiveNexusAPIClient
         let linkSemaphore = DispatchSemaphore(value: 0)
         var downloadURL: URL? = nil
         
-        NexusAPIService.shared.getDownloadLink(modId: modId, fileId: fileId, apiKey: apiKey) { result in
+        LiveNexusAPIClient.shared.getDownloadLink(modId: modId, fileId: fileId, apiKey: apiKey) { result in
             switch result {
             case .success(let links):
                 downloadURL = URL(string: links.first?.URI ?? "")

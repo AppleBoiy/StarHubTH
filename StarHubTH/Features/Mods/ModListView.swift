@@ -898,7 +898,7 @@ struct ModListRow: View {
                 if !vm.nexusApiKey.isEmpty {
                     if let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
                         Button(vm.L(L10n.Settings.nexusEndorse)) {
-                            NexusAPIService.shared.endorseMod(modId: nId, version: mod.version, apiKey: vm.nexusApiKey) { result in
+                            LiveNexusAPIClient.shared.endorseMod(modId: nId, version: mod.version, apiKey: vm.nexusApiKey) { result in
                                 DispatchQueue.main.async {
                                     if case .success = result {
                                         vm.showModal(message: vm.L(L10n.Settings.nexusEndorsed))

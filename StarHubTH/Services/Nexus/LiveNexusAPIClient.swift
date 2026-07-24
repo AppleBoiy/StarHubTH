@@ -1,8 +1,8 @@
 import Foundation
 
 /// A service to interact with the Nexus Mods API (v1).
-final class NexusAPIService {
-    static let shared = NexusAPIService()
+final class LiveNexusAPIClient {
+    static let shared = LiveNexusAPIClient()
     private let baseURL = "https://api.nexusmods.com/v1"
     private let gameName = "stardewvalley"
     

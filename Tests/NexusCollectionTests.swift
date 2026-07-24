@@ -19,7 +19,7 @@ class NexusCollectionTests {
         let expectation = DispatchSemaphore(value: 0)
         let slug = "tckf0m"
         
-        NexusAPIService.shared.getCollectionGraph(slug: slug, apiKey: apiKey) { result in
+        LiveNexusAPIClient.shared.getCollectionGraph(slug: slug, apiKey: apiKey) { result in
             switch result {
             case .success(let collection):
                 SimpleTestFramework.assertEqual(collection.slug, slug, "Slug should match")
