@@ -67,9 +67,33 @@ struct ModDetailView: View {
                             .font(.system(size: 22, weight: .bold))
                             
                         HStack {
-                            Text("v\(mod.version) • \(mod.author)")
-                                .font(.system(size: 14))
-                                .foregroundColor(.secondary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("v\(mod.version) • \(mod.author)")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary)
+                                
+                                HStack(spacing: 8) {
+                                    Text("ID: \(mod.uniqueId)")
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .foregroundColor(.secondary.opacity(0.8))
+                                        .textSelection(.enabled)
+                                    
+                                    if !mod.nexusUrl.isEmpty, let url = URL(string: mod.nexusUrl) {
+                                        Text("•")
+                                            .foregroundColor(.secondary.opacity(0.5))
+                                            
+                                        if let nId = nexusId {
+                                            Link("Nexus (\(String(nId)))", destination: url)
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.blue)
+                                        } else {
+                                            Link("Nexus", destination: url)
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.blue)
+                                        }
+                                    }
+                                }
+                            }
                                 
                             if isLoading {
                                 ProgressView().controlSize(.small)
@@ -150,8 +174,11 @@ struct ModDetailView: View {
                             isLoading = false
                         }
                     } label: {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .help(vm.L(L10n.Tags.sync))
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                            Text(vm.L(L10n.Tags.sync))
+                        }
+                        .help(vm.L(L10n.Tags.sync))
                     }
                 }
                 
@@ -161,8 +188,11 @@ struct ModDetailView: View {
                             NSWorkspace.shared.open(url)
                         }
                     } label: {
-                        Image(systemName: "link")
-                            .help("Open on Nexus Mods")
+                        HStack(spacing: 4) {
+                            Image(systemName: "link")
+                            Text("Nexus")
+                        }
+                        .help("Open on Nexus Mods")
                     }
                 }
             }

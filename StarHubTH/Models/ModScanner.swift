@@ -45,19 +45,25 @@ struct ModScanner {
                 if modsInGroup.count == 1 {
                     scannedMods.append(modsInGroup[0])
                 } else {
+                    let groupAuthor = modsInGroup.first(where: { $0.author != "Unknown" })?.author ?? "Unknown"
+                    let groupInstallDate = modsInGroup.compactMap { $0.installDate }.min()
+                    let groupLastModifiedDate = modsInGroup.compactMap { $0.lastModifiedDate }.max()
+                    
                     let groupMod = ModItem(
                         uniqueId: "",
                         name: groupName,
                         folderName: groupName,
                         version: "",
-                        author: "Group",
+                        author: groupAuthor,
                         description: "\(modsInGroup.count) mods",
                         nexusUrl: "",
                         isEnabled: isEnabled,
                         dependencies: [],
                         children: modsInGroup,
                         isGroup: true,
-                        modTag: modsInGroup.first(where: { !$0.modTag.isEmpty })?.modTag ?? ""
+                        modTag: modsInGroup.first(where: { !$0.modTag.isEmpty })?.modTag ?? "",
+                        installDate: groupInstallDate,
+                        lastModifiedDate: groupLastModifiedDate
                     )
                     scannedMods.append(groupMod)
                 }

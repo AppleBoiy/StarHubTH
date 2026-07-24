@@ -268,7 +268,10 @@ struct SavesView: View {
                 Button {
                     vm.reloadSaves()
                 } label: {
-                    Label(vm.L(L10n.Tags.sync), systemImage: "arrow.triangle.2.circlepath")
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text(vm.L(L10n.Tags.sync))
+                    }
                 }
                 .help(vm.L(L10n.Tags.sync))
             }

@@ -38,6 +38,8 @@ struct ModItem: Identifiable, Equatable {
     var children: [ModItem]?
     var isGroup: Bool = false
     var modTag: String = ""      // inferred type tag (e.g. "Framework", "Cosmetic", "UI", …)
+    var installDate: Date? = nil
+    var lastModifiedDate: Date? = nil
 
     /// Infer a display type tag from manifest metadata.
     static func inferTag(name: String, uniqueId: String, description: String) -> String {
@@ -189,6 +191,8 @@ enum ModSortOption: String, CaseIterable {
     case author
     case version
     case status
+    case dateAddedDesc
+    case dateModifiedDesc
 }
 
 class StarHubTHViewModel: ObservableObject {

@@ -50,7 +50,7 @@ struct ModPacksView: View {
                     if !vm.nexusApiKey.isEmpty {
                         Button {
                             for packMod in pack.mods {
-                                let isInstalled = vm.mods.contains { $0.uniqueId.caseInsensitiveCompare(packMod.uniqueId) == .orderedSame }
+                                let isInstalled = vm.resolveDependencyStatus(for: packMod.uniqueId) != .missing
                                 if !isInstalled, let nexusId = packMod.nexusId {
                                     vm.downloadModFromNexus(nexusId: nexusId) { success in
                                         if success {
@@ -76,7 +76,7 @@ struct ModPacksView: View {
                             }
                             Spacer()
                             
-                            let isInstalled = vm.mods.contains { $0.uniqueId.caseInsensitiveCompare(packMod.uniqueId) == .orderedSame }
+                            let isInstalled = vm.resolveDependencyStatus(for: packMod.uniqueId) != .missing
                             
                             if isInstalled {
                                 Label(vm.L(L10n.ModPacks.installed), systemImage: "checkmark.circle.fill")

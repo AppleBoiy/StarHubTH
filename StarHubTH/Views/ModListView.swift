@@ -64,6 +64,10 @@ struct ModListView: View {
                 case .nameDesc: return a.name.lowercased() > b.name.lowercased()
                 case .author:   return a.author.lowercased() < b.author.lowercased()
                 case .version:  return a.version.lowercased() < b.version.lowercased()
+                case .dateAddedDesc:
+                    return (a.installDate ?? Date.distantPast) > (b.installDate ?? Date.distantPast)
+                case .dateModifiedDesc:
+                    return (a.lastModifiedDate ?? Date.distantPast) > (b.lastModifiedDate ?? Date.distantPast)
                 case .status:
                     if a.isEnabled != b.isEnabled { return a.isEnabled }
                     return a.name.lowercased() < b.name.lowercased()
@@ -229,7 +233,10 @@ struct ModListView: View {
                                 .monospacedDigit()
                         }
                     } else {
-                        Label(vm.L(L10n.Tags.sync), systemImage: "arrow.triangle.2.circlepath")
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                            Text(vm.L(L10n.Tags.sync))
+                        }
                     }
                 }
                 .disabled(vm.isSyncingAllTags)
@@ -244,6 +251,7 @@ struct ModListView: View {
 struct ModControlsBar: View {
     @ObservedObject var vm: StarHubTHViewModel
     let availableTags: [String]
+    @AppStorage("modListViewMode") private var viewMode: String = "list"
 
     var body: some View {
         HStack(spacing: 10) {
@@ -305,6 +313,8 @@ struct ModControlsBar: View {
                     (.nameDesc,              L10n.Mods.sortNameDesc),
                     (.author,               L10n.Mods.sortAuthor),
                     (.version,              L10n.Mods.sortVersion),
+                    (.dateAddedDesc,        L10n.Mods.sortDateAdded),
+                    (.dateModifiedDesc,     L10n.Mods.sortDateModified),
                     (.status,               L10n.Mods.sortStatus),
                 ], id: \.0) { option, key in
                     Button {
@@ -336,6 +346,15 @@ struct ModControlsBar: View {
                 )
             }
             .menuStyle(BorderlessButtonMenuStyle())
+            
+            // View Mode Toggle
+            Picker("", selection: $viewMode) {
+                Image(systemName: "list.bullet").tag("list")
+                Image(systemName: "square.grid.2x2").tag("grid")
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .frame(width: 70)
+            .padding(.leading, 8)
 
             Divider()
                 .frame(height: 18)
@@ -484,27 +503,58 @@ struct ModSectionGroup: View {
     let title: String
     let mods: [ModItem]
     @ObservedObject var vm: StarHubTHViewModel
+    @AppStorage("modListViewMode") private var viewMode: String = "list"
+    @State private var expandedGroups: [String: Bool] = [:]
+
+    let columns = [GridItem(.adaptive(minimum: 280, maximum: 400), spacing: 16)]
 
     var body: some View {
         StandardSection(title: title) {
-            VStack(spacing: 0) {
-                ForEach(Array(mods.enumerated()), id: \.element.id) { idx, mod in
-                    if mod.isGroup, let children = mod.children {
-                        ModGroupRow(mod: mod, children: children, vm: vm)
-                    } else {
-                        ModListRow(mod: mod, vm: vm, isChild: false, isGroupHeader: false, isExpanded: .constant(false))
-                    }
-                    
-                    if idx < mods.count - 1 {
-                        Rectangle()
-                            .fill(Color.primary.opacity(0.05))
-                            .frame(height: 1)
-                            .padding(.leading, 48)
-                            .padding(.vertical, 2)
+            if viewMode == "grid" {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(mods, id: \.id) { mod in
+                        if mod.isGroup, let children = mod.children {
+                            ModCardView(mod: mod, vm: vm, isChild: false, isGroupHeader: true, isExpanded: Binding(
+                                get: { expandedGroups[mod.id, default: false] },
+                                set: { expandedGroups[mod.id] = $0 }
+                            ))
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    expandedGroups[mod.id, default: false].toggle()
+                                }
+                            }
+                            
+                            if expandedGroups[mod.id] == true {
+                                ForEach(children, id: \.id) { child in
+                                    ModCardView(mod: child, vm: vm, isChild: true, isGroupHeader: false, isExpanded: .constant(false))
+                                }
+                            }
+                        } else {
+                            ModCardView(mod: mod, vm: vm, isChild: false, isGroupHeader: false, isExpanded: .constant(false))
+                        }
                     }
                 }
+                .padding(.vertical, 8)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(mods.enumerated()), id: \.element.id) { idx, mod in
+                        if mod.isGroup, let children = mod.children {
+                            ModGroupRow(mod: mod, children: children, vm: vm)
+                        } else {
+                            ModListRow(mod: mod, vm: vm, isChild: false, isGroupHeader: false, isExpanded: .constant(false))
+                        }
+                        
+                        if idx < mods.count - 1 {
+                            Rectangle()
+                                .fill(Color.primary.opacity(0.05))
+                                .frame(height: 1)
+                                .padding(.leading, 48)
+                                .padding(.vertical, 2)
+                        }
+                    }
+                }
+                .padding(.vertical, -8)
             }
-            .padding(.vertical, -8)
         }
     }
 }
@@ -854,5 +904,243 @@ struct ModListRow: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Grid Card Views
+
+struct ModCardView: View {
+    let mod: ModItem
+    @ObservedObject var vm: StarHubTHViewModel
+    var isChild: Bool = false
+    var isGroupHeader: Bool = false
+    @Binding var isExpanded: Bool
+    @State private var isHovered = false
+    @State private var localIsOn: Bool?
+
+    private var hasConfigJson: Bool {
+        guard !mod.isGroup else { return false }
+        let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
+        let path = URL(fileURLWithPath: vm.gameDir)
+            .appendingPathComponent(baseFolder)
+            .appendingPathComponent(mod.folderName)
+            .appendingPathComponent("config.json")
+            .path
+        return FileManager.default.fileExists(atPath: path)
+    }
+
+    private var pendingUpdate: ModUpdateInfo? {
+        guard !mod.isGroup else { return nil }
+        return vm.outOfDateMods.first {
+            $0.name.localizedCaseInsensitiveCompare(mod.name) == .orderedSame ||
+            mod.name.lowercased().contains($0.name.lowercased())
+        }
+    }
+    
+    private var hasMissingDependencies: Bool {
+        guard mod.isEnabled && !mod.isGroup else { return false }
+        for dep in mod.dependencies where dep.isRequired {
+            if vm.resolveDependencyStatus(for: dep.uniqueId) != .active {
+                return true
+            }
+        }
+        return false
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header Row: Title & Toggle
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(mod.name)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(!mod.isEnabled ? .secondary : .primary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        if hasMissingDependencies {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                                .help(vm.L(L10n.Mods.missingDependencies))
+                        }
+                    }
+                    
+                    if mod.name != mod.folderName {
+                        Text(mod.folderName)
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary.opacity(0.7))
+                            .lineLimit(1)
+                    }
+                }
+                
+                Spacer(minLength: 8)
+                
+                // Group Expand Chevron OR Toggle
+                if isGroupHeader {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .padding(4)
+                        .background(Color.secondary.opacity(0.1))
+                        .clipShape(Circle())
+                } else {
+                    Toggle("", isOn: Binding(
+                        get: { localIsOn ?? mod.isEnabled },
+                        set: { newValue in
+                            localIsOn = newValue
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                if newValue != mod.isEnabled {
+                                    vm.toggleMod(mod)
+                                }
+                                localIsOn = nil
+                            }
+                        }
+                    ))
+                    .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+                    .labelsHidden()
+                    .scaleEffect(0.8)
+                }
+            }
+            
+            // Badges & Updates
+            if !mod.modTag.isEmpty && !isChild {
+                Text(vm.localizedTag(mod.modTag))
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.secondary.opacity(0.12))
+                    .cornerRadius(4)
+            }
+            
+            if pendingUpdate != nil {
+                HStack(spacing: 3) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 9))
+                    Text(vm.L(L10n.Mods.updateAvailable))
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.blue)
+                .cornerRadius(4)
+            }
+            
+            // Subtitle
+            if !mod.isGroup {
+                Text("\(mod.author) • v\(mod.version)")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            } else {
+                Text(mod.description)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+            
+            Spacer(minLength: 4)
+            
+            // Footer: Actions
+            // Footer: Actions
+            actionButtons
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isHovered ? Color.primary.opacity(0.08) : Color.primary.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isChild ? Color.accentColor.opacity(0.3) : Color.primary.opacity(0.1), lineWidth: 1)
+        )
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isHovered = hovering
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            if let update = pendingUpdate {
+                updateButton(update: update)
+            }
+            
+            Spacer()
+            
+            folderButton
+            
+            if hasConfigJson {
+                configButton
+            }
+            
+            detailsButton
+        }
+    }
+
+    private func updateButton(update: ModUpdateInfo) -> some View {
+        Button {
+            if !vm.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
+                vm.downloadAndInstallUpdate(for: update, nexusId: nId)
+            } else if let url = URL(string: update.url) {
+                NSWorkspace.shared.open(url)
+            }
+        } label: {
+            Image(systemName: "arrow.down.circle")
+                .font(.system(size: 14))
+                .foregroundColor(vm.downloadingMods.contains(mod.name) ? .gray : .blue)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .pointingHandCursor()
+        .disabled(vm.downloadingMods.contains(mod.name))
+        .help(vm.downloadingMods.contains(mod.name) ? vm.L(L10n.Settings.nexusDownloading) : vm.L(L10n.Mods.updateMod))
+    }
+
+    private var folderButton: some View {
+        Button {
+            let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
+            let url = URL(fileURLWithPath: vm.gameDir)
+                .appendingPathComponent(baseFolder)
+                .appendingPathComponent(mod.folderName)
+            NSWorkspace.shared.open(url)
+        } label: {
+            Image(systemName: "folder")
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .help(vm.L(L10n.Mods.openFolder))
+        .pointingHandCursor()
+    }
+
+    private var configButton: some View {
+        Button {
+            vm.editingModConfig = mod
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .help(vm.L(L10n.Settings.configEditor))
+        .pointingHandCursor()
+    }
+
+    private var detailsButton: some View {
+        Button {
+            vm.viewingModDetails = mod
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .help(vm.L(L10n.Settings.nexusModDetails))
+        .pointingHandCursor()
     }
 }
