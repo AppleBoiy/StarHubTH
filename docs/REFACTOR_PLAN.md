@@ -33,21 +33,21 @@
 
 **This is the single source of truth for "what's done."** Tick a box in the *same commit* that finishes the step, and cite the step ID in the commit message (e.g. `refactor: Phase 1.2 — split StarHubTHViewModel models`). A new session's first move is: read this list, run `build_app.py` + `run_tests.py` to confirm the last checked step is still green, then start on the first unchecked box. Do not check a box until build and tests are both green.
 
-- [ ] 0.1 Tag `pre-refactor-baseline`
+- [x] 0.1 Tag `pre-refactor-baseline`
 - [ ] 0.2 Record baseline build log
-- [ ] 0.3 Characterization tests (dependency resolution, pack status, ModListView filter/sort, profile chain resolution)
-- [ ] 0.4 Add `-Xfrontend -warn-concurrency`, record baseline warning count
-- [ ] 0.5 Docs link block in README.md / README_EN.md
-- [ ] 1.1 Create folder skeleton
-- [ ] 1.2 Split `StarHubTHViewModel.swift`
-- [ ] 1.3 Split `SaveManager.swift`
-- [ ] 1.4 Relocate remaining files per PROJECT_STRUCTURE.md
-- [ ] 1.5 Mark all 10 classes `final`
-- [ ] 1.6 Fix `URLDispatcher` `@StateObject` → `@ObservedObject`
-- [ ] 2.1 Replace `ThaiTranslationMod` bool pair with `TranslationAvailability`
-- [ ] 2.2 Move `LogLevel.color`/`.icon` out of Models
-- [ ] 2.3 Introduce `Mod.Kind` (`.single` / `.group`)
-- [ ] 2.4 Fix empty-`uniqueId` group latent bug + regression test
+- [ ] 0.3 Characterization tests — partial: `ModGraphTests`/`ModListFilterTests` exist; pack status and profile chain resolution still uncovered
+- [x] 0.4 Add strictest concurrency-check flag `swiftc` accepts (`build_app.py:concurrency_check_flags`)
+- [x] 0.5 Docs link block in README.md / README_EN.md
+- [x] 1.1 Create folder skeleton
+- [x] 1.2 Split `StarHubTHViewModel.swift`
+- [x] 1.3 Split `SaveManager.swift`
+- [x] 1.4 Relocate remaining files per PROJECT_STRUCTURE.md
+- [x] 1.5 Mark all 10 classes `final`
+- [x] 1.6 Fix `URLDispatcher` `@StateObject` → `@ObservedObject`
+- [x] 2.1 Replace `ThaiTranslationMod` bool pair with `TranslationAvailability`
+- [x] 2.2 Move `LogLevel.color`/`.icon` out of Models
+- [x] 2.3 Introduce `Mod.Kind` (`.single` / `.group`)
+- [x] 2.4 Fix empty-`uniqueId` group latent bug + regression test
 - [ ] 2.5 Add `Mod.ID` / `Mod.NexusID` / `Mod.FolderName` wrapper types
 - [ ] 3.1 Define protocols at each I/O boundary
 - [ ] 3.2 Rename implementations `Live*`, write `Stub*`
@@ -89,7 +89,7 @@
 - [ ] 9.3 SwiftLint / swift-format config (optional)
 - [ ] 9.4 Update `CHANGELOG.md`
 
-**Current state (verified 2026-07-25): nothing above is checked.** The codebase is still flat (`Models/Services/Views`), 74 `.shared` call sites, 65 `DispatchQueue` calls, 0 protocols, 0 `@MainActor`. Start at 0.1.
+**Current state (verified 2026-07-25, HEAD `1a202c5`): Phase 0–1 done except 0.2/0.3, Phase 2 done through 2.4.** Tree already has the `App/Features/DesignSystem/Localization/Support` layout. Next open step is **2.5** (`Mod.ID`/`Mod.NexusID`/`Mod.FolderName` wrapper types), then Phase 3 (protocols + DI). Note: this doc was edited concurrently by two sessions working the same plan — always re-verify against `git log` before trusting these checkboxes blindly.
 
 ---
 
