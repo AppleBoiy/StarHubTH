@@ -92,24 +92,42 @@ struct ModInstaller {
                 try fm.createDirectory(atPath: modsPath, withIntermediateDirectories: true)
             }
             
-            // 4. For each mod folder, move/copy
+            // 4. For each mod folder, move/copy.
+            //
+            // A multi-mod zip (several manifest.json folders in one archive) must install
+            // atomically — either every mod in it lands, or none do. Without that, a
+            // failure on the Nth folder would leave the first N-1 already moved into
+            // place while the completion reports total failure, so the caller has no idea
+            // some mods changed and never refreshes. To get that: backups made along the
+            // way aren't trashed until the whole loop finishes, so a later failure can
+            // still restore every earlier one from its backup before reporting failure.
             var installedNames: [String] = []
             var movedRoots = Set<String>()
-            
+            var completedInstalls: [(destRoot: URL, destBackup: URL?)] = []
+
+            func rollBackCompletedInstalls() {
+                for entry in completedInstalls.reversed() {
+                    try? fm.removeItem(at: entry.destRoot)
+                    if let backup = entry.destBackup, fm.fileExists(atPath: backup.path) {
+                        try? fm.moveItem(at: backup, to: entry.destRoot)
+                    }
+                }
+            }
+
             for modDir in topLevelDirs {
                 let originalRelative = Array(modDir.pathComponents.dropFirst(rootDir.pathComponents.count))
                 var relative = originalRelative
-                
+
                 // Strip common generic wrapper folders from the root
-                while let first = relative.first, 
+                while let first = relative.first,
                       first.lowercased() == "mods" || first.lowercased() == "stardew valley" || first.lowercased() == "stardewvalley" || first.lowercased() == "stardew_valley" {
                     relative.removeFirst()
                 }
-                
+
                 let rootName = relative.first ?? fallbackRootName ?? "UnknownMod"
                 if movedRoots.contains(rootName) { continue }
                 movedRoots.insert(rootName)
-                
+
                 var srcRoot = rootDir
                 if let firstUnstripped = relative.first, let index = originalRelative.firstIndex(of: firstUnstripped) {
                     for i in 0...index {
@@ -118,38 +136,50 @@ struct ModInstaller {
                 } else {
                     srcRoot = modDir
                 }
-                
+
                 let destRoot = URL(fileURLWithPath: modsPath).appendingPathComponent(rootName)
                 let destBackup = URL(fileURLWithPath: modsPath).appendingPathComponent("\(rootName)_backup_temp")
-                
-                if fm.fileExists(atPath: destRoot.path) {
+                let hadExisting = fm.fileExists(atPath: destRoot.path)
+
+                if hadExisting {
                     if fm.fileExists(atPath: destBackup.path) {
                         try? fm.removeItem(at: destBackup)
                     }
-                    try fm.moveItem(at: destRoot, to: destBackup)
+                    do {
+                        try fm.moveItem(at: destRoot, to: destBackup)
+                    } catch {
+                        rollBackCompletedInstalls()
+                        throw error
+                    }
                 }
-                
+
                 do {
                     if cleanup {
                         try fm.moveItem(at: srcRoot, to: destRoot)
                     } else {
                         try fm.copyItem(at: srcRoot, to: destRoot)
                     }
-                    if fm.fileExists(atPath: destBackup.path) {
-                        try? fm.trashItem(at: destBackup, resultingItemURL: nil)
-                    }
                     installedNames.append(rootName)
+                    completedInstalls.append((destRoot, hadExisting ? destBackup : nil))
                 } catch {
-                    if fm.fileExists(atPath: destBackup.path) && !fm.fileExists(atPath: destRoot.path) {
+                    if hadExisting && !fm.fileExists(atPath: destRoot.path) {
                         try? fm.moveItem(at: destBackup, to: destRoot)
                     }
+                    rollBackCompletedInstalls()
                     throw error
                 }
             }
-            
+
+            // Whole batch succeeded — now it's safe to trash every backup made along the way.
+            for entry in completedInstalls {
+                if let backup = entry.destBackup {
+                    try? fm.trashItem(at: backup, resultingItemURL: nil)
+                }
+            }
+
             if cleanup { try? fm.removeItem(at: rootDir) }
             DispatchQueue.main.async { completion(.success(installedNames)) }
-            
+
         } catch {
             if cleanup { try? fm.removeItem(at: rootDir) }
             DispatchQueue.main.async { completion(.failure(.other(error.localizedDescription))) }
