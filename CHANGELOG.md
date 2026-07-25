@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Internal — Architecture refactor complete**: Finished the multi-phase internal refactor tracked in `docs/REFACTOR_PLAN.md`. The old 2,100-line `StarHubTHViewModel` god object is gone, replaced by one `@MainActor` store per feature (Mods, Saves, Profiles, Mod Packs, Thai Hub, Logs) plus an `AppCoordinator` for cross-store actions. Every I/O boundary (Nexus API, save files, mod install, SMAPI install, file pickers, preferences) now goes through an injectable protocol with a test double, all async work uses `async`/`await` instead of completion handlers, failures throw typed errors instead of silently returning `false`, and the seven largest views were split into smaller focused files. No user-facing behavior changes; a few previously-silent failures (backup/restore errors, Nexus tag sync) now show an actual message instead of failing quietly. Added `scripts/check_standards.py` and a CI build/test workflow to keep the codebase from drifting back.
+
 ## [1.1.3] - 2026-07-24
 
 ### Added
