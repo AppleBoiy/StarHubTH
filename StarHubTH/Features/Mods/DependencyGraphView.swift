@@ -2,12 +2,13 @@ import SwiftUI
 
 struct DependencyGraphView: View {
     let mod: ModItem
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var localizationStore: LocalizationStore
     
     // Check if there are any missing required dependencies
     var missingDeps: [ModDependency] {
         mod.dependencies.filter { dep in
-            dep.isRequired && vm.resolveDependencyStatus(for: dep.uniqueId) != .active
+            dep.isRequired && modsStore.resolveDependencyStatus(for: dep.uniqueId) != .active
         }
     }
     
@@ -16,7 +17,7 @@ struct DependencyGraphView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .center, spacing: 0) {
                     // Parent Mod Node
-                    ModNodeView(mod: mod, status: mod.isEnabled ? .active : .disabled(mod), vm: vm)
+                    ModNodeView(mod: mod, status: mod.isEnabled ? .active : .disabled(mod))
                     
                     if !mod.dependencies.isEmpty {
                         // Horizontal connector
@@ -32,7 +33,7 @@ struct DependencyGraphView: View {
                                     ConnectionPathView(isFirst: idx == 0, isLast: idx == mod.dependencies.count - 1, count: mod.dependencies.count)
                                         .frame(width: 30)
                                     
-                                    DependencyNodeView(dep: dep, vm: vm)
+                                    DependencyNodeView(dep: dep)
                                         .padding(.vertical, 6)
                                 }
                             }
@@ -52,7 +53,7 @@ struct DependencyGraphView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.orange)
                         .font(.system(size: 16))
-                    Text(String(format: vm.L(L10n.Mods.missingDependencies), missingDeps.map { $0.uniqueId.rawValue }.joined(separator: ", ")))
+                    Text(String(format: localizationStore.L(L10n.Mods.missingDependencies), missingDeps.map { $0.uniqueId.rawValue }.joined(separator: ", ")))
                         .font(.system(size: 13, weight: .semibold))
                     Spacer()
                     Button {
@@ -60,7 +61,7 @@ struct DependencyGraphView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.down.app.fill")
-                            Text(vm.L(L10n.ModPacksExtra.downloadMissing))
+                            Text(localizationStore.L(L10n.ModPacksExtra.downloadMissing))
                         }
                     }
                     .buttonStyle(.borderedProminent)
@@ -89,7 +90,6 @@ struct DependencyGraphView: View {
 struct ModNodeView: View {
     let mod: ModItem
     let status: DependencyStatus
-    @ObservedObject var vm: StarHubTHViewModel
     
     var body: some View {
         HStack(spacing: 12) {
@@ -125,11 +125,12 @@ struct ModNodeView: View {
 
 struct DependencyNodeView: View {
     let dep: ModDependency
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var localizationStore: LocalizationStore
     
     var body: some View {
-        let status = vm.resolveDependencyStatus(for: dep.uniqueId)
-        let targetMod = vm.mods.first(where: { $0.uniqueId.rawValue.caseInsensitiveCompare(dep.uniqueId.rawValue) == .orderedSame })
+        let status = modsStore.resolveDependencyStatus(for: dep.uniqueId)
+        let targetMod = modsStore.mods.first(where: { $0.uniqueId.rawValue.caseInsensitiveCompare(dep.uniqueId.rawValue) == .orderedSame })
         
         HStack(spacing: 12) {
             // Icon based on status
@@ -157,7 +158,7 @@ struct DependencyNodeView: View {
                 }
                 
                 HStack(spacing: 6) {
-                    Text(dep.isRequired ? vm.L(L10n.Profiles.required) : vm.L(L10n.Profiles.optional))
+                    Text(dep.isRequired ? localizationStore.L(L10n.Profiles.required) : localizationStore.L(L10n.Profiles.optional))
                         .font(.system(size: 8, weight: .bold))
                         .foregroundColor(dep.isRequired ? .orange : .secondary)
                         .padding(.horizontal, 4)
@@ -229,7 +230,7 @@ struct DependencyNodeView: View {
     
     private func statusText(_ status: DependencyStatus) -> String {
         switch status {
-        case .active: return vm.L(L10n.Mods.enabled)
+        case .active: return localizationStore.L(L10n.Mods.enabled)
         case .disabled: return "Installed (Disabled)"
         case .missing: return "Missing"
         }

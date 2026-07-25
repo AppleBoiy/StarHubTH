@@ -1,25 +1,27 @@
 import SwiftUI
 
 struct ModDetailView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     let mod: ModItem
-    
+
     @State private var selectedTab: Int
     @State private var coverUrl: URL? = nil
     @State private var nexusDescription: [LiveNexusAPIClient.DescriptionBlock]? = nil
     @State private var nexusChangelog: [LiveNexusAPIClient.DescriptionBlock]? = nil
     @State private var isLoading: Bool = false
-    
+
     @Environment(\.presentationMode) var presentationMode
-    
-    init(vm: StarHubTHViewModel, mod: ModItem, initialTab: Int = 0) {
-        self.vm = vm
+
+    init(mod: ModItem, initialTab: Int = 0) {
         self.mod = mod
         self._selectedTab = State(initialValue: initialTab)
     }
     
     var localChangelog: String? {
-        let basePath = (vm.gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
+        let basePath = (appEnvironment.gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
         let modPath = (basePath as NSString).appendingPathComponent(mod.folderName.rawValue)
         let mdPath = (modPath as NSString).appendingPathComponent("CHANGELOG.md")
         let txtPath = (modPath as NSString).appendingPathComponent("changelog.txt")
@@ -38,7 +40,7 @@ struct ModDetailView: View {
     }
     
     private var shortDateFormatter: DateFormatter {
-        vm.makeDateFormatter()
+        localizationStore.makeDateFormatter()
     }
     
     var body: some View {
@@ -72,7 +74,7 @@ struct ModDetailView: View {
                             
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("v\(mod.version) • \(vm.L(mod.author))")
+                                Text("v\(mod.version) • \(localizationStore.L(mod.author))")
                                     .font(.system(size: 14))
                                     .foregroundColor(.secondary)
                                 
@@ -101,14 +103,14 @@ struct ModDetailView: View {
                                 // Dates
                                 HStack(spacing: 8) {
                                     if let added = mod.installDate {
-                                        Text("\(vm.L(L10n.Mods.sortDateAdded)): \(shortDateFormatter.string(from: added))")
+                                        Text("\(localizationStore.L(L10n.Mods.sortDateAdded)): \(shortDateFormatter.string(from: added))")
                                     }
                                     if let modified = mod.lastModifiedDate, modified != mod.installDate {
                                         if mod.installDate != nil {
                                             Text("•")
                                                 .foregroundColor(.secondary.opacity(0.5))
                                         }
-                                        Text("\(vm.L(L10n.Mods.sortDateModified)): \(shortDateFormatter.string(from: modified))")
+                                        Text("\(localizationStore.L(L10n.Mods.sortDateModified)): \(shortDateFormatter.string(from: modified))")
                                     }
                                 }
                                 .font(.system(size: 11))
@@ -137,7 +139,7 @@ struct ModDetailView: View {
                 VStack(alignment: .leading) {
                     if selectedTab == 0 {
                         if let blocks = nexusDescription {
-                            BBCodeView(vm: vm, blocks: blocks)
+                            BBCodeView(blocks: blocks)
                         } else {
                             Text(.init(mod.description))
                                 .font(.body)
@@ -145,23 +147,23 @@ struct ModDetailView: View {
                         }
                     } else if selectedTab == 1 {
                         if let blocks = nexusChangelog {
-                            BBCodeView(vm: vm, blocks: blocks)
+                            BBCodeView(blocks: blocks)
                         } else if let locLog = localChangelog {
                             Text(.init(locLog))
                                 .font(.system(.body, design: .monospaced))
                                 .textSelection(.enabled)
                         } else {
-                            Text(vm.L(L10n.Settings.nexusNoChangelog))
+                            Text(localizationStore.L(L10n.Settings.nexusNoChangelog))
                                 .foregroundColor(.secondary)
                                 .italic()
                         }
                     } else if selectedTab == 2 {
                         if mod.dependencies.isEmpty {
-                            Text(vm.L(L10n.VM.noDependenciesFound))
+                            Text(localizationStore.L(L10n.VM.noDependenciesFound))
                                 .foregroundColor(.secondary)
                                 .italic()
                         } else {
-                            DependencyGraphView(mod: mod, vm: vm)
+                            DependencyGraphView(mod: mod)
                         }
                     }
                 }
@@ -174,9 +176,9 @@ struct ModDetailView: View {
             // Footer
             VStack {
                 Picker("", selection: $selectedTab) {
-                    Text(vm.L(L10n.Settings.nexusDescription)).tag(0)
-                    Text(vm.L(L10n.Settings.nexusChangelog)).tag(1)
-                    Text(vm.L(L10n.Profiles.dependencies)).tag(2)
+                    Text(localizationStore.L(L10n.Settings.nexusDescription)).tag(0)
+                    Text(localizationStore.L(L10n.Settings.nexusChangelog)).tag(1)
+                    Text(localizationStore.L(L10n.Profiles.dependencies)).tag(2)
                 }
                 .pickerStyle(SegmentedPickerStyle())
             }
@@ -187,18 +189,18 @@ struct ModDetailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                if nexusId != nil && !vm.nexusApiKey.isEmpty {
+                if nexusId != nil && !appEnvironment.nexusApiKey.isEmpty {
                     Button {
                         isLoading = true
-                        vm.syncTagFromNexus(for: mod) { success in
+                        appCoordinator.syncTagFromNexus(for: mod) { success in
                             isLoading = false
                         }
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.triangle.2.circlepath")
-                            Text(vm.L(L10n.Tags.sync))
+                            Text(localizationStore.L(L10n.Tags.sync))
                         }
-                        .help(vm.L(L10n.Tags.sync))
+                        .help(localizationStore.L(L10n.Tags.sync))
                     }
                 }
                 
@@ -221,58 +223,34 @@ struct ModDetailView: View {
     }
     
     private func loadNexusInfo() {
-        let apiKey = vm.nexusApiKey
+        let apiKey = appEnvironment.nexusApiKey
         guard !apiKey.isEmpty, let nId = nexusId else { return }
-        
+
         isLoading = true
-        
-        let dispatchGroup = DispatchGroup()
-        
-        dispatchGroup.enter()
-        LiveNexusAPIClient.shared.getModInfo(modId: nId, apiKey: apiKey) { result in
-            DispatchQueue.main.async {
-                if case .success(let info) = result {
-                    if let pic = info.pictureUrl {
-                        self.coverUrl = URL(string: pic)
-                    }
-                    self.nexusDescription = LiveNexusAPIClient.parseBlocks(info.description)
-                }
-                dispatchGroup.leave()
-            }
-        }
-        
-        dispatchGroup.enter()
-        LiveNexusAPIClient.shared.getModFiles(modId: nId, apiKey: apiKey) { result in
-            DispatchQueue.main.async {
-                if case .success(let files) = result {
-                    // Combine changelogs from files, or just take the latest file's changelog
-                    if let latestChangelog = files.files.first(where: { !($0.changelogHtml?.isEmpty ?? true) })?.changelogHtml {
-                        self.nexusChangelog = LiveNexusAPIClient.parseBlocks(latestChangelog)
-                    }
-                }
-                dispatchGroup.leave()
-            }
-        }
-        
-        dispatchGroup.notify(queue: .main) {
+        modsStore.fetchNexusInfo(nexusId: nId, apiKey: apiKey) { coverUrl, description, changelog in
+            self.coverUrl = coverUrl
+            if let description { self.nexusDescription = description }
+            if let changelog { self.nexusChangelog = changelog }
             self.isLoading = false
         }
     }
 }
 
 struct DependencyRow: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     let dependency: ModDependency
     
     var body: some View {
-        let status = vm.resolveDependencyStatus(for: dependency.uniqueId)
+        let status = modsStore.resolveDependencyStatus(for: dependency.uniqueId)
         
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(dependency.uniqueId.rawValue)
                     .font(.system(size: 13, weight: .bold))
                 if dependency.isRequired {
-                    Text(vm.L(L10n.ModDetailExtra.required))
+                    Text(localizationStore.L(L10n.ModDetailExtra.required))
                         .font(.system(size: 10, weight: .bold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -280,7 +258,7 @@ struct DependencyRow: View {
                         .foregroundColor(.red)
                         .cornerRadius(4)
                 } else {
-                    Text(vm.L(L10n.ModDetailExtra.optional))
+                    Text(localizationStore.L(L10n.ModDetailExtra.optional))
                         .font(.system(size: 10, weight: .bold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -294,14 +272,14 @@ struct DependencyRow: View {
             
             switch status {
             case .active:
-                Label(vm.L(L10n.ModDetailExtra.installedAndEnabled), systemImage: "checkmark.circle.fill")
+                Label(localizationStore.L(L10n.ModDetailExtra.installedAndEnabled), systemImage: "checkmark.circle.fill")
                     .foregroundColor(.green)
                     .font(.system(size: 12, weight: .medium))
             case .disabled(let mod):
                 Button {
-                    vm.toggleMod(mod)
+                    appCoordinator.toggleMod(mod)
                 } label: {
-                    Label(vm.L(L10n.ModDetailExtra.enableMod), systemImage: "power")
+                    Label(localizationStore.L(L10n.ModDetailExtra.enableMod), systemImage: "power")
                 }
                 .buttonStyle(PlainButtonStyle())
                 .padding(.horizontal, 8)
@@ -315,7 +293,7 @@ struct DependencyRow: View {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
-                    Label(vm.L(L10n.ModDetailExtra.searchNexus), systemImage: "magnifyingglass")
+                    Label(localizationStore.L(L10n.ModDetailExtra.searchNexus), systemImage: "magnifyingglass")
                 }
                 .buttonStyle(PlainButtonStyle())
                 .padding(.horizontal, 8)
@@ -336,7 +314,7 @@ struct DependencyRow: View {
 }
 
 struct SpoilerView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var localizationStore: LocalizationStore
     let title: String
     let content: String
     @State private var isExpanded = false
@@ -347,7 +325,7 @@ struct SpoilerView: View {
                 HStack {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 11, weight: .bold))
-                    let displayTitle = (title.isEmpty || title == "tag_show_spoiler") ? vm.L(L10n.Tags.spoiler) : title
+                    let displayTitle = (title.isEmpty || title == "tag_show_spoiler") ? localizationStore.L(L10n.Tags.spoiler) : title
                     Text(displayTitle)
                         .font(.system(size: 13, weight: .semibold))
                     Spacer()
@@ -382,7 +360,6 @@ struct SpoilerView: View {
 }
 
 struct BBCodeView: View {
-    @ObservedObject var vm: StarHubTHViewModel
     let blocks: [LiveNexusAPIClient.DescriptionBlock]
     
     var body: some View {
@@ -404,7 +381,7 @@ struct BBCodeView: View {
                         }
                     }
                 case .spoiler(let title, let content):
-                    SpoilerView(vm: vm, title: title, content: content)
+                    SpoilerView(title: title, content: content)
                 }
             }
         }

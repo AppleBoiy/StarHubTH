@@ -130,6 +130,52 @@ final class ModsStore: ObservableObject {
         }
     }
 
+    /// Phase 4.9: replaces ModDetailView's direct `LiveNexusAPIClient.shared.getModInfo`/
+    /// `.getModFiles` calls — fetches a mod's Nexus cover image, description, and latest
+    /// changelog for display.
+    func fetchNexusInfo(
+        nexusId: Int,
+        apiKey: String,
+        completion: @escaping (_ coverUrl: URL?, _ description: [LiveNexusAPIClient.DescriptionBlock]?, _ changelog: [LiveNexusAPIClient.DescriptionBlock]?) -> Void
+    ) {
+        let dispatchGroup = DispatchGroup()
+        var coverUrl: URL?
+        var description: [LiveNexusAPIClient.DescriptionBlock]?
+        var changelog: [LiveNexusAPIClient.DescriptionBlock]?
+
+        dispatchGroup.enter()
+        nexusAPIClient.getModInfo(modId: nexusId, apiKey: apiKey) { result in
+            if case .success(let info) = result {
+                if let pic = info.pictureUrl { coverUrl = URL(string: pic) }
+                description = LiveNexusAPIClient.parseBlocks(info.description)
+            }
+            dispatchGroup.leave()
+        }
+
+        dispatchGroup.enter()
+        nexusAPIClient.getModFiles(modId: nexusId, apiKey: apiKey) { result in
+            if case .success(let files) = result {
+                if let latestChangelog = files.files.first(where: { !($0.changelogHtml?.isEmpty ?? true) })?.changelogHtml {
+                    changelog = LiveNexusAPIClient.parseBlocks(latestChangelog)
+                }
+            }
+            dispatchGroup.leave()
+        }
+
+        dispatchGroup.notify(queue: .main) {
+            completion(coverUrl, description, changelog)
+        }
+    }
+
+    /// Phase 4.9: replaces ModListView's direct `LiveNexusAPIClient.shared.endorseMod` call.
+    func endorseMod(nexusId: Int, version: String?, apiKey: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        nexusAPIClient.endorseMod(modId: nexusId, version: version, apiKey: apiKey) { result in
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
+    }
+
     func syncAllTagsFromNexus(nexusApiKey: String, refresh: @escaping () -> Void) {
         guard !nexusApiKey.isEmpty else { return }
 

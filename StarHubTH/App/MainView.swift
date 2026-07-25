@@ -50,11 +50,11 @@ struct MainView: View {
             ModPacksView()
         } else if currentTab == "Mods" {
             if let mod = vm.editingModConfig {
-                ModConfigEditorView(vm: vm, mod: mod)
+                ModConfigEditorView(mod: mod)
             } else if let mod = vm.viewingModDetails {
-                ModDetailView(vm: vm, mod: mod)
+                ModDetailView(mod: mod)
             } else {
-                ModListView(vm: vm)
+                ModListView()
             }
         } else if currentTab == "Saves" {
             if let save = vm.viewingSaveTimeline {
@@ -655,7 +655,7 @@ struct UpdatesView: View {
             .padding(20)
         }
         .sheet(item: $viewingModDetails) { modItem in
-            ModDetailView(vm: vm, mod: modItem, initialTab: 1)
+            ModDetailView(mod: modItem, initialTab: 1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))

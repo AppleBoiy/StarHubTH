@@ -31,7 +31,11 @@ final class ConfigTreeNode: Identifiable {
 }
 
 struct ModConfigEditorView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var alertStore: AlertStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     let mod: ModItem
     
     @State private var configText: String = ""
@@ -42,7 +46,7 @@ struct ModConfigEditorView: View {
     @State private var searchText: String = ""
     
     var configPath: String {
-        let basePath = (vm.gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
+        let basePath = (appEnvironment.gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
         let modPath = (basePath as NSString).appendingPathComponent(mod.folderName.rawValue)
         return (modPath as NSString).appendingPathComponent("config.json")
     }
@@ -82,7 +86,7 @@ struct ModConfigEditorView: View {
                 if configItems.isEmpty {
                     VStack {
                         Spacer()
-                        Text(vm.L(L10n.Settings.configNoSettingsFound))
+                        Text(localizationStore.L(L10n.Settings.configNoSettingsFound))
                             .foregroundColor(.secondary)
                         Spacer()
                     }
@@ -94,7 +98,7 @@ struct ModConfigEditorView: View {
                             }
                             
                             if filteredItems.isEmpty && !searchText.isEmpty {
-                                Text(String(format: vm.L(L10n.Settings.configNoSettingsFoundFor), searchText))
+                                Text(String(format: localizationStore.L(L10n.Settings.configNoSettingsFoundFor), searchText))
                                     .foregroundColor(.secondary)
                                     .padding()
                             } else {
@@ -103,7 +107,7 @@ struct ModConfigEditorView: View {
                                 let rootGroups = tree.filter { $0.item == nil }
                                 
                                 if !rootLeaves.isEmpty {
-                                    StandardSection(title: vm.L(L10n.Settings.settings)) {
+                                    StandardSection(title: localizationStore.L(L10n.Settings.settings)) {
                                         VStack(spacing: 0) {
                                             ForEach(Array(rootLeaves.enumerated()), id: \.element.id) { index, leafNode in
                                                 if let item = leafNode.item {
@@ -130,7 +134,7 @@ struct ModConfigEditorView: View {
                 }
             } else {
                 VStack {
-                    StandardSection(title: vm.L(L10n.Settings.configRawJson)) {
+                    StandardSection(title: localizationStore.L(L10n.Settings.configRawJson)) {
                         TextEditor(text: $configText)
                             .font(.system(size: 13, design: .monospaced))
                             .scrollContentBackground(.hidden)
@@ -155,23 +159,23 @@ struct ModConfigEditorView: View {
             // Footer Action Bar
             HStack {
                 Menu {
-                    Button(action: { vm.backupMod(mod: mod) }) {
-                        Label(vm.L(L10n.Settings.configBackupMod), systemImage: "arrow.down.doc")
+                    Button(action: { appCoordinator.backupMod(mod: mod) }) {
+                        Label(localizationStore.L(L10n.Settings.configBackupMod), systemImage: "arrow.down.doc")
                     }
-                    Button(action: { vm.restoreModZip(mod: mod) }) {
-                        Label(vm.L(L10n.Settings.configRestoreMod), systemImage: "arrow.up.doc")
+                    Button(action: { appCoordinator.restoreModZip(mod: mod) }) {
+                        Label(localizationStore.L(L10n.Settings.configRestoreMod), systemImage: "arrow.up.doc")
                     }
                     Divider()
                     Button(action: { restoreConfigBackup() }) {
-                        Label(vm.L(L10n.Settings.configRestoreConfig), systemImage: "arrow.counterclockwise")
+                        Label(localizationStore.L(L10n.Settings.configRestoreConfig), systemImage: "arrow.counterclockwise")
                     }
                 } label: {
-                    Label(vm.L(L10n.Settings.configBackupAndRestore), systemImage: "ellipsis.circle")
+                    Label(localizationStore.L(L10n.Settings.configBackupAndRestore), systemImage: "ellipsis.circle")
                 }
                 .menuStyle(.borderedButton)
                 
                 if isInvalidJson {
-                    Text(vm.L(L10n.Settings.configInvalidJson))
+                    Text(localizationStore.L(L10n.Settings.configInvalidJson))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.red)
                         .padding(.leading, 8)
@@ -184,14 +188,14 @@ struct ModConfigEditorView: View {
                     isInvalidJson = false
                     parseToVisual()
                 }) {
-                    Text(vm.L(L10n.Settings.configReset))
+                    Text(localizationStore.L(L10n.Settings.configReset))
                 }
                 .buttonStyle(.bordered)
                 .disabled(configText == originalText)
                 
-                Button(vm.L(L10n.Saves.saveChanges)) {
+                Button(localizationStore.L(L10n.Saves.saveChanges)) {
                     if saveConfig() {
-                        vm.editingModConfig = nil
+                        modsStore.editingModConfig = nil
                     }
                 }
                 .keyboardShortcut(.defaultAction)
@@ -201,12 +205,12 @@ struct ModConfigEditorView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
         }
-        .searchable(text: $searchText, prompt: Text(vm.L(L10n.Settings.configSearchPlaceholder)))
+        .searchable(text: $searchText, prompt: Text(localizationStore.L(L10n.Settings.configSearchPlaceholder)))
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Picker("", selection: $selectedTab) {
-                    Text(vm.L(L10n.Settings.configVisualEditor)).tag(0)
-                    Text(vm.L(L10n.Settings.configCodeEditor)).tag(1)
+                    Text(localizationStore.L(L10n.Settings.configVisualEditor)).tag(0)
+                    Text(localizationStore.L(L10n.Settings.configCodeEditor)).tag(1)
                 }
                 .pickerStyle(.segmented)
             }
@@ -361,10 +365,10 @@ struct ModConfigEditorView: View {
             }
             try configText.write(toFile: configPath, atomically: true, encoding: .utf8)
             originalText = configText
-            vm.showModal(message: vm.L(L10n.Settings.configSaved))
+            alertStore.show(localizationStore.L(L10n.Settings.configSaved))
             return true
         } catch {
-            vm.showModal(message: "Error saving config.json: \(error.localizedDescription)")
+            alertStore.show("Error saving config.json: \(error.localizedDescription)")
             return false
         }
     }
@@ -379,7 +383,7 @@ struct ModConfigEditorView: View {
                 originalText = content
                 validateJson(configText)
                 parseToVisual()
-                vm.showModal(message: "Restored config from config.json.bak successfully!")
+                alertStore.show("Restored config from config.json.bak successfully!")
                 return
             } catch {
                 print("Failed to restore .bak: \(error)")
@@ -398,9 +402,9 @@ struct ModConfigEditorView: View {
                 originalText = content
                 validateJson(configText)
                 parseToVisual()
-                vm.showModal(message: "Loaded config from \(url.lastPathComponent) successfully!")
+                alertStore.show("Loaded config from \(url.lastPathComponent) successfully!")
             } catch {
-                vm.showModal(message: "Failed to load config: \(error.localizedDescription)")
+                alertStore.show("Failed to load config: \(error.localizedDescription)")
             }
         }
     }

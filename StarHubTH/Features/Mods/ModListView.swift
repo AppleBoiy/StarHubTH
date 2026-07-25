@@ -3,14 +3,18 @@ import SwiftUI
 // MARK: - ModListView
 
 struct ModListView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var alertStore: AlertStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     @State private var searchText = ""
     @State private var isDropTargeted = false
 
     // ── Derived: all unique tags present in the loaded mods ──────────
     private var availableTags: [String] {
         var tags = Set<String>()
-        for mod in vm.mods {
+        for mod in modsStore.mods {
             if case .group(let children) = mod.kind {
                 for c in children where !c.modTag.isEmpty { tags.insert(c.modTag) }
             } else if !mod.modTag.isEmpty {
@@ -25,24 +29,24 @@ struct ModListView: View {
     private var processedMods: [ModItem] {
         ModListFilter(
             searchText: searchText,
-            status: vm.modFilterStatus,
-            tag: vm.modFilterTag,
-            date: vm.modFilterDate,
-            sort: vm.modSortOption
+            status: modsStore.modFilterStatus,
+            tag: modsStore.modFilterTag,
+            date: modsStore.modFilterDate,
+            sort: modsStore.modSortOption
         )
-        .apply(to: vm.mods)
+        .apply(to: modsStore.mods)
     }
 
     var body: some View {
         VStack(spacing: 0) {
             // ── Controls bar ──────────────────────────────────────────
-            ModControlsBar(vm: vm, availableTags: availableTags)
+            ModControlsBar(availableTags: availableTags)
 
             Divider()
 
             // ── Update banner (only when updates exist) ───────────────
-            if !vm.outOfDateMods.isEmpty {
-                ModUpdateBanner(vm: vm)
+            if !modsStore.outOfDateMods.isEmpty {
+                ModUpdateBanner()
                 Divider()
             }
 
@@ -55,18 +59,18 @@ struct ModListView: View {
                                 Image(systemName: "puzzlepiece.extension")
                                     .font(.system(size: 48))
                                     .foregroundColor(.secondary.opacity(0.5))
-                                if vm.mods.isEmpty {
-                                    Text(vm.L(L10n.Mods.noModsInstalled))
+                                if modsStore.mods.isEmpty {
+                                    Text(localizationStore.L(L10n.Mods.noModsInstalled))
                                         .multilineTextAlignment(.center)
                                         .font(.system(size: 14))
                                         .foregroundColor(.secondary)
                                     // Empty-state install hint
                                     Button {
-                                        vm.openInstallModPanel()
+                                        appCoordinator.openInstallModPanel()
                                     } label: {
                                         HStack(spacing: 6) {
                                             Image(systemName: "plus.circle.fill")
-                                            Text(vm.L(L10n.Mods.installMod))
+                                            Text(localizationStore.L(L10n.Mods.installMod))
                                         }
                                         .font(.system(size: 13, weight: .medium))
                                         .foregroundColor(.white)
@@ -79,7 +83,7 @@ struct ModListView: View {
                                     .pointingHandCursor()
                                     .padding(.top, 4)
                                 } else {
-                                    Text(String(format: vm.L(L10n.Mods.noModFound), searchText.isEmpty ? "-" : searchText))
+                                    Text(String(format: localizationStore.L(L10n.Mods.noModFound), searchText.isEmpty ? "-" : searchText))
                                         .multilineTextAlignment(.center)
                                         .font(.system(size: 14))
                                         .foregroundColor(.secondary)
@@ -90,20 +94,20 @@ struct ModListView: View {
                         } else {
                             // When status filter is "All" → split into enabled/disabled sections
                             // When status filter is set   → single section
-                            if vm.modFilterStatus == .all {
+                            if modsStore.modFilterStatus == .all {
                                 let enabled  = processedMods.filter { $0.isEnabled }
                                 let disabled = processedMods.filter { !$0.isEnabled }
                                 if !enabled.isEmpty {
-                                    ModSectionGroup(title: vm.L(L10n.Mods.enabled), mods: enabled, vm: vm)
+                                    ModSectionGroup(title: localizationStore.L(L10n.Mods.enabled), mods: enabled)
                                 }
                                 if !disabled.isEmpty {
-                                    ModSectionGroup(title: vm.L(L10n.Mods.disabled), mods: disabled, vm: vm)
+                                    ModSectionGroup(title: localizationStore.L(L10n.Mods.disabled), mods: disabled)
                                 }
                             } else {
-                                let sectionTitle = vm.modFilterStatus == .enabled
-                                    ? vm.L(L10n.Mods.enabled)
-                                    : vm.L(L10n.Mods.disabled)
-                                ModSectionGroup(title: sectionTitle, mods: processedMods, vm: vm)
+                                let sectionTitle = modsStore.modFilterStatus == .enabled
+                                    ? localizationStore.L(L10n.Mods.enabled)
+                                    : localizationStore.L(L10n.Mods.disabled)
+                                ModSectionGroup(title: sectionTitle, mods: processedMods)
                             }
                         }
                     }
@@ -126,7 +130,7 @@ struct ModListView: View {
                                 Image(systemName: "arrow.down.circle.fill")
                                     .font(.system(size: 40))
                                     .foregroundColor(.accentColor)
-                                Text(vm.L(L10n.Mods.installDropHint))
+                                Text(localizationStore.L(L10n.Mods.installDropHint))
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(.accentColor)
                             }
@@ -136,14 +140,14 @@ struct ModListView: View {
                 }
 
                 // ── Installing spinner overlay ─────────────────────────
-                if vm.isInstallingMod {
+                if modsStore.isInstallingMod {
                     ZStack {
                         Color.black.opacity(0.25)
                             .ignoresSafeArea()
                         VStack(spacing: 12) {
                             ProgressView()
                                 .scaleEffect(1.2)
-                            Text(vm.L(L10n.Mods.installing))
+                            Text(localizationStore.L(L10n.Mods.installing))
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(.primary)
                         }
@@ -167,7 +171,7 @@ struct ModListView: View {
                         var isDir: ObjCBool = false
                         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
                         guard ext == "zip" || isDir.boolValue else { return }
-                        DispatchQueue.main.async { vm.installMod(url: url) }
+                        DispatchQueue.main.async { appCoordinator.installMod(url: url) }
                     }
                     handled = true
                 }
@@ -175,30 +179,30 @@ struct ModListView: View {
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
-        .searchable(text: $searchText, prompt: Text(vm.L(L10n.Mods.searchMods)))
+        .searchable(text: $searchText, prompt: Text(localizationStore.L(L10n.Mods.searchMods)))
         .toolbar {
             ToolbarItem {
                 Button {
-                    vm.scanMods()
-                    if !vm.nexusApiKey.isEmpty {
-                        vm.syncAllTagsFromNexus()
+                    appCoordinator.scanMods()
+                    if !appEnvironment.nexusApiKey.isEmpty {
+                        appCoordinator.syncAllTagsFromNexus()
                     }
                 } label: {
-                    if vm.isSyncingAllTags {
+                    if modsStore.isSyncingAllTags {
                         HStack(spacing: 4) {
                             ProgressView().controlSize(.small).scaleEffect(0.7)
-                            Text("\(Int(vm.syncAllTagsProgress * 100))%")
+                            Text("\(Int(modsStore.syncAllTagsProgress * 100))%")
                                 .monospacedDigit()
                         }
                     } else {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.triangle.2.circlepath")
-                            Text(vm.L(L10n.Tags.sync))
+                            Text(localizationStore.L(L10n.Tags.sync))
                         }
                     }
                 }
-                .disabled(vm.isSyncingAllTags)
-                .help(vm.L(L10n.Tags.sync))
+                .disabled(modsStore.isSyncingAllTags)
+                .help(localizationStore.L(L10n.Tags.sync))
             }
         }
     }
@@ -207,25 +211,27 @@ struct ModListView: View {
 // MARK: - Controls Bar
 
 struct ModControlsBar: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var appCoordinator: AppCoordinator
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var modsStore: ModsStore
     let availableTags: [String]
     @AppStorage("modListViewMode") private var viewMode: String = "list"
 
     var body: some View {
         HStack(spacing: 10) {
             // Status filter pills
-            StatusFilterPills(vm: vm)
+            StatusFilterPills()
 
             Spacer()
 
             // Type filter menu
             Menu {
                 Button {
-                    vm.modFilterTag = ""
+                    modsStore.modFilterTag = ""
                 } label: {
                     HStack {
-                        Text(vm.L(L10n.Mods.filterTypeAll))
-                        if vm.modFilterTag.isEmpty {
+                        Text(localizationStore.L(L10n.Mods.filterTypeAll))
+                        if modsStore.modFilterTag.isEmpty {
                             Image(systemName: "checkmark")
                         }
                     }
@@ -233,11 +239,11 @@ struct ModControlsBar: View {
                 if !availableTags.isEmpty { Divider() }
                 ForEach(availableTags, id: \.self) { tag in
                     Button {
-                        vm.modFilterTag = tag
+                        modsStore.modFilterTag = tag
                     } label: {
                         HStack {
-                            Text(vm.localizedTag(tag))
-                            if vm.modFilterTag == tag {
+                            Text(localizationStore.localizedTag(tag))
+                            if modsStore.modFilterTag == tag {
                                 Image(systemName: "checkmark")
                             }
                         }
@@ -247,19 +253,19 @@ struct ModControlsBar: View {
                 HStack(spacing: 4) {
                     Image(systemName: "tag")
                         .font(.system(size: 11))
-                    Text(vm.modFilterTag.isEmpty ? vm.L(L10n.Mods.filterTypeAll) : vm.localizedTag(vm.modFilterTag))
+                    Text(modsStore.modFilterTag.isEmpty ? localizationStore.L(L10n.Mods.filterTypeAll) : localizationStore.localizedTag(modsStore.modFilterTag))
                         .font(.system(size: 12))
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: true)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9, weight: .semibold))
                 }
-                .foregroundColor(vm.modFilterTag.isEmpty ? .secondary : .accentColor)
+                .foregroundColor(modsStore.modFilterTag.isEmpty ? .secondary : .accentColor)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(vm.modFilterTag.isEmpty
+                        .fill(modsStore.modFilterTag.isEmpty
                               ? Color.primary.opacity(0.06)
                               : Color.accentColor.opacity(0.12))
                 )
@@ -275,11 +281,11 @@ struct ModControlsBar: View {
                     (.past30Days,               L10n.Mods.filterDate30d),
                 ], id: \.0) { option, key in
                     Button {
-                        vm.modFilterDate = option
+                        modsStore.modFilterDate = option
                     } label: {
                         HStack {
-                            Text(vm.L(key))
-                            if vm.modFilterDate == option {
+                            Text(localizationStore.L(key))
+                            if modsStore.modFilterDate == option {
                                 Image(systemName: "checkmark")
                             }
                         }
@@ -289,21 +295,21 @@ struct ModControlsBar: View {
                 HStack(spacing: 4) {
                     Image(systemName: "calendar")
                         .font(.system(size: 11))
-                    Text(vm.modFilterDate == .all ? vm.L(L10n.Mods.filterDateAll) :
-                            (vm.modFilterDate == .past24Hours ? vm.L(L10n.Mods.filterDate24h) :
-                                (vm.modFilterDate == .past7Days ? vm.L(L10n.Mods.filterDate7d) : vm.L(L10n.Mods.filterDate30d))))
+                    Text(modsStore.modFilterDate == .all ? localizationStore.L(L10n.Mods.filterDateAll) :
+                            (modsStore.modFilterDate == .past24Hours ? localizationStore.L(L10n.Mods.filterDate24h) :
+                                (modsStore.modFilterDate == .past7Days ? localizationStore.L(L10n.Mods.filterDate7d) : localizationStore.L(L10n.Mods.filterDate30d))))
                         .font(.system(size: 12))
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: true)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9, weight: .semibold))
                 }
-                .foregroundColor(vm.modFilterDate == .all ? .secondary : .accentColor)
+                .foregroundColor(modsStore.modFilterDate == .all ? .secondary : .accentColor)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(vm.modFilterDate == .all
+                        .fill(modsStore.modFilterDate == .all
                               ? Color.primary.opacity(0.06)
                               : Color.accentColor.opacity(0.12))
                 )
@@ -322,11 +328,11 @@ struct ModControlsBar: View {
                     (.status,               L10n.Mods.sortStatus),
                 ], id: \.0) { option, key in
                     Button {
-                        vm.modSortOption = option
+                        modsStore.modSortOption = option
                     } label: {
                         HStack {
-                            Text(vm.L(key))
-                            if vm.modSortOption == option {
+                            Text(localizationStore.L(key))
+                            if modsStore.modSortOption == option {
                                 Image(systemName: "checkmark")
                             }
                         }
@@ -336,7 +342,7 @@ struct ModControlsBar: View {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up.arrow.down")
                         .font(.system(size: 11))
-                    Text(vm.L(L10n.Mods.sortBy))
+                    Text(localizationStore.L(L10n.Mods.sortBy))
                         .font(.system(size: 12))
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: true)
@@ -367,12 +373,12 @@ struct ModControlsBar: View {
 
             // Install Mod button
             Button {
-                vm.openInstallModPanel()
+                appCoordinator.openInstallModPanel()
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 12))
-                    Text(vm.L(L10n.Mods.installMod))
+                    Text(localizationStore.L(L10n.Mods.installMod))
                         .font(.system(size: 12, weight: .medium))
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: true)
@@ -385,7 +391,7 @@ struct ModControlsBar: View {
             }
             .buttonStyle(PlainButtonStyle())
             .pointingHandCursor()
-            .help(vm.L(L10n.Mods.installDropHint))
+            .help(localizationStore.L(L10n.Mods.installDropHint))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -395,30 +401,31 @@ struct ModControlsBar: View {
 // MARK: - Status Filter Pills
 
 struct StatusFilterPills: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var modsStore: ModsStore
 
     private var options: [(ModFilterStatus, String)] {[
-        (.all,      vm.L(L10n.Mods.filterAll)),
-        (.enabled,  vm.L(L10n.Mods.filterEnabled)),
-        (.disabled, vm.L(L10n.Mods.filterDisabled)),
+        (.all,      localizationStore.L(L10n.Mods.filterAll)),
+        (.enabled,  localizationStore.L(L10n.Mods.filterEnabled)),
+        (.disabled, localizationStore.L(L10n.Mods.filterDisabled)),
     ]}
 
     var body: some View {
         HStack(spacing: 2) {
             ForEach(options, id: \.0.rawValue) { status, label in
                 Button {
-                    vm.modFilterStatus = status
+                    modsStore.modFilterStatus = status
                 } label: {
                     Text(label)
-                        .font(.system(size: 12, weight: vm.modFilterStatus == status ? .semibold : .regular))
+                        .font(.system(size: 12, weight: modsStore.modFilterStatus == status ? .semibold : .regular))
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: true)
-                        .foregroundColor(vm.modFilterStatus == status ? .white : .primary)
+                        .foregroundColor(modsStore.modFilterStatus == status ? .white : .primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
                         .background(
                             RoundedRectangle(cornerRadius: 6)
-                                .fill(vm.modFilterStatus == status ? Color.accentColor : Color.clear)
+                                .fill(modsStore.modFilterStatus == status ? Color.accentColor : Color.clear)
                         )
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -436,7 +443,8 @@ struct StatusFilterPills: View {
 // MARK: - Update Banner
 
 struct ModUpdateBanner: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var modsStore: ModsStore
     @State private var isExpanded = false
 
     var body: some View {
@@ -448,7 +456,7 @@ struct ModUpdateBanner: View {
                     Image(systemName: "arrow.down.circle.fill")
                         .foregroundColor(.blue)
                         .font(.system(size: 14))
-                    Text(String(format: vm.L(L10n.Mods.updateCount), Int64(vm.outOfDateMods.count)))
+                    Text(String(format: localizationStore.L(L10n.Mods.updateCount), Int64(modsStore.outOfDateMods.count)))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.primary)
                     Spacer()
@@ -466,7 +474,7 @@ struct ModUpdateBanner: View {
 
             if isExpanded {
                 VStack(spacing: 0) {
-                    ForEach(vm.outOfDateMods) { update in
+                    ForEach(modsStore.outOfDateMods) { update in
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(update.name)
@@ -484,7 +492,7 @@ struct ModUpdateBanner: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "arrow.down.circle")
                                         .font(.system(size: 11))
-                                    Text(vm.L(L10n.Mods.updateMod))
+                                    Text(localizationStore.L(L10n.Mods.updateMod))
                                         .font(.system(size: 11, weight: .medium))
                                 }
                                 .foregroundColor(.white)
@@ -512,7 +520,6 @@ struct ModUpdateBanner: View {
 struct ModSectionGroup: View {
     let title: String
     let mods: [ModItem]
-    @ObservedObject var vm: StarHubTHViewModel
     @AppStorage("modListViewMode") private var viewMode: String = "list"
     @State private var expandedGroups: [ModItem.FolderName: Bool] = [:]
 
@@ -524,7 +531,7 @@ struct ModSectionGroup: View {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(mods, id: \.id) { mod in
                         if case .group(let children) = mod.kind {
-                            ModCardView(mod: mod, vm: vm, isChild: false, isGroupHeader: true, isExpanded: Binding(
+                            ModCardView(mod: mod, isChild: false, isGroupHeader: true, isExpanded: Binding(
                                 get: { expandedGroups[mod.id, default: false] },
                                 set: { expandedGroups[mod.id] = $0 }
                             ))
@@ -536,11 +543,11 @@ struct ModSectionGroup: View {
                             
                             if expandedGroups[mod.id] == true {
                                 ForEach(children, id: \.id) { child in
-                                    ModCardView(mod: child, vm: vm, isChild: true, isGroupHeader: false, isExpanded: .constant(false))
+                                    ModCardView(mod: child, isChild: true, isGroupHeader: false, isExpanded: .constant(false))
                                 }
                             }
                         } else {
-                            ModCardView(mod: mod, vm: vm, isChild: false, isGroupHeader: false, isExpanded: .constant(false))
+                            ModCardView(mod: mod, isChild: false, isGroupHeader: false, isExpanded: .constant(false))
                         }
                     }
                 }
@@ -549,9 +556,9 @@ struct ModSectionGroup: View {
                 VStack(spacing: 0) {
                     ForEach(Array(mods.enumerated()), id: \.element.id) { idx, mod in
                         if case .group(let children) = mod.kind {
-                            ModGroupRow(mod: mod, children: children, vm: vm)
+                            ModGroupRow(mod: mod, children: children)
                         } else {
-                            ModListRow(mod: mod, vm: vm, isChild: false, isGroupHeader: false, isExpanded: .constant(false))
+                            ModListRow(mod: mod, isChild: false, isGroupHeader: false, isExpanded: .constant(false))
                         }
                         
                         if idx < mods.count - 1 {
@@ -573,12 +580,11 @@ struct ModSectionGroup: View {
 struct ModGroupRow: View {
     let mod: ModItem
     let children: [ModItem]
-    @ObservedObject var vm: StarHubTHViewModel
     @State private var isExpanded = false
     
     var body: some View {
         VStack(spacing: 0) {
-            ModListRow(mod: mod, vm: vm, isChild: false, isGroupHeader: true, isExpanded: $isExpanded)
+            ModListRow(mod: mod, isChild: false, isGroupHeader: true, isExpanded: $isExpanded)
                 .onTapGesture {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         isExpanded.toggle()
@@ -588,7 +594,7 @@ struct ModGroupRow: View {
             if isExpanded {
                 VStack(spacing: 0) {
                     ForEach(Array(children.enumerated()), id: \.element.id) { cIdx, child in
-                        ModListRow(mod: child, vm: vm, isChild: true, isGroupHeader: false, isExpanded: .constant(false))
+                        ModListRow(mod: child, isChild: true, isGroupHeader: false, isExpanded: .constant(false))
                         if cIdx < children.count - 1 {
                             Rectangle()
                                 .fill(Color.primary.opacity(0.05))
@@ -607,7 +613,11 @@ struct ModGroupRow: View {
 // MARK: - Row
 struct ModListRow: View {
     let mod: ModItem
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var alertStore: AlertStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var modsStore: ModsStore
     @State private var isHovered = false
     var isChild: Bool = false
     var isGroupHeader: Bool = false
@@ -617,7 +627,7 @@ struct ModListRow: View {
     private var hasConfigJson: Bool {
         guard !mod.isGroup else { return false }
         let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
-        let path = URL(fileURLWithPath: vm.gameDir)
+        let path = URL(fileURLWithPath: appEnvironment.gameDir)
             .appendingPathComponent(baseFolder)
             .appendingPathComponent(mod.folderName.rawValue)
             .appendingPathComponent("config.json")
@@ -628,7 +638,7 @@ struct ModListRow: View {
     /// Returns a matching ModUpdateInfo if this mod has an update available
     private var pendingUpdate: ModUpdateInfo? {
         guard !mod.isGroup else { return nil }
-        return vm.outOfDateMods.first {
+        return modsStore.outOfDateMods.first {
             $0.name.localizedCaseInsensitiveCompare(mod.name) == .orderedSame ||
             mod.name.lowercased().contains($0.name.lowercased())
         }
@@ -637,7 +647,7 @@ struct ModListRow: View {
     private var hasMissingDependencies: Bool {
         guard mod.isEnabled && !mod.isGroup else { return false }
         for dep in mod.dependencies where dep.isRequired {
-            if vm.resolveDependencyStatus(for: dep.uniqueId) != .active {
+            if modsStore.resolveDependencyStatus(for: dep.uniqueId) != .active {
                 return true
             }
         }
@@ -670,15 +680,15 @@ struct ModListRow: View {
                         .lineLimit(1)
                     
                     if hasMissingDependencies {
-                        let names = mod.dependencies.filter { $0.isRequired && vm.resolveDependencyStatus(for: $0.uniqueId) != .active }.map { $0.uniqueId.rawValue }.joined(separator: ", ")
+                        let names = mod.dependencies.filter { $0.isRequired && modsStore.resolveDependencyStatus(for: $0.uniqueId) != .active }.map { $0.uniqueId.rawValue }.joined(separator: ", ")
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
-                            .help(String(format: vm.L(L10n.Mods.missingDependencies), names))
+                            .help(String(format: localizationStore.L(L10n.Mods.missingDependencies), names))
                     }
 
                     // Type tag badge
                     if !mod.modTag.isEmpty && !isChild {
-                        Text(vm.localizedTag(mod.modTag))
+                        Text(localizationStore.localizedTag(mod.modTag))
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 5)
@@ -692,7 +702,7 @@ struct ModListRow: View {
                         HStack(spacing: 3) {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 9))
-                            Text(vm.L(L10n.Mods.updateAvailable))
+                            Text(localizationStore.L(L10n.Mods.updateAvailable))
                                 .font(.system(size: 9, weight: .semibold))
                         }
                         .foregroundColor(.white)
@@ -722,19 +732,19 @@ struct ModListRow: View {
                             .foregroundColor(.secondary)
                     }
                 } else {
-                    let displayAuthor = vm.L(mod.author)
-                    let countStr = Int(mod.description).map { String(format: vm.L(L10n.Mods.groupCount), $0) } ?? mod.description
+                    let displayAuthor = localizationStore.L(mod.author)
+                    let countStr = Int(mod.description).map { String(format: localizationStore.L(L10n.Mods.groupCount), $0) } ?? mod.description
                     Text("\(displayAuthor) • \(countStr)")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
                 
-                let missingDeps = vm.getMissingDependencies(for: mod)
+                let missingDeps = modsStore.getMissingDependencies(for: mod)
                 if !missingDeps.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.yellow)
-                        Text(String(format: vm.L(L10n.Mods.missingDependencies), missingDeps.map { $0.rawValue }.joined(separator: ", ")))
+                        Text(String(format: localizationStore.L(L10n.Mods.missingDependencies), missingDeps.map { $0.rawValue }.joined(separator: ", ")))
                             .foregroundColor(.yellow)
                     }
                     .font(.system(size: 11))
@@ -749,41 +759,41 @@ struct ModListRow: View {
                 // Update button (only when an update is available)
                 if let update = pendingUpdate {
                     Button {
-                        if !vm.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
-                            vm.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId))
+                        if !appEnvironment.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
+                            appCoordinator.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId))
                         } else if let url = URL(string: update.url) {
                             NSWorkspace.shared.open(url)
                         }
                     } label: {
                         HStack(spacing: 3) {
-                            if vm.downloadingMods.contains(mod.name) {
+                            if modsStore.downloadingMods.contains(mod.name) {
                                 ProgressView()
                                     .controlSize(.small)
                                     .scaleEffect(0.7)
-                                Text(vm.L(L10n.Settings.nexusDownloading))
+                                Text(localizationStore.L(L10n.Settings.nexusDownloading))
                                     .font(.system(size: 11, weight: .medium))
                             } else {
                                 Image(systemName: "arrow.down.circle")
                                     .font(.system(size: 11))
-                                Text(!vm.nexusApiKey.isEmpty ? vm.L(L10n.Settings.nexusDownloadInstall) : vm.L(L10n.Mods.updateMod))
+                                Text(!appEnvironment.nexusApiKey.isEmpty ? localizationStore.L(L10n.Settings.nexusDownloadInstall) : localizationStore.L(L10n.Mods.updateMod))
                                     .font(.system(size: 11, weight: .medium))
                             }
                         }
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(vm.downloadingMods.contains(mod.name) ? Color.gray : Color.blue)
+                        .background(modsStore.downloadingMods.contains(mod.name) ? Color.gray : Color.blue)
                         .cornerRadius(5)
                     }
                     .buttonStyle(PlainButtonStyle())
                     .pointingHandCursor()
-                    .disabled(vm.downloadingMods.contains(mod.name))
-                    .help(vm.L(L10n.Mods.updateAvailable))
+                    .disabled(modsStore.downloadingMods.contains(mod.name))
+                    .help(localizationStore.L(L10n.Mods.updateAvailable))
                 }
 
                 Button {
                     let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
-                    let url = URL(fileURLWithPath: vm.gameDir)
+                    let url = URL(fileURLWithPath: appEnvironment.gameDir)
                         .appendingPathComponent(baseFolder)
                         .appendingPathComponent(mod.folderName.rawValue)
                     NSWorkspace.shared.open(url)
@@ -793,32 +803,32 @@ struct ModListRow: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(PlainButtonStyle())
-                .help(vm.L(L10n.Mods.openFolder))
+                .help(localizationStore.L(L10n.Mods.openFolder))
                 .pointingHandCursor()
                 
                 if hasConfigJson {
                     Button {
-                        vm.editingModConfig = mod
+                        modsStore.editingModConfig = mod
                     } label: {
                         Image(systemName: "gearshape")
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .help(vm.L(L10n.Settings.configEditor))
+                    .help(localizationStore.L(L10n.Settings.configEditor))
                     .pointingHandCursor()
                 }
                 
                 if !mod.nexusUrl.isEmpty || !mod.dependencies.isEmpty {
                     Button {
-                        vm.viewingModDetails = mod
+                        modsStore.viewingModDetails = mod
                     } label: {
                         Image(systemName: "info.circle")
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .help(vm.L(L10n.Settings.nexusModDetails))
+                    .help(localizationStore.L(L10n.Settings.nexusModDetails))
                     .pointingHandCursor()
                 }
             }
@@ -832,7 +842,7 @@ struct ModListRow: View {
                         localIsOn = newValue
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             if newValue != mod.isEnabled {
-                                vm.toggleMod(mod)
+                                appCoordinator.toggleMod(mod)
                             }
                             localIsOn = nil
                         }
@@ -859,52 +869,50 @@ struct ModListRow: View {
             Menu {
                 ForEach(["tag_nexus_2", "tag_nexus_3", "tag_nexus_4", "tag_nexus_5", "tag_nexus_6", "tag_nexus_7", "tag_nexus_8", "tag_nexus_9", "tag_nexus_10", "tag_nexus_11", "tag_nexus_12", "tag_nexus_13", "tag_nexus_14", "tag_nexus_15", "tag_nexus_16", "tag_nexus_17", "tag_nexus_18", "tag_nexus_19", "tag_nexus_20", "tag_nexus_21", "tag_nexus_22", "tag_nexus_23", "tag_nexus_24", "tag_nexus_25", "tag_nexus_26", "tag_nexus_27", "Content Patcher", "Translation", "Other"], id: \.self) { tag in
                     Button {
-                        vm.setCustomTag(for: mod.uniqueId, tag: tag)
+                        appCoordinator.setCustomTag(for: mod.uniqueId, tag: tag)
                     } label: {
                         HStack {
-                            Text(vm.localizedTag(tag))
-                            if vm.customModTags[mod.uniqueId.rawValue] == tag {
+                            Text(localizationStore.localizedTag(tag))
+                            if modsStore.customModTags[mod.uniqueId.rawValue] == tag {
                                 Image(systemName: "checkmark")
                             }
                         }
                     }
                 }
                 
-                if vm.customModTags[mod.uniqueId.rawValue] != nil {
+                if modsStore.customModTags[mod.uniqueId.rawValue] != nil {
                     Divider()
                     Button(role: .destructive) {
-                        vm.resetCustomTag(for: mod.uniqueId)
+                        appCoordinator.resetCustomTag(for: mod.uniqueId)
                     } label: {
-                        Text(vm.L(L10n.Tags.reset))
+                        Text(localizationStore.L(L10n.Tags.reset))
                     }
                 }
             } label: {
-                Text(vm.L(L10n.Tags.change))
+                Text(localizationStore.L(L10n.Tags.change))
             }
             
             Divider()
             
-            Button(vm.L(L10n.Mods.openInFinder)) {
+            Button(localizationStore.L(L10n.Mods.openInFinder)) {
                 let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
-                let url = URL(fileURLWithPath: vm.gameDir)
+                let url = URL(fileURLWithPath: appEnvironment.gameDir)
                     .appendingPathComponent(baseFolder)
                     .appendingPathComponent(mod.folderName.rawValue)
                 NSWorkspace.shared.open(url)
             }
             if !mod.nexusUrl.isEmpty {
-                Button(vm.L(L10n.Mods.viewDetailsOnNexus)) {
+                Button(localizationStore.L(L10n.Mods.viewDetailsOnNexus)) {
                     if let url = URL(string: mod.nexusUrl) { NSWorkspace.shared.open(url) }
                 }
-                if !vm.nexusApiKey.isEmpty {
+                if !appEnvironment.nexusApiKey.isEmpty {
                     if let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
-                        Button(vm.L(L10n.Settings.nexusEndorse)) {
-                            LiveNexusAPIClient.shared.endorseMod(modId: nId, version: mod.version, apiKey: vm.nexusApiKey) { result in
-                                DispatchQueue.main.async {
-                                    if case .success = result {
-                                        vm.showModal(message: vm.L(L10n.Settings.nexusEndorsed))
-                                    } else {
-                                        vm.showModal(message: "Failed to endorse mod")
-                                    }
+                        Button(localizationStore.L(L10n.Settings.nexusEndorse)) {
+                            modsStore.endorseMod(nexusId: nId, version: mod.version, apiKey: appEnvironment.nexusApiKey) { result in
+                                if case .success = result {
+                                    alertStore.show(localizationStore.L(L10n.Settings.nexusEndorsed))
+                                } else {
+                                    alertStore.show("Failed to endorse mod")
                                 }
                             }
                         }
@@ -913,7 +921,7 @@ struct ModListRow: View {
             }
             if let update = pendingUpdate {
                 Divider()
-                Button(vm.L(L10n.Mods.updateMod)) {
+                Button(localizationStore.L(L10n.Mods.updateMod)) {
                     if let url = URL(string: update.url) { NSWorkspace.shared.open(url) }
                 }
             }
@@ -921,7 +929,7 @@ struct ModListRow: View {
     }
     
     private var shortDateFormatter: DateFormatter {
-        vm.makeDateFormatter()
+        localizationStore.makeDateFormatter()
     }
 }
 
@@ -929,7 +937,10 @@ struct ModListRow: View {
 
 struct ModCardView: View {
     let mod: ModItem
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var appCoordinator: AppCoordinator
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var modsStore: ModsStore
     var isChild: Bool = false
     var isGroupHeader: Bool = false
     @Binding var isExpanded: Bool
@@ -939,7 +950,7 @@ struct ModCardView: View {
     private var hasConfigJson: Bool {
         guard !mod.isGroup else { return false }
         let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
-        let path = URL(fileURLWithPath: vm.gameDir)
+        let path = URL(fileURLWithPath: appEnvironment.gameDir)
             .appendingPathComponent(baseFolder)
             .appendingPathComponent(mod.folderName.rawValue)
             .appendingPathComponent("config.json")
@@ -949,7 +960,7 @@ struct ModCardView: View {
 
     private var pendingUpdate: ModUpdateInfo? {
         guard !mod.isGroup else { return nil }
-        return vm.outOfDateMods.first {
+        return modsStore.outOfDateMods.first {
             $0.name.localizedCaseInsensitiveCompare(mod.name) == .orderedSame ||
             mod.name.lowercased().contains($0.name.lowercased())
         }
@@ -958,7 +969,7 @@ struct ModCardView: View {
     private var hasMissingDependencies: Bool {
         guard mod.isEnabled && !mod.isGroup else { return false }
         for dep in mod.dependencies where dep.isRequired {
-            if vm.resolveDependencyStatus(for: dep.uniqueId) != .active {
+            if modsStore.resolveDependencyStatus(for: dep.uniqueId) != .active {
                 return true
             }
         }
@@ -978,10 +989,10 @@ struct ModCardView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         
                         if hasMissingDependencies {
-                            let names = mod.dependencies.filter { $0.isRequired && vm.resolveDependencyStatus(for: $0.uniqueId) != .active }.map { $0.uniqueId.rawValue }.joined(separator: ", ")
+                            let names = mod.dependencies.filter { $0.isRequired && modsStore.resolveDependencyStatus(for: $0.uniqueId) != .active }.map { $0.uniqueId.rawValue }.joined(separator: ", ")
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.orange)
-                                .help(String(format: vm.L(L10n.Mods.missingDependencies), names))
+                                .help(String(format: localizationStore.L(L10n.Mods.missingDependencies), names))
                         }
                     }
                     
@@ -1010,7 +1021,7 @@ struct ModCardView: View {
                             localIsOn = newValue
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 if newValue != mod.isEnabled {
-                                    vm.toggleMod(mod)
+                                    appCoordinator.toggleMod(mod)
                                 }
                                 localIsOn = nil
                             }
@@ -1024,7 +1035,7 @@ struct ModCardView: View {
             
             // Badges & Updates
             if !mod.modTag.isEmpty && !isChild {
-                Text(vm.localizedTag(mod.modTag))
+                Text(localizationStore.localizedTag(mod.modTag))
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 5)
@@ -1037,7 +1048,7 @@ struct ModCardView: View {
                 HStack(spacing: 3) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 9))
-                    Text(vm.L(L10n.Mods.updateAvailable))
+                    Text(localizationStore.L(L10n.Mods.updateAvailable))
                         .font(.system(size: 9, weight: .semibold))
                 }
                 .foregroundColor(.white)
@@ -1054,8 +1065,8 @@ struct ModCardView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             } else {
-                let displayAuthor = vm.L(mod.author)
-                let countStr = Int(mod.description).map { String(format: vm.L(L10n.Mods.groupCount), $0) } ?? mod.description
+                let displayAuthor = localizationStore.L(mod.author)
+                let countStr = Int(mod.description).map { String(format: localizationStore.L(L10n.Mods.groupCount), $0) } ?? mod.description
                 Text("\(displayAuthor) • \(countStr)")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
@@ -1106,26 +1117,26 @@ struct ModCardView: View {
 
     private func updateButton(update: ModUpdateInfo) -> some View {
         Button {
-            if !vm.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
-                vm.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId))
+            if !appEnvironment.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
+                appCoordinator.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId))
             } else if let url = URL(string: update.url) {
                 NSWorkspace.shared.open(url)
             }
         } label: {
             Image(systemName: "arrow.down.circle")
                 .font(.system(size: 14))
-                .foregroundColor(vm.downloadingMods.contains(mod.name) ? .gray : .blue)
+                .foregroundColor(modsStore.downloadingMods.contains(mod.name) ? .gray : .blue)
         }
         .buttonStyle(PlainButtonStyle())
         .pointingHandCursor()
-        .disabled(vm.downloadingMods.contains(mod.name))
-        .help(vm.downloadingMods.contains(mod.name) ? vm.L(L10n.Settings.nexusDownloading) : vm.L(L10n.Mods.updateMod))
+        .disabled(modsStore.downloadingMods.contains(mod.name))
+        .help(modsStore.downloadingMods.contains(mod.name) ? localizationStore.L(L10n.Settings.nexusDownloading) : localizationStore.L(L10n.Mods.updateMod))
     }
 
     private var folderButton: some View {
         Button {
             let baseFolder = mod.isEnabled ? "Mods" : "Mods_disabled"
-            let url = URL(fileURLWithPath: vm.gameDir)
+            let url = URL(fileURLWithPath: appEnvironment.gameDir)
                 .appendingPathComponent(baseFolder)
                 .appendingPathComponent(mod.folderName.rawValue)
             NSWorkspace.shared.open(url)
@@ -1135,37 +1146,37 @@ struct ModCardView: View {
                 .foregroundColor(.secondary)
         }
         .buttonStyle(PlainButtonStyle())
-        .help(vm.L(L10n.Mods.openFolder))
+        .help(localizationStore.L(L10n.Mods.openFolder))
         .pointingHandCursor()
     }
 
     private var configButton: some View {
         Button {
-            vm.editingModConfig = mod
+            modsStore.editingModConfig = mod
         } label: {
             Image(systemName: "gearshape")
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
         }
         .buttonStyle(PlainButtonStyle())
-        .help(vm.L(L10n.Settings.configEditor))
+        .help(localizationStore.L(L10n.Settings.configEditor))
         .pointingHandCursor()
     }
 
     private var detailsButton: some View {
         Button {
-            vm.viewingModDetails = mod
+            modsStore.viewingModDetails = mod
         } label: {
             Image(systemName: "info.circle")
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
         }
         .buttonStyle(PlainButtonStyle())
-        .help(vm.L(L10n.Settings.nexusModDetails))
+        .help(localizationStore.L(L10n.Settings.nexusModDetails))
         .pointingHandCursor()
     }
     
     private var shortDateFormatter: DateFormatter {
-        vm.makeDateFormatter()
+        localizationStore.makeDateFormatter()
     }
 }
