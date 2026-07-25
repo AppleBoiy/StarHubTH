@@ -94,7 +94,8 @@ struct ModPacksView: View {
 struct CollectionBannerView: View {
     @ObservedObject var vm: StarHubTHViewModel
     let pack: StarHubPack
-    
+    @State private var isDownloadingAll = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // ── Top section: cover + info ──────────────────────────────
@@ -202,24 +203,33 @@ struct CollectionBannerView: View {
                 // Download All action
                 if !vm.nexusApiKey.isEmpty {
                     Button {
-                        for packMod in pack.mods {
-                            let status = vm.resolvePackModStatus(nexusId: packMod.nexusId, uniqueId: packMod.uniqueId)
-                            if status == .missing, let nexusId = packMod.nexusId {
-                                vm.downloadModFromNexus(nexusId: nexusId) { success in
-                                    if success { vm.scanMods() }
-                                }
+                        isDownloadingAll = true
+                        vm.downloadAllMissingPackMods(pack) { installed, failed in
+                            isDownloadingAll = false
+                            vm.scanMods()
+                            let message: String
+                            if failed > 0 {
+                                message = String(format: vm.L(L10n.ModPacks.downloadAllSummaryWithFailures), installed, failed)
+                            } else {
+                                message = String(format: vm.L(L10n.ModPacks.downloadAllSummary), installed)
                             }
+                            vm.showModal(message: message)
                         }
                     } label: {
-                        Label(vm.L(L10n.ModPacks.downloadAll), systemImage: "arrow.down.circle.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .background(Color.accentColor)
-                            .cornerRadius(7)
+                        if isDownloadingAll {
+                            Label(vm.L(L10n.ModPacks.downloading), systemImage: "arrow.down.circle.fill")
+                        } else {
+                            Label(vm.L(L10n.ModPacks.downloadAll), systemImage: "arrow.down.circle.fill")
+                        }
                     }
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(Color.accentColor)
+                    .cornerRadius(7)
                     .buttonStyle(.plain)
+                    .disabled(isDownloadingAll)
                 } else {
                     Text(vm.L(L10n.ModPacksExtra.addApiKeyHint))
                         .font(.caption2)

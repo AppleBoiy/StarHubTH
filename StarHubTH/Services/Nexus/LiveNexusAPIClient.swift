@@ -1,5 +1,42 @@
 import Foundation
 
+/// Errors surfaced by `LiveNexusAPIClient`'s HTTP/GraphQL calls, in place of a bare
+/// `NSError` — callers need to tell "your API key isn't Premium" (403) and
+/// "you're rate-limited" (429) apart from a generic failure to show the right message,
+/// which a stringly-typed `NSError` domain/code pair doesn't make easy to check for.
+enum NexusAPIError: Error, LocalizedError {
+    case invalidURL
+    case httpStatus(Int)
+    case noData
+    case decodingFailed(String)
+    case graphQLErrors(String)
+    case collectionNotFound
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL: return "Invalid URL"
+        case .httpStatus(let code): return "HTTP Error: \(code)"
+        case .noData: return "No data received"
+        case .decodingFailed(let message): return "Failed to decode response: \(message)"
+        case .graphQLErrors(let message): return "GraphQL Errors: \(message)"
+        case .collectionNotFound: return "Collection not found"
+        }
+    }
+
+    /// Nexus returns 403 both when no file is attached to a mod and when a non-premium
+    /// API key requests a download link without the `key`/`expires` pair a manual
+    /// "Download with Manager" link carries — either way, "needs a workaround, not a retry."
+    var isPremiumRequired: Bool {
+        if case .httpStatus(403) = self { return true }
+        return false
+    }
+
+    var isRateLimited: Bool {
+        if case .httpStatus(429) = self { return true }
+        return false
+    }
+}
+
 /// A service to interact with the Nexus Mods API (v1).
 final class LiveNexusAPIClient {
     static let shared = LiveNexusAPIClient()
@@ -175,122 +212,116 @@ final class LiveNexusAPIClient {
     
     private func fetch<T: Decodable>(endpoint: String, apiKey: String, method: String = "GET", completion: @escaping (Result<T, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else {
-            completion(.failure(NSError(domain: "NexusAPI", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            completion(.failure(NexusAPIError.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue(apiKey, forHTTPHeaderField: "apikey")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        
+
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
                 return
             }
-            
+
             if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
-                let statusError = NSError(domain: "NexusAPI", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP Error: \(httpResponse.statusCode)"])
-                completion(.failure(statusError))
+                completion(.failure(NexusAPIError.httpStatus(httpResponse.statusCode)))
                 return
             }
-            
+
             guard let data = data else {
-                completion(.failure(NSError(domain: "NexusAPI", code: 204, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                completion(.failure(NexusAPIError.noData))
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 let result = try decoder.decode(T.self, from: data)
                 completion(.success(result))
             } catch {
-                completion(.failure(error))
+                completion(.failure(NexusAPIError.decodingFailed(error.localizedDescription)))
             }
         }
         task.resume()
     }
-    
+
     private func post(endpoint: String, apiKey: String, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else {
-            completion(.failure(NSError(domain: "NexusAPI", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            completion(.failure(NexusAPIError.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(apiKey, forHTTPHeaderField: "apikey")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        
+
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
                 return
             }
-            
+
             if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
-                let statusError = NSError(domain: "NexusAPI", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP Error: \(httpResponse.statusCode)"])
-                completion(.failure(statusError))
+                completion(.failure(NexusAPIError.httpStatus(httpResponse.statusCode)))
                 return
             }
-            
+
             completion(.success(()))
         }
         task.resume()
     }
-    
+
     private func postGraphQL<T: Decodable>(query: String, variables: [String: Any], apiKey: String, completion: @escaping (Result<T, Error>) -> Void) {
         let graphqlURL = "https://api.nexusmods.com/v2/graphql"
         guard let url = URL(string: graphqlURL) else {
-            completion(.failure(NSError(domain: "NexusAPI", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            completion(.failure(NexusAPIError.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(apiKey, forHTTPHeaderField: "apikey")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         let body: [String: Any] = [
             "query": query,
             "variables": variables
         ]
-        
+
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         } catch {
             completion(.failure(error))
             return
         }
-        
+
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
                 return
             }
-            
+
             if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
-                let statusError = NSError(domain: "NexusAPI", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP Error: \(httpResponse.statusCode)"])
-                completion(.failure(statusError))
+                completion(.failure(NexusAPIError.httpStatus(httpResponse.statusCode)))
                 return
             }
-            
+
             guard let data = data else {
-                completion(.failure(NSError(domain: "NexusAPI", code: 204, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                completion(.failure(NexusAPIError.noData))
                 return
             }
-            
+
             do {
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    print("GraphQL Data: \(jsonString)")
-                }
                 let decoder = JSONDecoder()
                 let result = try decoder.decode(T.self, from: data)
                 completion(.success(result))
             } catch {
-                completion(.failure(error))
+                completion(.failure(NexusAPIError.decodingFailed(error.localizedDescription)))
             }
         }
         task.resume()
@@ -308,8 +339,27 @@ final class LiveNexusAPIClient {
         fetch(endpoint: endpoint, apiKey: apiKey, completion: completion)
     }
     
-    func getDownloadLink(modId: Int, fileId: Int, apiKey: String, completion: @escaping (Result<[ModDownloadLink], Error>) -> Void) {
-        let endpoint = "/games/\(gameName)/mods/\(modId)/files/\(fileId)/download_link.json"
+    /// `key`/`expires` are the one-time authorization pair from a manual "Download with
+    /// Manager" `nxm://` link (see `NXMParser`). Nexus's API requires them for a
+    /// non-premium API key to obtain a download link at all; a premium key ignores them.
+    /// Pass `nil` for both when the caller has no `nxm://` link to source them from —
+    /// the request will then only succeed for a premium API key.
+    func getDownloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String, completion: @escaping (Result<[ModDownloadLink], Error>) -> Void) {
+        var endpoint = "/games/\(gameName)/mods/\(modId)/files/\(fileId)/download_link.json"
+
+        if let key, let expires, !key.isEmpty, !expires.isEmpty {
+            var queryItems: [String] = []
+            if let encodedKey = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                queryItems.append("key=\(encodedKey)")
+            }
+            if let encodedExpires = expires.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                queryItems.append("expires=\(encodedExpires)")
+            }
+            if !queryItems.isEmpty {
+                endpoint += "?" + queryItems.joined(separator: "&")
+            }
+        }
+
         fetch(endpoint: endpoint, apiKey: apiKey, completion: completion)
     }
     
@@ -377,11 +427,11 @@ final class LiveNexusAPIClient {
             case .success(let response):
                 if let errors = response.errors, !errors.isEmpty {
                     let errStr = errors.map { $0.message }.joined(separator: ", ")
-                    completion(.failure(NSError(domain: "NexusAPI", code: 400, userInfo: [NSLocalizedDescriptionKey: "GraphQL Errors: \(errStr)"])))
+                    completion(.failure(NexusAPIError.graphQLErrors(errStr)))
                     return
                 }
                 guard let collection = response.data?.collection else {
-                    completion(.failure(NSError(domain: "NexusAPI", code: 404, userInfo: [NSLocalizedDescriptionKey: "Collection not found"])))
+                    completion(.failure(NexusAPIError.collectionNotFound))
                     return
                 }
                 completion(.success(collection))

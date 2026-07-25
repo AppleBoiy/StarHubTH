@@ -170,6 +170,9 @@
 "modpack_installed" = "Installed";
 "modpack_missing" = "Missing";
 "modpack_download_all" = "Download All";
+"modpack_downloading" = "Downloading…";
+"modpack_download_all_summary" = "Installed %d mod(s).";
+"modpack_download_all_summary_with_failures" = "Installed %d mod(s), %d failed — see Logs for details.";
 "modpack_get_nexus" = "Get from Nexus";
 "modpack_pack_name" = "Pack Name";
 "settings_backup" = "Backup";

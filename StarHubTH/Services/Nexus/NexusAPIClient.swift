@@ -5,7 +5,7 @@ import Foundation
 protocol NexusAPIClient {
     func getModInfo(modId: Int, apiKey: String, completion: @escaping (Result<LiveNexusAPIClient.ModInfo, Error>) -> Void)
     func getModFiles(modId: Int, apiKey: String, completion: @escaping (Result<LiveNexusAPIClient.ModFileListResponse, Error>) -> Void)
-    func getDownloadLink(modId: Int, fileId: Int, apiKey: String, completion: @escaping (Result<[LiveNexusAPIClient.ModDownloadLink], Error>) -> Void)
+    func getDownloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String, completion: @escaping (Result<[LiveNexusAPIClient.ModDownloadLink], Error>) -> Void)
     func endorseMod(modId: Int, version: String?, apiKey: String, completion: @escaping (Result<Void, Error>) -> Void)
     func getCollectionGraph(slug: String, apiKey: String, completion: @escaping (Result<LiveNexusAPIClient.CollectionGraph, Error>) -> Void)
 }

@@ -262,6 +262,9 @@ enum L10n {
         static let installed            = "modpack_installed"
         static let missing              = "modpack_missing"
         static let downloadAll          = "modpack_download_all"
+        static let downloading          = "modpack_downloading"
+        static let downloadAllSummary   = "modpack_download_all_summary"
+        static let downloadAllSummaryWithFailures = "modpack_download_all_summary_with_failures"
         static let getFromNexus         = "modpack_get_nexus"
         static let packName             = "modpack_pack_name"
     }

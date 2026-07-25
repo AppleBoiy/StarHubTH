@@ -17,7 +17,7 @@ final class StubNexusAPIClient: NexusAPIClient {
         completion(modFilesResult)
     }
 
-    func getDownloadLink(modId: Int, fileId: Int, apiKey: String, completion: @escaping (Result<[LiveNexusAPIClient.ModDownloadLink], Error>) -> Void) {
+    func getDownloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String, completion: @escaping (Result<[LiveNexusAPIClient.ModDownloadLink], Error>) -> Void) {
         completion(downloadLinkResult)
     }
 

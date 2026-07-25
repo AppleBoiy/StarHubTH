@@ -368,9 +368,9 @@ final class StarHubTHViewModel: ObservableObject {
         
         if let result = NXMParser.parse(url: url) {
             switch result {
-            case .mod(let modId, let fileId):
+            case .mod(let modId, let fileId, let key, let expires):
                 log("Downloading from NXM: Mod \(modId), File \(fileId)", level: .info)
-                self.downloadModFromNexus(nexusId: ModItem.NexusID(rawValue: modId), fileId: fileId) { success in
+                self.downloadModFromNexus(nexusId: ModItem.NexusID(rawValue: modId), fileId: fileId, key: key, expires: expires) { success in
                     if success {
                         self.scanMods()
                         self.showModal(message: self.L(L10n.VM.nxmDownloadSuccess))
@@ -755,12 +755,26 @@ final class StarHubTHViewModel: ObservableObject {
         )
     }
 
-    func downloadModFromNexus(nexusId: ModItem.NexusID, fileId: Int? = nil, completion: @escaping (Bool) -> Void) {
+    func downloadModFromNexus(nexusId: ModItem.NexusID, fileId: Int? = nil, key: String? = nil, expires: String? = nil, completion: @escaping (Bool) -> Void) {
         modPacksStore.downloadModFromNexus(
             nexusId: nexusId,
             fileId: fileId,
+            key: key,
+            expires: expires,
             nexusApiKey: nexusApiKey,
             installModFromZip: { [weak self] url, completion in self?.installModFromZip(url: url, completion: completion) },
+            showModal: { [weak self] message in self?.showModal(message: message) },
+            completion: completion
+        )
+    }
+
+    func downloadAllMissingPackMods(_ pack: StarHubPack, completion: @escaping (_ installed: Int, _ failed: Int) -> Void) {
+        modPacksStore.downloadAllMissing(
+            from: pack.mods,
+            currentMods: mods,
+            nexusApiKey: nexusApiKey,
+            installModFromZip: { [weak self] url, completion in self?.installModFromZip(url: url, completion: completion) },
+            showModal: { [weak self] message in self?.showModal(message: message) },
             completion: completion
         )
     }

@@ -55,7 +55,7 @@ class ModUpdateTests {
         let linkSemaphore = DispatchSemaphore(value: 0)
         var downloadURL: URL? = nil
         
-        LiveNexusAPIClient.shared.getDownloadLink(modId: modId, fileId: targetFileId, apiKey: apiKey) { result in
+        LiveNexusAPIClient.shared.getDownloadLink(modId: modId, fileId: targetFileId, key: nil, expires: nil, apiKey: apiKey) { result in
             switch result {
             case .success(let links):
                 downloadURL = URL(string: links.first?.URI ?? "")

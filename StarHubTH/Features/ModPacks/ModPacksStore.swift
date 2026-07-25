@@ -167,11 +167,17 @@ final class ModPacksStore: ObservableObject {
         }
     }
 
+    /// `key`/`expires` come from an `nxm://` link (see `NXMParser`) and let a non-premium
+    /// API key authorize that one download; pass `nil` for both for an in-app-triggered
+    /// download (auto-update, "Download All"), which then only succeeds for a premium key.
     func downloadModFromNexus(
         nexusId: ModItem.NexusID,
         fileId: Int? = nil,
+        key: String? = nil,
+        expires: String? = nil,
         nexusApiKey: String,
         installModFromZip: @escaping (URL, @escaping (Bool) -> Void) -> Void,
+        showModal: @escaping (String) -> Void,
         completion: @escaping (Bool) -> Void
     ) {
         if nexusApiKey.isEmpty {
@@ -183,7 +189,7 @@ final class ModPacksStore: ObservableObject {
 
         if let fId = fileId {
             targetFileId = fId
-            startDownload(nexusId: nexusId, fileId: targetFileId, apiKey: nexusApiKey, installModFromZip: installModFromZip, completion: completion)
+            startDownload(nexusId: nexusId, fileId: targetFileId, key: key, expires: expires, apiKey: nexusApiKey, installModFromZip: installModFromZip, showModal: showModal, completion: completion)
         } else {
             logStore.log("Fetching latest file for Nexus Mod #\(nexusId.rawValue)...")
             nexusAPIClient.getModFiles(modId: nexusId.rawValue, apiKey: nexusApiKey) { [weak self] result in
@@ -195,7 +201,7 @@ final class ModPacksStore: ObservableObject {
                         completion(false)
                         return
                     }
-                    self.startDownload(nexusId: nexusId, fileId: latestFile.fileId, apiKey: nexusApiKey, installModFromZip: installModFromZip, completion: completion)
+                    self.startDownload(nexusId: nexusId, fileId: latestFile.fileId, key: key, expires: expires, apiKey: nexusApiKey, installModFromZip: installModFromZip, showModal: showModal, completion: completion)
                 case .failure(let error):
                     self.logStore.log("Failed to fetch mod files: \(error.localizedDescription)")
                     completion(false)
@@ -207,12 +213,15 @@ final class ModPacksStore: ObservableObject {
     private func startDownload(
         nexusId: ModItem.NexusID,
         fileId: Int,
+        key: String?,
+        expires: String?,
         apiKey: String,
         installModFromZip: @escaping (URL, @escaping (Bool) -> Void) -> Void,
+        showModal: @escaping (String) -> Void,
         completion: @escaping (Bool) -> Void
     ) {
         logStore.log("Requesting download link for file #\(fileId)...")
-        nexusAPIClient.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, apiKey: apiKey) { [weak self] linkResult in
+        nexusAPIClient.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, key: key, expires: expires, apiKey: apiKey) { [weak self] linkResult in
             guard let self = self else { return }
             switch linkResult {
             case .success(let links):
@@ -251,9 +260,54 @@ final class ModPacksStore: ObservableObject {
                 task.resume()
 
             case .failure(let error):
-                self.logStore.log("Failed to get download link (Premium required?): \(error.localizedDescription)")
+                if let nexusError = error as? NexusAPIError, nexusError.isPremiumRequired {
+                    self.logStore.log("Download requires Nexus Premium (Mod #\(nexusId.rawValue), File #\(fileId)).")
+                    showModal(self.localization.L(L10n.VM.nexusPremiumRequired))
+                } else {
+                    self.logStore.log("Failed to get download link: \(error.localizedDescription)")
+                }
                 completion(false)
             }
         }
+    }
+
+    /// Downloads every mod in `packMods` that isn't already installed, one at a time.
+    /// Firing every missing mod's download concurrently (the previous "Download All"
+    /// behavior) commonly triggers Nexus's rate limiting on a collection with more than
+    /// a handful of missing mods, and gave the caller no way to know which ones failed —
+    /// this reports an aggregate count instead of silently dropping failures.
+    func downloadAllMissing(
+        from packMods: [StarHubPackMod],
+        currentMods: [ModItem],
+        nexusApiKey: String,
+        installModFromZip: @escaping (URL, @escaping (Bool) -> Void) -> Void,
+        showModal: @escaping (String) -> Void,
+        completion: @escaping (_ installed: Int, _ failed: Int) -> Void
+    ) {
+        let missing = packMods.filter { packMod in
+            guard let nexusId = packMod.nexusId else { return false }
+            return ModGraph.packModStatus(nexusID: nexusId, uniqueId: packMod.uniqueId, in: currentMods) == .missing
+        }
+
+        func step(_ index: Int, installed: Int, failed: Int) {
+            guard index < missing.count else {
+                completion(installed, failed)
+                return
+            }
+            guard let nexusId = missing[index].nexusId else {
+                step(index + 1, installed: installed, failed: failed)
+                return
+            }
+            downloadModFromNexus(
+                nexusId: nexusId,
+                nexusApiKey: nexusApiKey,
+                installModFromZip: installModFromZip,
+                showModal: showModal
+            ) { success in
+                step(index + 1, installed: installed + (success ? 1 : 0), failed: failed + (success ? 0 : 1))
+            }
+        }
+
+        step(0, installed: 0, failed: 0)
     }
 }

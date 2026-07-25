@@ -436,7 +436,11 @@ final class ModsStore: ObservableObject {
             case .failure(let error):
                 DispatchQueue.main.async {
                     self.downloadingMods.remove(mod.name)
-                    showModal(error.localizedDescription)
+                    if case .premiumRequired = error {
+                        showModal(self.localization.L(L10n.VM.nexusPremiumRequired))
+                    } else {
+                        showModal(error.localizedDescription)
+                    }
                 }
             }
         }

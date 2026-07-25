@@ -108,7 +108,8 @@ struct ModPacksStoreTests {
         store.downloadModFromNexus(
             nexusId: ModItem.NexusID(rawValue: 1234),
             nexusApiKey: "",
-            installModFromZip: { _, completion in completion(true) }
+            installModFromZip: { _, completion in completion(true) },
+            showModal: { _ in }
         ) { success in
             result = success
         }

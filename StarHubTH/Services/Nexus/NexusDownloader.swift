@@ -1,16 +1,20 @@
 import Foundation
 
 enum NexusDownloaderError: Error, LocalizedError {
+    case missingAPIKey
     case noValidFile
     case noDownloadLink
+    case premiumRequired
     case downloadFailed(String)
     case moveFailed(String)
     case fetchFailed(String)
-    
+
     var errorDescription: String? {
         switch self {
+        case .missingAPIKey: return "No Nexus API key configured."
         case .noValidFile: return "Could not find a valid file to download."
         case .noDownloadLink: return "Could not obtain download link."
+        case .premiumRequired: return "This download requires a Nexus Premium account."
         case .downloadFailed(let msg): return "Download failed: \(msg)"
         case .moveFailed(let msg): return "File move error: \(msg)"
         case .fetchFailed(let msg): return "Failed to fetch mod files: \(msg)"
@@ -19,11 +23,19 @@ enum NexusDownloaderError: Error, LocalizedError {
 }
 
 struct NexusDownloader {
-    static func downloadUpdate(nexusId: ModItem.NexusID, apiKey: String, completion: @escaping (Result<URL, NexusDownloaderError>) -> Void) {
-        guard !apiKey.isEmpty else { return }
+    static func downloadUpdate(
+        nexusId: ModItem.NexusID,
+        apiKey: String,
+        nexusAPIClient: NexusAPIClient = LiveNexusAPIClient.shared,
+        completion: @escaping (Result<URL, NexusDownloaderError>) -> Void
+    ) {
+        guard !apiKey.isEmpty else {
+            completion(.failure(.missingAPIKey))
+            return
+        }
 
         // Step 1: get files list to find latest file ID
-        LiveNexusAPIClient.shared.getModFiles(modId: nexusId.rawValue, apiKey: apiKey) { result in
+        nexusAPIClient.getModFiles(modId: nexusId.rawValue, apiKey: apiKey) { result in
             switch result {
             case .success(let fileList):
                 let mainFiles = fileList.files.filter { $0.categoryId == 1 }
@@ -34,15 +46,16 @@ struct NexusDownloader {
                     return
                 }
 
-                // Step 2: get download link
-                LiveNexusAPIClient.shared.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, apiKey: apiKey) { linkResult in
+                // Step 2: get download link. No `key`/`expires` here — auto-update isn't
+                // triggered from an `nxm://` link, so this only succeeds for a premium key.
+                nexusAPIClient.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, key: nil, expires: nil, apiKey: apiKey) { linkResult in
                     switch linkResult {
                     case .success(let links):
                         guard let downloadLink = links.first?.URI, let url = URL(string: downloadLink) else {
                             completion(.failure(.noDownloadLink))
                             return
                         }
-                        
+
                         // Step 3: download the file
                         let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".zip")
                         let task = URLSession.shared.downloadTask(with: url) { localURL, response, error in
@@ -51,7 +64,7 @@ struct NexusDownloader {
                                 return
                             }
                             guard let localURL = localURL else { return }
-                            
+
                             do {
                                 try FileManager.default.moveItem(at: localURL, to: tempZipURL)
                                 completion(.success(tempZipURL))
@@ -60,9 +73,13 @@ struct NexusDownloader {
                             }
                         }
                         task.resume()
-                        
+
                     case .failure(let error):
-                        completion(.failure(.downloadFailed(error.localizedDescription)))
+                        if let nexusError = error as? NexusAPIError, nexusError.isPremiumRequired {
+                            completion(.failure(.premiumRequired))
+                        } else {
+                            completion(.failure(.downloadFailed(error.localizedDescription)))
+                        }
                     }
                 }
             case .failure(let error):
