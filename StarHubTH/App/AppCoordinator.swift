@@ -193,12 +193,12 @@ final class AppCoordinator: ObservableObject {
         modsStore.backupAllMods(gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
-    func backupMod(mod: ModItem) {
-        modsStore.backupMod(mod: mod, gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
+    func backupMod(mod: ModItem) async {
+        await modsStore.backupMod(mod: mod, gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
-    func restoreModZip(mod: ModItem) {
-        modsStore.restoreModZip(mod: mod, gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
+    func restoreModZip(mod: ModItem) async {
+        await modsStore.restoreModZip(mod: mod, gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
     func cleanDisabledMods() {

@@ -491,7 +491,27 @@ final class ModsStore: ObservableObject {
         }
     }
 
-    func backupMod(mod: ModItem, gameDir: String, showModal: @escaping (String) -> Void) {
+    /// Runs a zip/unzip `Process` off the calling actor and resumes once it exits — the
+    /// shared plumbing behind `backupMod`/`restoreModZip`.
+    private func runProcess(executable: String, arguments: [String], currentDirectory: URL? = nil) async throws -> Int32 {
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: executable)
+                process.arguments = arguments
+                if let currentDirectory { process.currentDirectoryURL = currentDirectory }
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    continuation.resume(returning: process.terminationStatus)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    func backupMod(mod: ModItem, gameDir: String, showModal: @escaping (String) -> Void) async {
         guard !gameDir.isEmpty else {
             showModal(localization.L(L10n.Settings.gameDirNotSet))
             return
@@ -501,42 +521,27 @@ final class ModsStore: ObservableObject {
         let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium).replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "")
         let defaultFileName = "\(mod.folderName.rawValue)_Backup_\(timestamp).zip"
 
-        DispatchQueue.main.async {
-            let panel = NSSavePanel()
-            panel.title = "Save Backup"
-            panel.nameFieldStringValue = defaultFileName
-            panel.allowedContentTypes = [.zip]
-            panel.canCreateDirectories = true
+        let panel = NSSavePanel()
+        panel.title = "Save Backup"
+        panel.nameFieldStringValue = defaultFileName
+        panel.allowedContentTypes = [.zip]
+        panel.canCreateDirectories = true
 
-            if panel.runModal() == .OK, let url = panel.url {
-                DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                    guard let self = self else { return }
-                    let process = Process()
-                    process.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
-                    process.arguments = ["-r", url.path, "."]
-                    process.currentDirectoryURL = URL(fileURLWithPath: modDir)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
 
-                    do {
-                        try process.run()
-                        process.waitUntilExit()
-                        DispatchQueue.main.async {
-                            if process.terminationStatus == 0 {
-                                showModal(String(format: self.localization.L(L10n.VM.backupModsSuccess), url.path))
-                            } else {
-                                showModal(self.localization.L(L10n.VM.zipModsError))
-                            }
-                        }
-                    } catch {
-                        DispatchQueue.main.async {
-                            showModal(self.localization.L(L10n.VM.cannotRunZip))
-                        }
-                    }
-                }
+        do {
+            let status = try await runProcess(executable: "/usr/bin/zip", arguments: ["-r", url.path, "."], currentDirectory: URL(fileURLWithPath: modDir))
+            if status == 0 {
+                showModal(String(format: localization.L(L10n.VM.backupModsSuccess), url.path))
+            } else {
+                showModal(localization.L(L10n.VM.zipModsError))
             }
+        } catch {
+            showModal(localization.L(L10n.VM.cannotRunZip))
         }
     }
 
-    func restoreModZip(mod: ModItem, gameDir: String, showModal: @escaping (String) -> Void) {
+    func restoreModZip(mod: ModItem, gameDir: String, showModal: @escaping (String) -> Void) async {
         guard !gameDir.isEmpty else {
             showModal(localization.L(L10n.Settings.gameDirNotSet))
             return
@@ -544,37 +549,23 @@ final class ModsStore: ObservableObject {
         let basePath = (gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
         let modDir = (basePath as NSString).appendingPathComponent(mod.folderName.rawValue)
 
-        DispatchQueue.main.async {
-            let panel = NSOpenPanel()
-            panel.title = "Select Mod Backup (.zip)"
-            panel.allowedContentTypes = [.init(filenameExtension: "zip")!]
-            panel.allowsMultipleSelection = false
+        let panel = NSOpenPanel()
+        panel.title = "Select Mod Backup (.zip)"
+        panel.allowedContentTypes = [.init(filenameExtension: "zip")!]
+        panel.allowsMultipleSelection = false
 
-            if panel.runModal() == .OK, let zipUrl = panel.url {
-                DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                    guard let self = self else { return }
-                    let process = Process()
-                    process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-                    process.arguments = ["-o", zipUrl.path, "-d", modDir]
+        guard panel.runModal() == .OK, let zipUrl = panel.url else { return }
 
-                    do {
-                        try process.run()
-                        process.waitUntilExit()
-                        DispatchQueue.main.async {
-                            if process.terminationStatus == 0 {
-                                showModal(self.localization.L(L10n.VM.modZipRestoreSuccess))
-                                self.scanMods(gameDir: gameDir)
-                            } else {
-                                showModal(self.localization.L(L10n.VM.modZipRestoreFailed))
-                            }
-                        }
-                    } catch {
-                        DispatchQueue.main.async {
-                            showModal(self.localization.L(L10n.VM.modZipRestoreError))
-                        }
-                    }
-                }
+        do {
+            let status = try await runProcess(executable: "/usr/bin/unzip", arguments: ["-o", zipUrl.path, "-d", modDir])
+            if status == 0 {
+                showModal(localization.L(L10n.VM.modZipRestoreSuccess))
+                scanMods(gameDir: gameDir)
+            } else {
+                showModal(localization.L(L10n.VM.modZipRestoreFailed))
             }
+        } catch {
+            showModal(localization.L(L10n.VM.modZipRestoreError))
         }
     }
 
