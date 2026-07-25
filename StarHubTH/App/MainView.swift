@@ -298,7 +298,7 @@ struct MainView: View {
                 } else if currentTab == "Settings" {
                     SettingsView(vm: vm)
                 } else if currentTab == "AppChangelog" {
-                    AppChangelogView(vm: vm)
+                    AppChangelogView()
                 } else if currentTab == "Logs" {
                     LogsView(vm: vm)
                 } else {

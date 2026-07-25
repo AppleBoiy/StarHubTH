@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct AppChangelogView: View {
-    @ObservedObject var vm: StarHubTHViewModel
     @State private var changelogText: String = "Loading..."
     
     var body: some View {
