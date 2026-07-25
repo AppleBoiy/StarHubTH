@@ -6,7 +6,7 @@ import Foundation
 protocol ProfileStoring {
     func loadProfiles() -> (profiles: [ModProfile], activeId: UUID?)
     func saveProfiles(_ profiles: [ModProfile], activeProfileId: UUID?)
-    func applyProfileToFilesystem(profile: ModProfile, mods: [Mod], gameDir: String) -> Bool
+    func applyProfileToFilesystem(profile: ModProfile, mods: [Mod], gameDir: String) throws(ProfileApplyError)
     func exportProfile(_ profile: ModProfile, mods: [Mod], to url: URL) throws
     func importProfile(from url: URL) throws -> (ModCollection, ModProfile)
 }

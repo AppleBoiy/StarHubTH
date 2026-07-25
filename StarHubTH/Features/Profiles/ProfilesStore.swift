@@ -64,7 +64,8 @@ final class ProfilesStore: ObservableObject {
         enabledModIds: [Mod.UniqueID],
         gameDir: String,
         modsProvider: () -> [Mod],
-        scanMods: () -> Void
+        scanMods: () -> Void,
+        showModal: (String) -> Void
     ) {
         if let index = modProfiles.firstIndex(where: { $0.id == id }) {
             modProfiles[index].name = newName
@@ -73,7 +74,11 @@ final class ProfilesStore: ObservableObject {
 
             // If this is the active profile, apply the new mod selection to the filesystem
             if activeProfileId == id {
-                applyProfileToFilesystem(profile: modProfiles[index], gameDir: gameDir, modsProvider: modsProvider, scanMods: scanMods)
+                do {
+                    try applyProfileToFilesystem(profile: modProfiles[index], gameDir: gameDir, modsProvider: modsProvider, scanMods: scanMods)
+                } catch {
+                    showModal(message(for: error))
+                }
             }
         }
     }
@@ -98,28 +103,32 @@ final class ProfilesStore: ObservableObject {
             return
         }
 
-        let success = applyProfileToFilesystem(profile: profile, gameDir: gameDir, modsProvider: modsProvider, scanMods: scanMods)
-        if success {
+        do {
+            try applyProfileToFilesystem(profile: profile, gameDir: gameDir, modsProvider: modsProvider, scanMods: scanMods)
             activeProfileId = id
             saveProfiles()
             log(String(format: localization.L(L10n.VM.switchProfile), profile.name))
-        } else {
-            showModal(localization.L(L10n.VM.profileApplyError))
+        } catch {
+            showModal(message(for: error))
         }
     }
 
+    private func message(for error: ProfileApplyError) -> String {
+        "\(localization.L(L10n.VM.profileApplyError))\n\(error.failedModNames.joined(separator: ", "))"
+    }
+
     /// Actually move mod files to match the given profile's enabledModIds.
-    @discardableResult
     private func applyProfileToFilesystem(
         profile: ModProfile,
         gameDir: String,
         modsProvider: () -> [Mod],
         scanMods: () -> Void
-    ) -> Bool {
-        let success = profileStoring.applyProfileToFilesystem(profile: profile, mods: modsProvider(), gameDir: gameDir)
-        scanMods()
-        syncActiveProfileIds(mods: modsProvider())
-        return success
+    ) throws(ProfileApplyError) {
+        defer {
+            scanMods()
+            syncActiveProfileIds(mods: modsProvider())
+        }
+        try profileStoring.applyProfileToFilesystem(profile: profile, mods: modsProvider(), gameDir: gameDir)
     }
 
     /// Compute which uniqueIds should be added/removed when toggling a mod in a profile,

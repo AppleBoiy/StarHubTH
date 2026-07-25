@@ -36,11 +36,11 @@ final class ProfileManager: Sendable {
     }
     
     /// Moves mod files to match the given profile's enabledModIds.
-    func applyProfileToFilesystem(profile: ModProfile, mods: [Mod], gameDir: String) -> Bool {
+    func applyProfileToFilesystem(profile: ModProfile, mods: [Mod], gameDir: String) throws(ProfileApplyError) {
         let fileManager = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
         let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
-        var hasError = false
+        var failedModNames: [String] = []
         
         func isCoveredByProfile(_ mod: Mod) -> Bool {
             if case .group(let children) = mod.kind {
@@ -77,8 +77,7 @@ final class ProfileManager: Sendable {
                         throw error
                     }
                 } catch {
-                    print("Failed to disable \(mod.name) for profile: \(error)")
-                    hasError = true
+                    failedModNames.append(mod.name)
                 }
             }
         }
@@ -111,13 +110,12 @@ final class ProfileManager: Sendable {
                         throw error
                     }
                 } catch {
-                    print("Failed to enable \(mod.name) for profile: \(error)")
-                    hasError = true
+                    failedModNames.append(mod.name)
                 }
             }
         }
-        
-        return !hasError
+
+        guard failedModNames.isEmpty else { throw ProfileApplyError(failedModNames: failedModNames) }
     }
     
     func exportProfile(_ profile: ModProfile, mods: [Mod], to url: URL) throws {

@@ -16,8 +16,8 @@ final class StubProfileStoring: ProfileStoring {
         savedProfiles = profiles
     }
 
-    func applyProfileToFilesystem(profile: ModProfile, mods: [Mod], gameDir: String) -> Bool {
-        applyResult
+    func applyProfileToFilesystem(profile: ModProfile, mods: [Mod], gameDir: String) throws(ProfileApplyError) {
+        guard applyResult else { throw ProfileApplyError(failedModNames: mods.map { $0.name }) }
     }
 
     func exportProfile(_ profile: ModProfile, mods: [Mod], to url: URL) throws {}

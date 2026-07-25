@@ -297,7 +297,8 @@ final class AppCoordinator: ObservableObject {
             enabledModIds: enabledModIds,
             gameDir: appEnvironment.gameDir,
             modsProvider: { [weak self] in self?.modsStore.mods ?? [] },
-            scanMods: { [weak self] in self?.scanMods() }
+            scanMods: { [weak self] in self?.scanMods() },
+            showModal: { [weak self] message in self?.alertStore.show(message) }
         )
     }
 
