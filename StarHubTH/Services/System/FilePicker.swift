@@ -28,4 +28,8 @@ struct FilePicker: FilePicking {
         guard panel.runModal() == .OK else { return [] }
         return panel.urls
     }
+
+    func reveal(_ url: URL) {
+        NSWorkspace.shared.open(url)
+    }
 }

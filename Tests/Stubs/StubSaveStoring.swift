@@ -19,7 +19,6 @@ final class StubSaveStoring: SaveStoring {
         try failIfNeeded()
     }
 
-    func openSaveInFinder(info: SaveGameInfo) {}
     func deleteSave(info: SaveGameInfo) throws(SaveStorageError) { try failIfNeeded() }
     func duplicateSave(info: SaveGameInfo, newName: String, newFarm: String) throws(SaveStorageError) { try failIfNeeded() }
     func branchFromBackup(backup: SaveBackup, newName: String, newFarm: String) throws(SaveStorageError) { try failIfNeeded() }

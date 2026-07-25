@@ -1,5 +1,4 @@
 import Foundation
-import AppKit
 import UniformTypeIdentifiers
 
 /// Phase 4.6. Owns save-file management: the save list, its hierarchy/filter/sort view,
@@ -211,7 +210,7 @@ final class SavesStore: ObservableObject {
     }
 
     func openSaveInFinder(info: SaveGameInfo) {
-        saveStoring.openSaveInFinder(info: info)
+        filePicking.reveal(info.fileURL.deletingLastPathComponent())
     }
 
     // MARK: - Backup Timeline
@@ -302,6 +301,6 @@ final class SavesStore: ObservableObject {
     func openSavesFolder() {
         let home = NSHomeDirectory()
         let savesDir = URL(fileURLWithPath: "\(home)/.config/StardewValley/Saves")
-        NSWorkspace.shared.open(savesDir)
+        filePicking.reveal(savesDir)
     }
 }

@@ -1,7 +1,4 @@
 import Foundation
-#if canImport(AppKit)
-import AppKit
-#endif
 
 /// `savesDir` is a `let`, set once in `init()` and never mutated — a plain `Sendable`
 /// conformance, no actor needed (see Phase 5's Context notes on why `SaveManager` isn't
@@ -245,13 +242,6 @@ final class SaveManager: Sendable {
     }
 
     // MARK: - Advanced Management
-
-    func openSaveInFinder(info: SaveGameInfo) {
-        #if os(macOS)
-        let folderPath = info.fileURL.deletingLastPathComponent()
-        NSWorkspace.shared.open(folderPath)
-        #endif
-    }
 
     func deleteSave(info: SaveGameInfo) throws(SaveStorageError) {
         let folderPath = info.fileURL.deletingLastPathComponent()

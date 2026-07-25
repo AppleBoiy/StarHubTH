@@ -13,4 +13,8 @@ protocol FilePicking {
     /// Presents a file/folder picker. Returns an empty array if the user cancels. A
     /// `nil` title leaves the panel's default system title in place.
     func pickFiles(title: String?, allowedContentTypes: [UTType], allowsMultipleSelection: Bool, canChooseDirectories: Bool) -> [URL]
+
+    /// Reveals a file or folder in Finder. The other AppKit-confinement half of this
+    /// protocol — `NSWorkspace.shared.open` belongs here, not scattered across services/stores.
+    func reveal(_ url: URL)
 }
