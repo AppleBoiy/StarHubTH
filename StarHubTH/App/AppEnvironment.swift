@@ -112,24 +112,20 @@ final class AppEnvironment: ObservableObject {
     }
 
     // Install SMAPI via Installer Helper
-    func installSmapi(showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) {
-        smapiInstaller.install(gameDir: gameDir) { [weak self] success, msgKey, detail in
-            guard let self = self else { return }
-            self.checkSmapiVersion()
-            let message = detail != nil ? "\(self.localization.L(msgKey))\n\(detail!)" : self.localization.L(msgKey)
-            showModal(message)
-            log(message)
-        }
+    func installSmapi(showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
+        let outcome = await smapiInstaller.install(gameDir: gameDir)
+        checkSmapiVersion()
+        let message = outcome.detail.map { "\(localization.L(outcome.messageKey))\n\($0)" } ?? localization.L(outcome.messageKey)
+        showModal(message)
+        log(message)
     }
 
     // Uninstall SMAPI
-    func uninstallSmapi(showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) {
-        smapiInstaller.uninstall(gameDir: gameDir) { [weak self] success, msgKey, detail in
-            guard let self = self else { return }
-            self.checkSmapiVersion()
-            let message = detail != nil ? "\(self.localization.L(msgKey))\n\(detail!)" : self.localization.L(msgKey)
-            showModal(message)
-            log(message)
-        }
+    func uninstallSmapi(showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
+        let outcome = await smapiInstaller.uninstall(gameDir: gameDir)
+        checkSmapiVersion()
+        let message = outcome.detail.map { "\(localization.L(outcome.messageKey))\n\($0)" } ?? localization.L(outcome.messageKey)
+        showModal(message)
+        log(message)
     }
 }

@@ -14,7 +14,6 @@ ModManifestParserTests.run()
 SaveFileParserTests.run()
 SaveManagerTests.run()
 SmapiLogParserTests.run()
-SmapiInstallerTests.run()
 
 // Every suite below either awaits real async work or still touches a method that hasn't
 // been converted off DispatchQueue.main.async yet (ModsStore.scanMods, as of Phase 5.2's
@@ -35,6 +34,7 @@ func runSuite(deadline seconds: TimeInterval, _ body: @escaping () async -> Void
     }
 }
 
+runSuite(deadline: 10) { await SmapiInstallerTests.run() }
 runSuite(deadline: 120) { await NXMParserTests.run() }
 runSuite(deadline: 30) { await NexusCollectionTests.run() }
 runSuite(deadline: 120) { await ModUpdateTests.run() }

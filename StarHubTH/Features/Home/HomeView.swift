@@ -118,9 +118,9 @@ struct HomeView: View {
                                         .controlSize(.small)
                                         .padding(.trailing, 4)
                                 } else if appEnvironment.smapiInstalledVersion == nil {
-                                    Button(localizationStore.L(L10n.Home.installSmapi)) { appCoordinator.installSmapi() }
+                                    Button(localizationStore.L(L10n.Home.installSmapi)) { Task { await appCoordinator.installSmapi() } }
                                 } else {
-                                    Button(localizationStore.L(L10n.Home.uninstall)) { appCoordinator.uninstallSmapi() }
+                                    Button(localizationStore.L(L10n.Home.uninstall)) { Task { await appCoordinator.uninstallSmapi() } }
                                 }
                             }
                             

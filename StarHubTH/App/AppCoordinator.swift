@@ -207,15 +207,15 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - SMAPI
 
-    func installSmapi() {
-        appEnvironment.installSmapi(
+    func installSmapi() async {
+        await appEnvironment.installSmapi(
             showModal: { [weak self] message in self?.alertStore.show(message) },
             log: { [weak self] message in self?.logStore.log(message) }
         )
     }
 
-    func uninstallSmapi() {
-        appEnvironment.uninstallSmapi(
+    func uninstallSmapi() async {
+        await appEnvironment.uninstallSmapi(
             showModal: { [weak self] message in self?.alertStore.show(message) },
             log: { [weak self] message in self?.logStore.log(message) }
         )

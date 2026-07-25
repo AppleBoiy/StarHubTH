@@ -1,14 +1,10 @@
 import Foundation
 
 final class StubSmapiInstalling: SmapiInstalling {
-    var installResult: (success: Bool, messageKey: String, detail: String?) = (true, "", nil)
-    var uninstallResult: (success: Bool, messageKey: String, detail: String?) = (true, "", nil)
+    var installResult = SmapiInstallOutcome(success: true, messageKey: "", detail: nil)
+    var uninstallResult = SmapiInstallOutcome(success: true, messageKey: "", detail: nil)
 
-    func install(gameDir: String, completion: @escaping (Bool, String, String?) -> Void) {
-        completion(installResult.success, installResult.messageKey, installResult.detail)
-    }
+    func install(gameDir: String) async -> SmapiInstallOutcome { installResult }
 
-    func uninstall(gameDir: String, completion: @escaping (Bool, String, String?) -> Void) {
-        completion(uninstallResult.success, uninstallResult.messageKey, uninstallResult.detail)
-    }
+    func uninstall(gameDir: String) async -> SmapiInstallOutcome { uninstallResult }
 }
