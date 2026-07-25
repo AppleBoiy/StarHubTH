@@ -552,6 +552,7 @@ struct SidebarNavItem: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityIdentifier("sidebar-tab-\(tab)")
         .onHover { isHovered = $0 }
         .pointingHandCursor()
     }
