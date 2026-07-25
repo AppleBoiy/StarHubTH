@@ -4,7 +4,7 @@ struct ModScanner {
     static func scan(gameDir: String, customModTags: [String: String]) -> [Mod] {
         guard !gameDir.isEmpty else { return [] }
         
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
         let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
         
@@ -19,7 +19,7 @@ struct ModScanner {
             var groups: [String: [Mod]] = [:]
             var ungrouped: [Mod] = []
             
-            if let enumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
+            if let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
                 for case let fileURL as URL in enumerator {
                     if fileURL.lastPathComponent.lowercased() == "manifest.json" {
                         let modFolderURL = fileURL.deletingLastPathComponent()
@@ -72,11 +72,11 @@ struct ModScanner {
             }
         }
         
-        if fm.fileExists(atPath: modsPath) {
+        if fileManager.fileExists(atPath: modsPath) {
             scanFolderForMods(at: modsPath, isEnabled: true)
         }
         
-        if fm.fileExists(atPath: disabledModsPath) {
+        if fileManager.fileExists(atPath: disabledModsPath) {
             scanFolderForMods(at: disabledModsPath, isEnabled: false)
         }
         

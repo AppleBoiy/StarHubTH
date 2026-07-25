@@ -33,11 +33,11 @@ final class SmapiInstaller: ObservableObject {
 
     // Check if SMAPI is installed in the Stardew Valley MacOS directory
     nonisolated static func installedVersion(gameDir: String) -> String? {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let originalPath = (gameDir as NSString).appendingPathComponent("StardewValley-original")
 
         // SMAPI must have replaced the launcher
-        guard fm.fileExists(atPath: originalPath) else { return nil }
+        guard fileManager.fileExists(atPath: originalPath) else { return nil }
 
         // 1. Our own marker, written by `install()` right after a successful
         // run. SMAPI's packaging no longer includes anything that reliably
@@ -63,7 +63,7 @@ final class SmapiInstaller: ObservableObject {
         let logPath = (home as NSString).appendingPathComponent(
             ".config/StardewValley/ErrorLogs/SMAPI-latest.txt"
         )
-        if fm.fileExists(atPath: logPath),
+        if fileManager.fileExists(atPath: logPath),
            let handle = FileHandle(forReadingAtPath: logPath) {
             let data = handle.readData(ofLength: 256)
             try? handle.close()
@@ -113,10 +113,10 @@ final class SmapiInstaller: ObservableObject {
     // files it added. Re-downloading it for an uninstall is wasteful but
     // simple and correct; uninstalling isn't a hot path.
     func uninstall(gameDir: String) async -> SmapiInstallOutcome {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let originalPath = (gameDir as NSString).appendingPathComponent("StardewValley-original")
 
-        guard fm.fileExists(atPath: originalPath) else {
+        guard fileManager.fileExists(atPath: originalPath) else {
             return SmapiInstallOutcome(success: false, messageKey: L10n.Smapi.notFound, detail: nil)
         }
 
@@ -215,18 +215,18 @@ final class SmapiInstaller: ObservableObject {
             return SmapiInstallOutcome(success: false, messageKey: L10n.Smapi.downloadHttpError, detail: "HTTP \(http.statusCode)")
         }
 
-        let fm = FileManager.default
+        let fileManager = FileManager.default
 
         do {
-            if fm.fileExists(atPath: zipDest.path) { try fm.removeItem(at: zipDest) }
-            try fm.copyItem(at: localURL, to: zipDest)
+            if fileManager.fileExists(atPath: zipDest.path) { try fileManager.removeItem(at: zipDest) }
+            try fileManager.copyItem(at: localURL, to: zipDest)
 
             statusMessage = L10n.Smapi.extracting
             progress = 0.4
 
             let extractDir = URL(fileURLWithPath: tempDir).appendingPathComponent("smapi_extracted")
-            if fm.fileExists(atPath: extractDir.path) { try fm.removeItem(at: extractDir) }
-            try fm.createDirectory(at: extractDir, withIntermediateDirectories: true, attributes: nil)
+            if fileManager.fileExists(atPath: extractDir.path) { try fileManager.removeItem(at: extractDir) }
+            try fileManager.createDirectory(at: extractDir, withIntermediateDirectories: true, attributes: nil)
 
             let unzipStatus = try await runProcess(executable: "/usr/bin/unzip", arguments: ["-q", zipDest.path, "-d", extractDir.path])
             guard unzipStatus == 0 else {
@@ -241,7 +241,7 @@ final class SmapiInstaller: ObservableObject {
             // "SMAPI 4.5.2 installer/"), so search by suffix rather
             // than a fixed path.
             var installerPath: String? = nil
-            let enumerator = fm.enumerator(atPath: extractDir.path)
+            let enumerator = fileManager.enumerator(atPath: extractDir.path)
             while let element = enumerator?.nextObject() as? String {
                 if element.hasSuffix("internal/macOS/SMAPI.Installer") {
                     installerPath = (extractDir.path as NSString).appendingPathComponent(element)
@@ -249,7 +249,7 @@ final class SmapiInstaller: ObservableObject {
                 }
             }
 
-            guard let smapiInstallerBin = installerPath, fm.fileExists(atPath: smapiInstallerBin) else {
+            guard let smapiInstallerBin = installerPath, fileManager.fileExists(atPath: smapiInstallerBin) else {
                 isInstalling = false
                 return SmapiInstallOutcome(success: false, messageKey: L10n.Smapi.payloadNotFound, detail: nil)
             }
@@ -265,16 +265,16 @@ final class SmapiInstaller: ObservableObject {
             let internalRoot = (macOSDir as NSString).deletingLastPathComponent
             _ = try? await runProcess(executable: "/usr/bin/xattr", arguments: ["-r", "-d", "com.apple.quarantine", internalRoot])
 
-            var attributes = try fm.attributesOfItem(atPath: smapiInstallerBin)
+            var attributes = try fileManager.attributesOfItem(atPath: smapiInstallerBin)
             attributes[.posixPermissions] = 0o755
-            try fm.setAttributes(attributes, ofItemAtPath: smapiInstallerBin)
+            try fileManager.setAttributes(attributes, ofItemAtPath: smapiInstallerBin)
 
             statusMessage = L10n.Smapi.preparing
             progress = 0.8
 
             let outcome = await runOfficialInstaller(at: smapiInstallerBin, version: version, gameDir: gameDir, action: action)
-            try? fm.removeItem(at: zipDest)
-            try? fm.removeItem(at: extractDir)
+            try? fileManager.removeItem(at: zipDest)
+            try? fileManager.removeItem(at: extractDir)
             progress = outcome.success ? 1.0 : progress
             isInstalling = false
             return outcome
@@ -355,12 +355,12 @@ final class SmapiInstaller: ObservableObject {
                 process.waitUntilExit()
                 let output = String(data: outputData, encoding: .utf8) ?? ""
 
-                let fm = FileManager.default
+                let fileManager = FileManager.default
                 let smapiInternalPath = (gameDir as NSString).appendingPathComponent("smapi-internal")
 
                 switch action {
                 case .install:
-                    let succeeded = output.contains("SMAPI is installed!") && fm.fileExists(atPath: smapiInternalPath)
+                    let succeeded = output.contains("SMAPI is installed!") && fileManager.fileExists(atPath: smapiInternalPath)
                     if succeeded {
                         let markerPath = (gameDir as NSString).appendingPathComponent(Self.installedVersionMarkerRelativePath)
                         try? version.write(toFile: markerPath, atomically: true, encoding: .utf8)
@@ -369,7 +369,7 @@ final class SmapiInstaller: ObservableObject {
                         continuation.resume(returning: SmapiInstallOutcome(success: false, messageKey: L10n.Smapi.installError, detail: Self.lastMeaningfulLine(of: output)))
                     }
                 case .uninstall:
-                    let succeeded = output.contains("SMAPI is removed!") && !fm.fileExists(atPath: smapiInternalPath)
+                    let succeeded = output.contains("SMAPI is removed!") && !fileManager.fileExists(atPath: smapiInternalPath)
                     if succeeded {
                         continuation.resume(returning: SmapiInstallOutcome(success: true, messageKey: L10n.Smapi.uninstallSuccess, detail: nil))
                     } else {

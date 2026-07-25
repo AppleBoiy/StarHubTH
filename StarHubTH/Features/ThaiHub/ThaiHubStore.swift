@@ -85,7 +85,7 @@ final class ThaiHubStore: ObservableObject {
 
     func evaluateThaiTranslationStatus(gameDir: String, mods: [Mod]) {
         guard !gameDir.isEmpty else { return }
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let modsDir = (gameDir as NSString).appendingPathComponent("Mods")
 
         for i in 0..<thaiTranslations.count {
@@ -101,13 +101,13 @@ final class ThaiHubStore: ObservableObject {
                     let thJsonPath = (modsDir as NSString).appendingPathComponent("\(mod.folderName)/i18n/th.json")
                     let cpThJsonPath = (modsDir as NSString).appendingPathComponent("\(mod.folderName)/[CP] \(mod.folderName)/i18n/th.json") // Handle nested [CP]
 
-                    if fm.fileExists(atPath: thJsonPath) || fm.fileExists(atPath: cpThJsonPath) {
+                    if fileManager.fileExists(atPath: thJsonPath) || fileManager.fileExists(atPath: cpThJsonPath) {
                         foundTranslation = true
                     } else if case .group(let children) = mod.kind {
                         for child in children {
                             let childThJsonPath = (modsDir as NSString).appendingPathComponent("\(child.folderName)/i18n/th.json")
                             let childCpThJsonPath = (modsDir as NSString).appendingPathComponent("\(child.folderName)/[CP] \(child.folderName)/i18n/th.json")
-                            if fm.fileExists(atPath: childThJsonPath) || fm.fileExists(atPath: childCpThJsonPath) {
+                            if fileManager.fileExists(atPath: childThJsonPath) || fileManager.fileExists(atPath: childCpThJsonPath) {
                                 foundTranslation = true
                                 break
                             }

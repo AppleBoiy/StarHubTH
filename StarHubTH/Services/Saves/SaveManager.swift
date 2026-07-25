@@ -18,19 +18,19 @@ final class SaveManager: Sendable {
 
     func fetchSaves() -> [SaveGameInfo] {
         var saves: [SaveGameInfo] = []
-        let fm = FileManager.default
+        let fileManager = FileManager.default
 
-        guard let folders = try? fm.contentsOfDirectory(at: savesDir, includingPropertiesForKeys: [.isDirectoryKey]) else {
+        guard let folders = try? fileManager.contentsOfDirectory(at: savesDir, includingPropertiesForKeys: [.isDirectoryKey]) else {
             return []
         }
 
         for folder in folders {
             var isDir: ObjCBool = false
-            if fm.fileExists(atPath: folder.path, isDirectory: &isDir), isDir.boolValue {
+            if fileManager.fileExists(atPath: folder.path, isDirectory: &isDir), isDir.boolValue {
                 let saveName = folder.lastPathComponent
                 let saveFile = folder.appendingPathComponent(saveName)
 
-                if fm.fileExists(atPath: saveFile.path) {
+                if fileManager.fileExists(atPath: saveFile.path) {
                     if let info = SaveFileParser.parse(url: saveFile, folderName: saveName) {
                         saves.append(info)
                     }
@@ -94,7 +94,7 @@ final class SaveManager: Sendable {
     }
 
     func backupSave(info: SaveGameInfo) -> Bool {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd_HHmmss"
         let timestamp = formatter.string(from: Date())
@@ -107,13 +107,13 @@ final class SaveManager: Sendable {
         // on the same path, make copyItem throw "already exists", and silently abort
         // the caller's edit since both guard on this returning true.
         var suffix = 1
-        while fm.fileExists(atPath: backupPath.path) {
+        while fileManager.fileExists(atPath: backupPath.path) {
             backupPath = folderPath.appendingPathExtension("backup_\(timestamp)_\(suffix)")
             suffix += 1
         }
 
         do {
-            try fm.copyItem(at: folderPath, to: backupPath)
+            try fileManager.copyItem(at: folderPath, to: backupPath)
             print("Backup created at: \(backupPath.path)")
             return true
         } catch {
@@ -260,7 +260,7 @@ final class SaveManager: Sendable {
     /// the *old* player/farm name in-game despite the app confirming the rename worked.
     @discardableResult
     private func modifyInternalSaveNames(in folderURL: URL, newSaveName: String, newPlayerName: String, newFarmName: String) -> Bool {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let saveGameInfoURL = folderURL.appendingPathComponent("SaveGameInfo")
         let mainSaveURL = folderURL.appendingPathComponent(newSaveName)
 
@@ -277,17 +277,17 @@ final class SaveManager: Sendable {
         }
 
         var succeeded = true
-        if fm.fileExists(atPath: saveGameInfoURL.path) {
+        if fileManager.fileExists(atPath: saveGameInfoURL.path) {
             succeeded = updateFile(at: saveGameInfoURL) && succeeded
         }
-        if fm.fileExists(atPath: mainSaveURL.path) {
+        if fileManager.fileExists(atPath: mainSaveURL.path) {
             succeeded = updateFile(at: mainSaveURL) && succeeded
         }
         return succeeded
     }
 
     func duplicateSave(info: SaveGameInfo, newName: String, newFarm: String) -> Bool {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let folderPath = info.fileURL.deletingLastPathComponent()
         let saveName = folderPath.lastPathComponent
 
@@ -295,20 +295,20 @@ final class SaveManager: Sendable {
         var newFolderPath = folderPath.deletingLastPathComponent().appendingPathComponent(newSaveName)
 
         var counter = 1
-        while fm.fileExists(atPath: newFolderPath.path) {
+        while fileManager.fileExists(atPath: newFolderPath.path) {
             newSaveName = "\(saveName)_copy_\(counter)"
             newFolderPath = folderPath.deletingLastPathComponent().appendingPathComponent(newSaveName)
             counter += 1
         }
 
         do {
-            try fm.copyItem(at: folderPath, to: newFolderPath)
+            try fileManager.copyItem(at: folderPath, to: newFolderPath)
 
             // Rename internal file
             let oldFilePath = newFolderPath.appendingPathComponent(saveName)
             let newFilePath = newFolderPath.appendingPathComponent(newSaveName)
-            if fm.fileExists(atPath: oldFilePath.path) {
-                try fm.moveItem(at: oldFilePath, to: newFilePath)
+            if fileManager.fileExists(atPath: oldFilePath.path) {
+                try fileManager.moveItem(at: oldFilePath, to: newFilePath)
             }
 
             // Modify name and farm name inside XML files
@@ -322,7 +322,7 @@ final class SaveManager: Sendable {
     // MARK: - Backup Timeline
 
     func branchFromBackup(backup: SaveBackup, newName: String, newFarm: String) -> Bool {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let backupFolderPath = backup.folderPath
         let originalSaveName = String(backupFolderPath.lastPathComponent.split(separator: ".")[0])
         let parentDir = backupFolderPath.deletingLastPathComponent()
@@ -331,20 +331,20 @@ final class SaveManager: Sendable {
         var newFolderPath = parentDir.appendingPathComponent(newSaveName)
 
         var counter = 1
-        while fm.fileExists(atPath: newFolderPath.path) {
+        while fileManager.fileExists(atPath: newFolderPath.path) {
             newSaveName = "\(originalSaveName)_branch_\(counter)"
             newFolderPath = parentDir.appendingPathComponent(newSaveName)
             counter += 1
         }
 
         do {
-            try fm.copyItem(at: backupFolderPath, to: newFolderPath)
+            try fileManager.copyItem(at: backupFolderPath, to: newFolderPath)
 
             // Rename internal file
             let oldFilePath = newFolderPath.appendingPathComponent(originalSaveName)
             let newFilePath = newFolderPath.appendingPathComponent(newSaveName)
-            if fm.fileExists(atPath: oldFilePath.path) {
-                try fm.moveItem(at: oldFilePath, to: newFilePath)
+            if fileManager.fileExists(atPath: oldFilePath.path) {
+                try fileManager.moveItem(at: oldFilePath, to: newFilePath)
             }
 
             // Modify name and farm name inside XML files
@@ -389,7 +389,7 @@ final class SaveManager: Sendable {
 
     /// Restore a backup: backup current save first, then swap
     func restoreBackup(backup: SaveBackup, info: SaveGameInfo) -> Bool {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let saveFolder = info.fileURL.deletingLastPathComponent()
 
         // 1. First backup the current state before restoring
@@ -405,21 +405,21 @@ final class SaveManager: Sendable {
 
         do {
             // Backup current state
-            try fm.copyItem(at: saveFolder, to: preRestoreBackupPath)
+            try fileManager.copyItem(at: saveFolder, to: preRestoreBackupPath)
 
             // Move current save folder to temporary staging
-            try fm.moveItem(at: saveFolder, to: tempTrash)
+            try fileManager.moveItem(at: saveFolder, to: tempTrash)
 
             do {
                 // Copy backup into place
-                try fm.copyItem(at: backup.folderPath, to: saveFolder)
+                try fileManager.copyItem(at: backup.folderPath, to: saveFolder)
                 // Trash the temp after successful restore
-                try? fm.trashItem(at: tempTrash, resultingItemURL: nil)
+                try? fileManager.trashItem(at: tempTrash, resultingItemURL: nil)
                 return true
             } catch {
                 // Rollback: restore original save from tempTrash
-                if fm.fileExists(atPath: tempTrash.path) && !fm.fileExists(atPath: saveFolder.path) {
-                    try? fm.moveItem(at: tempTrash, to: saveFolder)
+                if fileManager.fileExists(atPath: tempTrash.path) && !fileManager.fileExists(atPath: saveFolder.path) {
+                    try? fileManager.moveItem(at: tempTrash, to: saveFolder)
                 }
                 throw error
             }

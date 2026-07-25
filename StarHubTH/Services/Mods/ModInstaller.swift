@@ -21,11 +21,11 @@ enum ModInstallerError: Error, LocalizedError {
 /// for retroactive conformance to be explicit and same-file).
 struct ModInstaller: Sendable {
     static func installFromZip(url: URL, gameDir: String) async throws(ModInstallerError) -> [String] {
-        let fm = FileManager.default
-        let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let fileManager = FileManager.default
+        let tempDir = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
 
         do {
-            try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
             let unzip = Process()
             unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
             unzip.arguments = ["-o", "-q", url.path, "-d", tempDir.path]
@@ -33,7 +33,7 @@ struct ModInstaller: Sendable {
             unzip.waitUntilExit()
 
             guard unzip.terminationStatus == 0 else {
-                try? fm.removeItem(at: tempDir)
+                try? fileManager.removeItem(at: tempDir)
                 throw ModInstallerError.unzipProcessError
             }
 
@@ -44,7 +44,7 @@ struct ModInstaller: Sendable {
         } catch let error as ModInstallerError {
             throw error
         } catch {
-            try? fm.removeItem(at: tempDir)
+            try? fileManager.removeItem(at: tempDir)
             throw .unzipFailed(error.localizedDescription)
         }
     }
@@ -54,7 +54,7 @@ struct ModInstaller: Sendable {
     }
 
     private static func installExtractedContent(from rootDir: URL, gameDir: String, specificRoot: String? = nil, fallbackRootName: String? = nil, cleanup: Bool) throws(ModInstallerError) -> [String] {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
 
         do {
@@ -62,7 +62,7 @@ struct ModInstaller: Sendable {
             var manifestDirs: [URL] = []
             let enumerateRoot = specificRoot.map { rootDir.appendingPathComponent($0) } ?? rootDir
             
-            if let enumerator = fm.enumerator(
+            if let enumerator = fileManager.enumerator(
                 at: enumerateRoot,
                 includingPropertiesForKeys: [.isDirectoryKey],
                 options: [.skipsHiddenFiles]
@@ -82,13 +82,13 @@ struct ModInstaller: Sendable {
             }
             
             guard !topLevelDirs.isEmpty else {
-                if cleanup { try? fm.removeItem(at: rootDir) }
+                if cleanup { try? fileManager.removeItem(at: rootDir) }
                 throw ModInstallerError.noModFound
             }
             
             // 3. Create Mods dir if needed
-            if !fm.fileExists(atPath: modsPath) {
-                try fm.createDirectory(atPath: modsPath, withIntermediateDirectories: true)
+            if !fileManager.fileExists(atPath: modsPath) {
+                try fileManager.createDirectory(atPath: modsPath, withIntermediateDirectories: true)
             }
             
             // 4. For each mod folder, move/copy.
@@ -106,9 +106,9 @@ struct ModInstaller: Sendable {
 
             func rollBackCompletedInstalls() {
                 for entry in completedInstalls.reversed() {
-                    try? fm.removeItem(at: entry.destRoot)
-                    if let backup = entry.destBackup, fm.fileExists(atPath: backup.path) {
-                        try? fm.moveItem(at: backup, to: entry.destRoot)
+                    try? fileManager.removeItem(at: entry.destRoot)
+                    if let backup = entry.destBackup, fileManager.fileExists(atPath: backup.path) {
+                        try? fileManager.moveItem(at: backup, to: entry.destRoot)
                     }
                 }
             }
@@ -138,14 +138,14 @@ struct ModInstaller: Sendable {
 
                 let destRoot = URL(fileURLWithPath: modsPath).appendingPathComponent(rootName)
                 let destBackup = URL(fileURLWithPath: modsPath).appendingPathComponent("\(rootName)_backup_temp")
-                let hadExisting = fm.fileExists(atPath: destRoot.path)
+                let hadExisting = fileManager.fileExists(atPath: destRoot.path)
 
                 if hadExisting {
-                    if fm.fileExists(atPath: destBackup.path) {
-                        try? fm.removeItem(at: destBackup)
+                    if fileManager.fileExists(atPath: destBackup.path) {
+                        try? fileManager.removeItem(at: destBackup)
                     }
                     do {
-                        try fm.moveItem(at: destRoot, to: destBackup)
+                        try fileManager.moveItem(at: destRoot, to: destBackup)
                     } catch {
                         rollBackCompletedInstalls()
                         throw error
@@ -154,15 +154,15 @@ struct ModInstaller: Sendable {
 
                 do {
                     if cleanup {
-                        try fm.moveItem(at: srcRoot, to: destRoot)
+                        try fileManager.moveItem(at: srcRoot, to: destRoot)
                     } else {
-                        try fm.copyItem(at: srcRoot, to: destRoot)
+                        try fileManager.copyItem(at: srcRoot, to: destRoot)
                     }
                     installedNames.append(rootName)
                     completedInstalls.append((destRoot, hadExisting ? destBackup : nil))
                 } catch {
-                    if hadExisting && !fm.fileExists(atPath: destRoot.path) {
-                        try? fm.moveItem(at: destBackup, to: destRoot)
+                    if hadExisting && !fileManager.fileExists(atPath: destRoot.path) {
+                        try? fileManager.moveItem(at: destBackup, to: destRoot)
                     }
                     rollBackCompletedInstalls()
                     throw error
@@ -172,17 +172,17 @@ struct ModInstaller: Sendable {
             // Whole batch succeeded — now it's safe to trash every backup made along the way.
             for entry in completedInstalls {
                 if let backup = entry.destBackup {
-                    try? fm.trashItem(at: backup, resultingItemURL: nil)
+                    try? fileManager.trashItem(at: backup, resultingItemURL: nil)
                 }
             }
 
-            if cleanup { try? fm.removeItem(at: rootDir) }
+            if cleanup { try? fileManager.removeItem(at: rootDir) }
             return installedNames
 
         } catch let error as ModInstallerError {
             throw error
         } catch {
-            if cleanup { try? fm.removeItem(at: rootDir) }
+            if cleanup { try? fileManager.removeItem(at: rootDir) }
             throw .other(error.localizedDescription)
         }
     }

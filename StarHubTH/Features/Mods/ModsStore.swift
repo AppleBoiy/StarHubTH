@@ -298,7 +298,7 @@ final class ModsStore: ObservableObject {
         }
         // else: chainToggleDependencies == false → only toggle the single mod itself
 
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
         let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
         var anyMoved = false
@@ -314,25 +314,25 @@ final class ModsStore: ObservableObject {
             let destBackup = "\(destPath)_toggle_backup_temp"
             do {
                 let destParent = (destPath as NSString).deletingLastPathComponent
-                if !fm.fileExists(atPath: destParent) {
-                    try fm.createDirectory(atPath: destParent, withIntermediateDirectories: true, attributes: nil)
+                if !fileManager.fileExists(atPath: destParent) {
+                    try fileManager.createDirectory(atPath: destParent, withIntermediateDirectories: true, attributes: nil)
                 }
-                if fm.fileExists(atPath: destPath) {
-                    if fm.fileExists(atPath: destBackup) {
-                        try? fm.removeItem(atPath: destBackup)
+                if fileManager.fileExists(atPath: destPath) {
+                    if fileManager.fileExists(atPath: destBackup) {
+                        try? fileManager.removeItem(atPath: destBackup)
                     }
-                    try fm.moveItem(atPath: destPath, toPath: destBackup)
+                    try fileManager.moveItem(atPath: destPath, toPath: destBackup)
                 }
 
                 do {
-                    try fm.moveItem(atPath: srcPath, toPath: destPath)
-                    if fm.fileExists(atPath: destBackup) {
-                        try? fm.trashItem(at: URL(fileURLWithPath: destBackup), resultingItemURL: nil)
+                    try fileManager.moveItem(atPath: srcPath, toPath: destPath)
+                    if fileManager.fileExists(atPath: destBackup) {
+                        try? fileManager.trashItem(at: URL(fileURLWithPath: destBackup), resultingItemURL: nil)
                     }
                     anyMoved = true
                 } catch {
-                    if fm.fileExists(atPath: destBackup) && !fm.fileExists(atPath: destPath) {
-                        try? fm.moveItem(atPath: destBackup, toPath: destPath)
+                    if fileManager.fileExists(atPath: destBackup) && !fileManager.fileExists(atPath: destPath) {
+                        try? fileManager.moveItem(atPath: destBackup, toPath: destPath)
                     }
                     throw error
                 }

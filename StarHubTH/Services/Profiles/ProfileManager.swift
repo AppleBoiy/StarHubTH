@@ -37,7 +37,7 @@ final class ProfileManager: Sendable {
     
     /// Moves mod files to match the given profile's enabledModIds.
     func applyProfileToFilesystem(profile: ModProfile, mods: [Mod], gameDir: String) -> Bool {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
         let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
         var hasError = false
@@ -56,23 +56,23 @@ final class ProfileManager: Sendable {
                 let dst = (disabledModsPath as NSString).appendingPathComponent(mod.folderName.rawValue)
                 let dstBackup = "\(dst)_profile_backup_temp"
                 do {
-                    try fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
+                    try fileManager.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
                                             withIntermediateDirectories: true, attributes: nil)
-                    if fm.fileExists(atPath: dst) {
-                        if fm.fileExists(atPath: dstBackup) {
-                            try? fm.removeItem(atPath: dstBackup)
+                    if fileManager.fileExists(atPath: dst) {
+                        if fileManager.fileExists(atPath: dstBackup) {
+                            try? fileManager.removeItem(atPath: dstBackup)
                         }
-                        try fm.moveItem(atPath: dst, toPath: dstBackup)
+                        try fileManager.moveItem(atPath: dst, toPath: dstBackup)
                     }
                     
                     do {
-                        try fm.moveItem(atPath: src, toPath: dst)
-                        if fm.fileExists(atPath: dstBackup) {
-                            try? fm.trashItem(at: URL(fileURLWithPath: dstBackup), resultingItemURL: nil)
+                        try fileManager.moveItem(atPath: src, toPath: dst)
+                        if fileManager.fileExists(atPath: dstBackup) {
+                            try? fileManager.trashItem(at: URL(fileURLWithPath: dstBackup), resultingItemURL: nil)
                         }
                     } catch {
-                        if fm.fileExists(atPath: dstBackup) && !fm.fileExists(atPath: dst) {
-                            try? fm.moveItem(atPath: dstBackup, toPath: dst)
+                        if fileManager.fileExists(atPath: dstBackup) && !fileManager.fileExists(atPath: dst) {
+                            try? fileManager.moveItem(atPath: dstBackup, toPath: dst)
                         }
                         throw error
                     }
@@ -90,23 +90,23 @@ final class ProfileManager: Sendable {
                 let dst = (modsPath as NSString).appendingPathComponent(mod.folderName.rawValue)
                 let dstBackup = "\(dst)_profile_backup_temp"
                 do {
-                    try fm.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
+                    try fileManager.createDirectory(atPath: (dst as NSString).deletingLastPathComponent,
                                             withIntermediateDirectories: true, attributes: nil)
-                    if fm.fileExists(atPath: dst) {
-                        if fm.fileExists(atPath: dstBackup) {
-                            try? fm.removeItem(atPath: dstBackup)
+                    if fileManager.fileExists(atPath: dst) {
+                        if fileManager.fileExists(atPath: dstBackup) {
+                            try? fileManager.removeItem(atPath: dstBackup)
                         }
-                        try fm.moveItem(atPath: dst, toPath: dstBackup)
+                        try fileManager.moveItem(atPath: dst, toPath: dstBackup)
                     }
                     
                     do {
-                        try fm.moveItem(atPath: src, toPath: dst)
-                        if fm.fileExists(atPath: dstBackup) {
-                            try? fm.trashItem(at: URL(fileURLWithPath: dstBackup), resultingItemURL: nil)
+                        try fileManager.moveItem(atPath: src, toPath: dst)
+                        if fileManager.fileExists(atPath: dstBackup) {
+                            try? fileManager.trashItem(at: URL(fileURLWithPath: dstBackup), resultingItemURL: nil)
                         }
                     } catch {
-                        if fm.fileExists(atPath: dstBackup) && !fm.fileExists(atPath: dst) {
-                            try? fm.moveItem(atPath: dstBackup, toPath: dst)
+                        if fileManager.fileExists(atPath: dstBackup) && !fileManager.fileExists(atPath: dst) {
+                            try? fileManager.moveItem(atPath: dstBackup, toPath: dst)
                         }
                         throw error
                     }
