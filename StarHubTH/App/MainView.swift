@@ -67,7 +67,7 @@ struct MainView: View {
         } else if currentTab == "Profiles" {
             ModProfilesView()
         } else if currentTab == "Updates" {
-            UpdatesView(vm: vm, currentTab: $currentTab)
+            UpdatesView(currentTab: $currentTab)
         } else if currentTab == "ThaiHub" {
             ThaiTranslationHubView()
         } else if currentTab == "Settings" {
@@ -502,7 +502,8 @@ struct SidebarNavItem: View {
 // MARK: - SMAPI Alerts UI
 // MARK: - Updates View (macOS System Settings style)
 struct UpdatesView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var localizationStore: LocalizationStore
     @Binding var currentTab: String
     
     @State private var viewingModDetails: ModItem?
@@ -512,8 +513,8 @@ struct UpdatesView: View {
             VStack(alignment: .leading, spacing: 20) {
                 
                 // Out of date mods (Software Update style)
-                if !vm.outOfDateMods.isEmpty {
-                    ForEach(vm.outOfDateMods) { mod in
+                if !modsStore.outOfDateMods.isEmpty {
+                    ForEach(modsStore.outOfDateMods) { mod in
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(alignment: .top, spacing: 16) {
                                 // App Icon Fake
@@ -534,7 +535,7 @@ struct UpdatesView: View {
                                         .font(.system(size: 12))
                                         .foregroundColor(.secondary)
                                     
-                    Text(vm.L(L10n.Updates.newUpdate))
+                    Text(localizationStore.L(L10n.Updates.newUpdate))
                                         .font(.system(size: 12))
                                         .foregroundColor(.red.opacity(0.8))
                                         .padding(.top, 2)
@@ -546,7 +547,7 @@ struct UpdatesView: View {
                                     Button(action: {
                                         if let url = URL(string: mod.url) { NSWorkspace.shared.open(url) }
                                     }) {
-                                        Text(vm.L(L10n.Updates.download))
+                                        Text(localizationStore.L(L10n.Updates.download))
                                             .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.primary)
                                             .padding(.horizontal, 16)
@@ -558,7 +559,7 @@ struct UpdatesView: View {
                                     .pointingHandCursor()
                                     
                                     Button(action: {
-                                        if let modItem = vm.mods.first(where: { $0.name == mod.name }) {
+                                        if let modItem = modsStore.mods.first(where: { $0.name == mod.name }) {
                                             viewingModDetails = modItem
                                         }
                                     }) {
@@ -567,28 +568,28 @@ struct UpdatesView: View {
                                             .font(.system(size: 16))
                                     }
                                     .buttonStyle(PlainButtonStyle())
-                                    .help(vm.L(L10n.Settings.nexusChangelog))
+                                    .help(localizationStore.L(L10n.Settings.nexusChangelog))
                                 }
                             }
                             
                             VStack(alignment: .leading, spacing: 16) {
-                                Text(vm.L(L10n.Updates.updateDescription))
+                                Text(localizationStore.L(L10n.Updates.updateDescription))
                                     .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                                 
-                                Text("\(vm.L(L10n.Updates.visitWebsite)) [\(mod.url)](\(mod.url))")
+                                Text("\(localizationStore.L(L10n.Updates.visitWebsite)) [\(mod.url)](\(mod.url))")
                                     .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                                     .tint(.blue)
                                 
                                 Button(action: {
-                                    if let modItem = vm.mods.first(where: { $0.name == mod.name }) {
+                                    if let modItem = modsStore.mods.first(where: { $0.name == mod.name }) {
                                         viewingModDetails = modItem
                                     }
                                 }) {
                                     HStack {
                                         Image(systemName: "doc.text")
-                                        Text(vm.L(L10n.Settings.nexusChangelog))
+                                        Text(localizationStore.L(L10n.Settings.nexusChangelog))
                                     }
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.blue)
@@ -605,19 +606,19 @@ struct UpdatesView: View {
                 }
                 
                 // SMAPI Errors (More Storage Required style)
-                if !vm.smapiErrors.isEmpty {
+                if !modsStore.smapiErrors.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.yellow)
                                 .font(.system(size: 16))
-                            let errorText = String(format: vm.L(L10n.Updates.errorsFound), vm.smapiErrors.count)
+                            let errorText = String(format: localizationStore.L(L10n.Updates.errorsFound), modsStore.smapiErrors.count)
                             Text(errorText)
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(.primary)
                             Spacer()
                             Button(action: { currentTab = "Logs" }) {
-                                Text(vm.L(L10n.Updates.viewLogs))
+                                Text(localizationStore.L(L10n.Updates.viewLogs))
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.primary)
                                     .padding(.horizontal, 12)
@@ -629,12 +630,12 @@ struct UpdatesView: View {
                             .pointingHandCursor()
                         }
                         
-                        Text(vm.L(L10n.Updates.errorDescription))
+                        Text(localizationStore.L(L10n.Updates.errorDescription))
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                             .padding(.bottom, 8)
                         
-                        ForEach(vm.smapiErrors, id: \.self) { error in
+                        ForEach(modsStore.smapiErrors, id: \.self) { error in
                             HStack(alignment: .top, spacing: 8) {
                                 Circle()
                                     .fill(Color.secondary.opacity(0.5))
