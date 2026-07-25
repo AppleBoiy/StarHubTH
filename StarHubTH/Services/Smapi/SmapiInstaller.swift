@@ -32,7 +32,7 @@ final class SmapiInstaller: ObservableObject {
     nonisolated static let installedVersionMarkerRelativePath = "smapi-internal/.starhubth-installed-version"
 
     // Check if SMAPI is installed in the Stardew Valley MacOS directory
-    nonisolated static func getInstalledVersion(gameDir: String) -> String? {
+    nonisolated static func installedVersion(gameDir: String) -> String? {
         let fm = FileManager.default
         let originalPath = (gameDir as NSString).appendingPathComponent("StardewValley-original")
 
@@ -325,7 +325,7 @@ final class SmapiInstaller: ObservableObject {
     /// On a successful install, also writes `version` to
     /// `installedVersionMarkerRelativePath` — verified directly against a
     /// real install that nothing else on disk reliably states SMAPI's own
-    /// version afterward (see `getInstalledVersion`'s doc comment), so this
+    /// version afterward (see `installedVersion`'s doc comment), so this
     /// app records what it just installed instead of guessing later.
     private func runOfficialInstaller(at installerPath: String, version: String, gameDir: String, action: InstallerAction) async -> SmapiInstallOutcome {
         await withCheckedContinuation { continuation in

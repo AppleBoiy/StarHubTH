@@ -739,7 +739,7 @@ struct ModListRow: View {
                         .foregroundColor(.secondary)
                 }
                 
-                let missingDeps = modsStore.getMissingDependencies(for: mod)
+                let missingDeps = modsStore.missingDependencies(for: mod)
                 if !missingDeps.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.triangle.fill")

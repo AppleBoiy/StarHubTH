@@ -89,7 +89,7 @@ final class SavesStore: ObservableObject {
     var savesHierarchy: [SaveNode] {
         let saveNames = Set(saves.map(\.folderName))
 
-        func getParentFolderName(for folderName: String) -> String? {
+        func parentFolderName(for folderName: String) -> String? {
             var candidate = folderName
             while let range = candidate.range(of: "_", options: .backwards) {
                 candidate = String(candidate[..<range.lowerBound])
@@ -119,7 +119,7 @@ final class SavesStore: ObservableObject {
         var rootSaves: [SaveGameInfo] = []
 
         for save in saves {
-            if let parentFolderName = getParentFolderName(for: save.folderName) {
+            if let parentFolderName = parentFolderName(for: save.folderName) {
                 childrenByParent[parentFolderName, default: []].append(save)
             } else {
                 rootSaves.append(save)
@@ -233,7 +233,7 @@ final class SavesStore: ObservableObject {
 
     // MARK: - Save Notes
 
-    func getNote(for folderName: String) -> SaveNote {
+    func note(for folderName: String) -> SaveNote {
         saveNoteStoring.note(for: folderName)
     }
 

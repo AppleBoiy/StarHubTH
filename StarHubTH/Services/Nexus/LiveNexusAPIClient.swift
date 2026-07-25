@@ -287,12 +287,12 @@ final class LiveNexusAPIClient: Sendable {
 
     // MARK: - Endpoints
 
-    func getModInfo(modId: Int, apiKey: String) async throws -> ModInfo {
+    func modInfo(modId: Int, apiKey: String) async throws -> ModInfo {
         let endpoint = "/games/\(gameName)/mods/\(modId).json"
         return try await fetch(endpoint: endpoint, apiKey: apiKey)
     }
 
-    func getModFiles(modId: Int, apiKey: String) async throws -> ModFileListResponse {
+    func modFiles(modId: Int, apiKey: String) async throws -> ModFileListResponse {
         let endpoint = "/games/\(gameName)/mods/\(modId)/files.json"
         return try await fetch(endpoint: endpoint, apiKey: apiKey)
     }
@@ -302,7 +302,7 @@ final class LiveNexusAPIClient: Sendable {
     /// non-premium API key to obtain a download link at all; a premium key ignores them.
     /// Pass `nil` for both when the caller has no `nxm://` link to source them from —
     /// the request will then only succeed for a premium API key.
-    func getDownloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String) async throws -> [ModDownloadLink] {
+    func downloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String) async throws -> [ModDownloadLink] {
         var endpoint = "/games/\(gameName)/mods/\(modId)/files/\(fileId)/download_link.json"
 
         if let key, let expires, !key.isEmpty, !expires.isEmpty {
@@ -332,7 +332,7 @@ final class LiveNexusAPIClient: Sendable {
         try await post(endpoint: endpoint, apiKey: apiKey)
     }
 
-    func getCollectionGraph(slug: String, apiKey: String) async throws -> CollectionGraph {
+    func collectionGraph(slug: String, apiKey: String) async throws -> CollectionGraph {
         let query = """
         query GetCollection($slug: String!) {
             collection(slug: $slug) {

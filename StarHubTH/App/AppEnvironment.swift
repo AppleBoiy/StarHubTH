@@ -107,7 +107,7 @@ final class AppEnvironment: ObservableObject {
             self.smapiInstalledVersion = nil
             return
         }
-        self.smapiInstalledVersion = SmapiInstaller.getInstalledVersion(gameDir: gameDir)
+        self.smapiInstalledVersion = SmapiInstaller.installedVersion(gameDir: gameDir)
     }
 
     // Install SMAPI via Installer Helper

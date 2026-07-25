@@ -120,7 +120,7 @@ struct SavesStoreTests {
     private static func testSetAvatarAndGetNote() {
         let (store, _, _, _) = makeStore()
         store.setAvatar(forSave: "Farm1", iconPath: "/tmp/icon.png")
-        SimpleTestFramework.assertEqual(store.getNote(for: "Farm1").customIconPath, "/tmp/icon.png", "setAvatar persists the icon path via SaveNoteStoring")
+        SimpleTestFramework.assertEqual(store.note(for: "Farm1").customIconPath, "/tmp/icon.png", "setAvatar persists the icon path via SaveNoteStoring")
     }
 
     private static func testSelectCustomAvatarCopiesPickedFile() {
@@ -134,7 +134,7 @@ struct SavesStoreTests {
         store.selectCustomAvatar(forSave: "Farm1") { path in completedPath = path }
 
         SimpleTestFramework.assertTrue(completedPath != nil, "selectCustomAvatar's completion fires with the copied file's path")
-        SimpleTestFramework.assertEqual(store.getNote(for: "Farm1").customIconPath, completedPath, "the copied path is persisted as the save's avatar")
+        SimpleTestFramework.assertEqual(store.note(for: "Farm1").customIconPath, completedPath, "the copied path is persisted as the save's avatar")
     }
 
     private static func testEditingSaveLoadsInventory() {

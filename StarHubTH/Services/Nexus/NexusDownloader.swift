@@ -34,7 +34,7 @@ struct NexusDownloader {
 
         let fileList: LiveNexusAPIClient.ModFileListResponse
         do {
-            fileList = try await nexusAPIClient.getModFiles(modId: nexusId.rawValue, apiKey: apiKey)
+            fileList = try await nexusAPIClient.modFiles(modId: nexusId.rawValue, apiKey: apiKey)
         } catch {
             throw NexusDownloaderError.fetchFailed(error.localizedDescription)
         }
@@ -50,7 +50,7 @@ struct NexusDownloader {
         // so this only succeeds for a premium key.
         let links: [LiveNexusAPIClient.ModDownloadLink]
         do {
-            links = try await nexusAPIClient.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, key: nil, expires: nil, apiKey: apiKey)
+            links = try await nexusAPIClient.downloadLink(modId: nexusId.rawValue, fileId: fileId, key: nil, expires: nil, apiKey: apiKey)
         } catch {
             if let nexusError = error as? NexusAPIError, nexusError.isPremiumRequired {
                 throw NexusDownloaderError.premiumRequired

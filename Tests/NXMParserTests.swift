@@ -27,7 +27,7 @@ class NXMParserTests {
 
     /// Nexus attaches `key`/`expires` to a "Download with Manager" link so a non-premium
     /// API key can authorize that single download. Dropping them silently breaks
-    /// non-premium downloads entirely — see `getDownloadLink`'s doc comment.
+    /// non-premium downloads entirely — see `downloadLink`'s doc comment.
     static func testNXMLinkWithKeyAndExpires() {
         let url = URL(string: "nxm://stardewvalley/mods/123/files/456?key=abc123&expires=1234567890")!
         let result = NXMParser.parse(url: url)
@@ -95,7 +95,7 @@ class NXMParserTests {
         // Step 1: Fetch download link directly from LiveNexusAPIClient
         var downloadURL: URL? = nil
         do {
-            let links = try await LiveNexusAPIClient.shared.getDownloadLink(modId: modId, fileId: fileId, key: key, expires: expires, apiKey: apiKey)
+            let links = try await LiveNexusAPIClient.shared.downloadLink(modId: modId, fileId: fileId, key: key, expires: expires, apiKey: apiKey)
             downloadURL = URL(string: links.first?.URI ?? "")
             print("Got download URL: \(downloadURL?.absoluteString ?? "nil")")
         } catch {

@@ -19,7 +19,7 @@ class NexusCollectionTests {
         let slug = "tckf0m"
 
         do {
-            let collection = try await LiveNexusAPIClient.shared.getCollectionGraph(slug: slug, apiKey: apiKey)
+            let collection = try await LiveNexusAPIClient.shared.collectionGraph(slug: slug, apiKey: apiKey)
             SimpleTestFramework.assertEqual(collection.slug, slug, "Slug should match")
             SimpleTestFramework.assertEqual(collection.game?.domainName, "stardewvalley", "Game domain should be stardewvalley")
             SimpleTestFramework.assertTrue(collection.latestPublishedRevision != nil, "Should have a latest revision")

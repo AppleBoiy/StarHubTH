@@ -21,7 +21,7 @@ struct SaveAvatarView: View {
     ]
     
     var body: some View {
-        let iconPath = savesStore.getNote(for: folderName).customIconPath ?? ""
+        let iconPath = savesStore.note(for: folderName).customIconPath ?? ""
         
         ZStack {
             Circle()
@@ -106,7 +106,7 @@ struct SavesView: View {
                 save.playerName.localizedCaseInsensitiveContains(searchText) ||
                 save.farmName.localizedCaseInsensitiveContains(searchText)
             let tagMatch = savesStore.saveFilterTag.isEmpty ||
-                savesStore.getNote(for: save.folderName).tag == savesStore.saveFilterTag
+                savesStore.note(for: save.folderName).tag == savesStore.saveFilterTag
             return searchMatch && tagMatch
         }
     }
@@ -321,7 +321,7 @@ struct SaveCardView: View {
                 SaveAvatarView(folderName: save.folderName, size: 64)
                 
                 VStack(spacing: 2) {
-                    let note = savesStore.getNote(for: save.folderName)
+                    let note = savesStore.note(for: save.folderName)
                     HStack(spacing: 4) {
                         if !note.tag.isEmpty {
                             Text(note.tag).font(.system(size: 13))
@@ -446,7 +446,7 @@ struct SaveRow: View {
             SaveAvatarView(folderName: save.folderName, size: 36)
             
             VStack(alignment: .leading, spacing: 2) {
-                let note = savesStore.getNote(for: save.folderName)
+                let note = savesStore.note(for: save.folderName)
                 HStack(spacing: 6) {
                     if !note.tag.isEmpty {
                         Text(note.tag)
@@ -800,7 +800,7 @@ struct SaveEditorView: View {
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .onAppear {
-            let note = savesStore.getNote(for: save.folderName)
+            let note = savesStore.note(for: save.folderName)
             noteTag = note.tag
             noteText = note.note
             iconPath = note.customIconPath ?? ""

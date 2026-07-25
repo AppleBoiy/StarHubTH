@@ -80,7 +80,7 @@ final class ModsStore: ObservableObject {
         ModGraph.packModStatus(nexusID: nexusId, uniqueId: uniqueId, in: mods)
     }
 
-    func getMissingDependencies(for mod: ModItem) -> [ModItem.UniqueID] {
+    func missingDependencies(for mod: ModItem) -> [ModItem.UniqueID] {
         ModGraph.missingDependencies(for: mod, in: mods)
     }
 
@@ -110,7 +110,7 @@ final class ModsStore: ObservableObject {
             return false
         }
 
-        guard let info = try? await nexusAPIClient.getModInfo(modId: modId, apiKey: nexusApiKey),
+        guard let info = try? await nexusAPIClient.modInfo(modId: modId, apiKey: nexusApiKey),
               let categoryId = info.categoryId else {
             return false
         }
@@ -120,15 +120,15 @@ final class ModsStore: ObservableObject {
         return true
     }
 
-    /// Phase 4.9: replaces ModDetailView's direct `LiveNexusAPIClient.shared.getModInfo`/
-    /// `.getModFiles` calls — fetches a mod's Nexus cover image, description, and latest
+    /// Phase 4.9: replaces ModDetailView's direct `LiveNexusAPIClient.shared.modInfo`/
+    /// `.modFiles` calls — fetches a mod's Nexus cover image, description, and latest
     /// changelog for display.
     func fetchNexusInfo(
         nexusId: Int,
         apiKey: String
     ) async -> (coverUrl: URL?, description: [LiveNexusAPIClient.DescriptionBlock]?, changelog: [LiveNexusAPIClient.DescriptionBlock]?) {
-        async let infoResult = try? nexusAPIClient.getModInfo(modId: nexusId, apiKey: apiKey)
-        async let filesResult = try? nexusAPIClient.getModFiles(modId: nexusId, apiKey: apiKey)
+        async let infoResult = try? nexusAPIClient.modInfo(modId: nexusId, apiKey: apiKey)
+        async let filesResult = try? nexusAPIClient.modFiles(modId: nexusId, apiKey: apiKey)
 
         var coverUrl: URL?
         var description: [LiveNexusAPIClient.DescriptionBlock]?
@@ -221,7 +221,7 @@ final class ModsStore: ObservableObject {
         onToggled: () -> Void
     ) {
         // Helper to find the top-level folder that contains a given uniqueId
-        func getTopLevelFolder(for uniqueId: ModItem.UniqueID) -> ModItem.FolderName? {
+        func topLevelFolder(for uniqueId: ModItem.UniqueID) -> ModItem.FolderName? {
             for m in self.mods {
                 switch m.kind {
                 case .single:
@@ -238,7 +238,7 @@ final class ModsStore: ObservableObject {
         }
 
         // Helper to get all dependencies of a top-level folder (including its children)
-        func getDependencies(for folderName: ModItem.FolderName) -> [ModDependency] {
+        func dependencies(for folderName: ModItem.FolderName) -> [ModDependency] {
             guard let m = self.mods.first(where: { $0.folderName == folderName }) else { return [] }
             if case .group(let children) = m.kind {
                 return children.flatMap { $0.dependencies }
@@ -256,10 +256,10 @@ final class ModsStore: ObservableObject {
                 var queue = [mod.folderName]
                 while !queue.isEmpty {
                     let currentFolder = queue.removeFirst()
-                    let deps = getDependencies(for: currentFolder)
+                    let deps = dependencies(for: currentFolder)
 
                     for dep in deps where dep.isRequired {
-                        if let depFolder = getTopLevelFolder(for: dep.uniqueId) {
+                        if let depFolder = topLevelFolder(for: dep.uniqueId) {
                             let isDepFolderEnabled = self.mods.first(where: { $0.folderName == depFolder })?.isEnabled ?? false
                             if !isDepFolderEnabled && !foldersToToggle.contains(depFolder) {
                                 foldersToToggle.insert(depFolder)
@@ -284,7 +284,7 @@ final class ModsStore: ObservableObject {
                     }
 
                     for otherMod in self.mods where otherMod.isEnabled && !foldersToToggle.contains(otherMod.folderName) {
-                        let otherDeps = getDependencies(for: otherMod.folderName)
+                        let otherDeps = dependencies(for: otherMod.folderName)
                         let requiresCurrent = otherDeps.contains { dep in
                             dep.isRequired && providedUniqueIds.contains { $0.rawValue.caseInsensitiveCompare(dep.uniqueId.rawValue) == .orderedSame }
                         }

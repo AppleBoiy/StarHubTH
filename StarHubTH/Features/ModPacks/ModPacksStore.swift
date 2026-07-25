@@ -99,7 +99,7 @@ final class ModPacksStore: ObservableObject {
 
         let collection: LiveNexusAPIClient.CollectionGraph
         do {
-            collection = try await nexusAPIClient.getCollectionGraph(slug: slug, apiKey: nexusApiKey)
+            collection = try await nexusAPIClient.collectionGraph(slug: slug, apiKey: nexusApiKey)
         } catch {
             showModal(localization.L(L10n.VM.collectionFetchFailed))
             return nil
@@ -179,7 +179,7 @@ final class ModPacksStore: ObservableObject {
         } else {
             logStore.log("Fetching latest file for Nexus Mod #\(nexusId.rawValue)...")
             do {
-                let response = try await nexusAPIClient.getModFiles(modId: nexusId.rawValue, apiKey: nexusApiKey)
+                let response = try await nexusAPIClient.modFiles(modId: nexusId.rawValue, apiKey: nexusApiKey)
                 guard let latestFile = response.files.first else {
                     logStore.log("No files found for Nexus Mod #\(nexusId.rawValue).")
                     return false
@@ -207,7 +207,7 @@ final class ModPacksStore: ObservableObject {
 
         let links: [LiveNexusAPIClient.ModDownloadLink]
         do {
-            links = try await nexusAPIClient.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, key: key, expires: expires, apiKey: apiKey)
+            links = try await nexusAPIClient.downloadLink(modId: nexusId.rawValue, fileId: fileId, key: key, expires: expires, apiKey: apiKey)
         } catch {
             if let nexusError = error as? NexusAPIError, nexusError.isPremiumRequired {
                 logStore.log("Download requires Nexus Premium (Mod #\(nexusId.rawValue), File #\(fileId)).")

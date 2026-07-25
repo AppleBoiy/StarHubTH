@@ -70,8 +70,8 @@ struct ModsStoreTests {
             "resolveDependencyStatus delegates to ModGraph using the store's own mods"
         )
         SimpleTestFramework.assertEqual(
-            store.getMissingDependencies(for: mod("b.mod")), [],
-            "getMissingDependencies delegates to ModGraph"
+            store.missingDependencies(for: mod("b.mod")), [],
+            "missingDependencies delegates to ModGraph"
         )
     }
 

@@ -258,7 +258,7 @@ struct BackupRow: View {
             .padding(.bottom, isLast ? 20 : 16)
         }
         .onAppear {
-            let note = savesStore.getNote(for: backup.folderPath.lastPathComponent)
+            let note = savesStore.note(for: backup.folderPath.lastPathComponent)
             noteTag = note.tag
             noteText = note.note
         }

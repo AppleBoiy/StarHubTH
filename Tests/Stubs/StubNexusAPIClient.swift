@@ -11,15 +11,15 @@ final class StubNexusAPIClient: NexusAPIClient, @unchecked Sendable {
     var endorseResult: Result<Void, Error> = .success(())
     var collectionGraphResult: Result<LiveNexusAPIClient.CollectionGraph, Error> = .failure(StubError.unconfigured)
 
-    func getModInfo(modId: Int, apiKey: String) async throws -> LiveNexusAPIClient.ModInfo {
+    func modInfo(modId: Int, apiKey: String) async throws -> LiveNexusAPIClient.ModInfo {
         try modInfoResult.get()
     }
 
-    func getModFiles(modId: Int, apiKey: String) async throws -> LiveNexusAPIClient.ModFileListResponse {
+    func modFiles(modId: Int, apiKey: String) async throws -> LiveNexusAPIClient.ModFileListResponse {
         try modFilesResult.get()
     }
 
-    func getDownloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String) async throws -> [LiveNexusAPIClient.ModDownloadLink] {
+    func downloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String) async throws -> [LiveNexusAPIClient.ModDownloadLink] {
         try downloadLinkResult.get()
     }
 
@@ -27,7 +27,7 @@ final class StubNexusAPIClient: NexusAPIClient, @unchecked Sendable {
         try endorseResult.get()
     }
 
-    func getCollectionGraph(slug: String, apiKey: String) async throws -> LiveNexusAPIClient.CollectionGraph {
+    func collectionGraph(slug: String, apiKey: String) async throws -> LiveNexusAPIClient.CollectionGraph {
         try collectionGraphResult.get()
     }
 }

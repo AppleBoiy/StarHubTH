@@ -27,7 +27,7 @@ class ModUpdateTests {
         // Step 1: Query API for all files for this mod to find the latest main file
         var latestFileId: Int? = nil
         do {
-            let response = try await LiveNexusAPIClient.shared.getModFiles(modId: modId, apiKey: apiKey)
+            let response = try await LiveNexusAPIClient.shared.modFiles(modId: modId, apiKey: apiKey)
             // Filter for main files (category 1) and sort by fileId descending to get the newest,
             // avoiding ancient .rar files that macOS's `unzip` can't extract.
             let mainFiles = response.files.filter { $0.categoryId == 1 }
@@ -45,7 +45,7 @@ class ModUpdateTests {
         // Step 2: Fetch premium download link
         var downloadURL: URL? = nil
         do {
-            let links = try await LiveNexusAPIClient.shared.getDownloadLink(modId: modId, fileId: targetFileId, key: nil, expires: nil, apiKey: apiKey)
+            let links = try await LiveNexusAPIClient.shared.downloadLink(modId: modId, fileId: targetFileId, key: nil, expires: nil, apiKey: apiKey)
             downloadURL = URL(string: links.first?.URI ?? "")
             print("Got update download URL: \(downloadURL?.absoluteString ?? "nil")")
         } catch {
