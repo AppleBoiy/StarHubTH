@@ -1,29 +1,89 @@
 import SwiftUI
 
 struct MainView: View {
-    @StateObject var vm: StarHubTHViewModel
-    /// Phase 4.9: the same instance as `vm.alertStore` — seeded via `StateObject(wrappedValue:)`
-    /// in `init()` below so this view reacts to it directly (Support for `@EnvironmentObject`
-    /// injection into the not-yet-migrated views below comes from the same instance).
+    // Phase 4.9 step 3: MainView is now the real composition root — StarHubTHViewModel is
+    // gone, so store construction (previously its init()) lives here, sourcing every
+    // service from DependencyContainer (finally used for its documented purpose) rather
+    // than reaching for `.shared`/`Live*` directly.
+    @StateObject private var localizationStore: LocalizationStore
+    @StateObject private var logStore: LogStore
+    @StateObject private var appEnvironment: AppEnvironment
+    @StateObject private var thaiHubStore: ThaiHubStore
+    @StateObject private var profilesStore: ProfilesStore
+    @StateObject private var modPacksStore: ModPacksStore
+    @StateObject private var savesStore: SavesStore
+    @StateObject private var modsStore: ModsStore
     @StateObject private var alertStore: AlertStore
+    @StateObject private var appCoordinator: AppCoordinator
+    /// Same instance as `appEnvironment.smapiInstaller` — its own `@EnvironmentObject`
+    /// since it publishes independently of `AppEnvironment`'s own `@Published` state.
+    @StateObject private var smapiInstaller: SmapiInstaller
+
     @State private var currentTab: String = "Home"
     @State private var searchText: String = ""
-    
+
     // History Management
     @State private var tabHistory: [String] = ["Home"]
     @State private var forwardHistory: [String] = []
     @State private var isNavigatingBackOrForward = false
-    
+
     @AppStorage("appColorScheme") private var appColorScheme: String = "System"
     @AppStorage("showDeveloperLogs") private var showDeveloperLogs: Bool = false
     @AppStorage("launchProfile") private var launchProfile: String = "SMAPI"
-    
+
     @State private var isProfileHovered = false
 
     init() {
-        let vm = StarHubTHViewModel()
-        _vm = StateObject(wrappedValue: vm)
-        _alertStore = StateObject(wrappedValue: vm.alertStore)
+        let container = DependencyContainer()
+        let localizationStore = LocalizationStore()
+        let logStore = LogStore()
+        let appEnvironment = AppEnvironment(preferenceStoring: container.preferenceStoring, localization: localizationStore)
+        let thaiHubStore = ThaiHubStore(localization: localizationStore)
+        let profilesStore = ProfilesStore(profileStoring: container.profileStoring, localization: localizationStore)
+        let modPacksStore = ModPacksStore(nexusAPIClient: container.nexusAPIClient, localization: localizationStore, logStore: logStore)
+        let savesStore = SavesStore(saveStoring: container.saveStoring, saveNoteStoring: container.saveNoteStoring, filePicking: container.filePicking, localization: localizationStore)
+        let modsStore = ModsStore(
+            modScanning: container.modScanning,
+            modInstalling: container.modInstalling,
+            nexusAPIClient: container.nexusAPIClient,
+            filePicking: container.filePicking,
+            preferenceStoring: container.preferenceStoring,
+            localization: localizationStore
+        )
+        let alertStore = AlertStore()
+        let appCoordinator = AppCoordinator(
+            localizationStore: localizationStore,
+            logStore: logStore,
+            thaiHubStore: thaiHubStore,
+            profilesStore: profilesStore,
+            modPacksStore: modPacksStore,
+            savesStore: savesStore,
+            modsStore: modsStore,
+            appEnvironment: appEnvironment,
+            alertStore: alertStore,
+            filePicking: container.filePicking,
+            preferenceStoring: container.preferenceStoring
+        )
+
+        _localizationStore = StateObject(wrappedValue: localizationStore)
+        _logStore = StateObject(wrappedValue: logStore)
+        _appEnvironment = StateObject(wrappedValue: appEnvironment)
+        _thaiHubStore = StateObject(wrappedValue: thaiHubStore)
+        _profilesStore = StateObject(wrappedValue: profilesStore)
+        _modPacksStore = StateObject(wrappedValue: modPacksStore)
+        _savesStore = StateObject(wrappedValue: savesStore)
+        _modsStore = StateObject(wrappedValue: modsStore)
+        _alertStore = StateObject(wrappedValue: alertStore)
+        _appCoordinator = StateObject(wrappedValue: appCoordinator)
+        _smapiInstaller = StateObject(wrappedValue: appEnvironment.smapiInstaller)
+
+        // Startup orchestration — same sequence StarHubTHViewModel.init() used to run.
+        appCoordinator.refresh()
+        profilesStore.loadProfiles()
+        if appEnvironment.steamUsername.isEmpty {
+            appEnvironment.steamUsername = localizationStore.L(L10n.VM.defaultFarmerName)
+        }
+        logStore.log("StarHubTH started", level: .info)
     }
 
     private func matchesSearch(_ text: String...) -> Bool {
@@ -36,8 +96,8 @@ struct MainView: View {
     /// inside the account-badge view's already-large expression tree — needed to keep
     /// type-checking that section within a reasonable time budget.
     private var activeProfile: ModProfile? {
-        guard let activeProfileId = vm.activeProfileId else { return nil }
-        return vm.modProfiles.first(where: { $0.id == activeProfileId })
+        guard let activeProfileId = profilesStore.activeProfileId else { return nil }
+        return profilesStore.modProfiles.first(where: { $0.id == activeProfileId })
     }
 
     /// Extracted out of `body` — as one inline `Group { if ... }` chain this pushed the
@@ -49,17 +109,17 @@ struct MainView: View {
         if currentTab == "ModPacks" {
             ModPacksView()
         } else if currentTab == "Mods" {
-            if let mod = vm.editingModConfig {
+            if let mod = modsStore.editingModConfig {
                 ModConfigEditorView(mod: mod)
-            } else if let mod = vm.viewingModDetails {
+            } else if let mod = modsStore.viewingModDetails {
                 ModDetailView(mod: mod)
             } else {
                 ModListView()
             }
         } else if currentTab == "Saves" {
-            if let save = vm.viewingSaveTimeline {
+            if let save = savesStore.viewingSaveTimeline {
                 SaveTimelineView(save: save)
-            } else if let save = vm.editingSave {
+            } else if let save = savesStore.editingSave {
                 SaveEditorView(save: save)
             } else {
                 SavesView()
@@ -82,21 +142,21 @@ struct MainView: View {
     }
 
     private var navigationTitleText: String {
-        if currentTab == "Saves" && vm.viewingSaveTimeline != nil { return vm.L(L10n.Saves.timeline) }
-        if currentTab == "Saves", let save = vm.editingSave { return save.playerName }
-        if currentTab == "Mods", let config = vm.editingModConfig { return config.name }
-        if currentTab == "Mods", let details = vm.viewingModDetails { return details.name }
-        if currentTab == "ThaiHub", let thaiMod = vm.viewingThaiMod { return thaiMod.name }
-        if currentTab == "Mods" { return vm.L(L10n.Mods.mods) }
-        if currentTab == "ModPacks" { return vm.L(L10n.ModPacks.title) }
-        if currentTab == "Profiles" { return vm.L(L10n.Profiles.title) }
-        if currentTab == "Updates" { return vm.L(L10n.Main.softwareUpdate) }
-        if currentTab == "ThaiHub" { return vm.L(L10n.ThaiHub.title) }
-        if currentTab == "Saves" { return vm.L(L10n.Saves.saves) }
-        if currentTab == "Settings" { return vm.L(L10n.Settings.settings) }
-        if currentTab == "Logs" { return vm.L(L10n.Logs.logs) }
-        if currentTab == "AppChangelog" { return vm.L(L10n.Main.appChangelog) }
-        return vm.L(L10n.Main.home)
+        if currentTab == "Saves" && savesStore.viewingSaveTimeline != nil { return localizationStore.L(L10n.Saves.timeline) }
+        if currentTab == "Saves", let save = savesStore.editingSave { return save.playerName }
+        if currentTab == "Mods", let config = modsStore.editingModConfig { return config.name }
+        if currentTab == "Mods", let details = modsStore.viewingModDetails { return details.name }
+        if currentTab == "ThaiHub", let thaiMod = thaiHubStore.viewingThaiMod { return thaiMod.name }
+        if currentTab == "Mods" { return localizationStore.L(L10n.Mods.mods) }
+        if currentTab == "ModPacks" { return localizationStore.L(L10n.ModPacks.title) }
+        if currentTab == "Profiles" { return localizationStore.L(L10n.Profiles.title) }
+        if currentTab == "Updates" { return localizationStore.L(L10n.Main.softwareUpdate) }
+        if currentTab == "ThaiHub" { return localizationStore.L(L10n.ThaiHub.title) }
+        if currentTab == "Saves" { return localizationStore.L(L10n.Saves.saves) }
+        if currentTab == "Settings" { return localizationStore.L(L10n.Settings.settings) }
+        if currentTab == "Logs" { return localizationStore.L(L10n.Logs.logs) }
+        if currentTab == "AppChangelog" { return localizationStore.L(L10n.Main.appChangelog) }
+        return localizationStore.L(L10n.Main.home)
     }
     
     var body: some View {
@@ -107,7 +167,7 @@ struct MainView: View {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
-                    TextField(vm.L(L10n.Main.search), text: $searchText)
+                    TextField(localizationStore.L(L10n.Main.search), text: $searchText)
                         .textFieldStyle(PlainTextFieldStyle())
                 }
                 .padding(.horizontal, 8)
@@ -120,11 +180,11 @@ struct MainView: View {
                 )
                 
                 // Account Section (macOS style profile)
-                if matchesSearch(vm.steamUsername, vm.L(L10n.Main.account)) {
+                if matchesSearch(appEnvironment.steamUsername, localizationStore.L(L10n.Main.account)) {
                     Button(action: { currentTab = "Home" }) {
                         HStack(spacing: 12) {
                             ZStack(alignment: .bottomTrailing) {
-                                if let avatarPath = vm.steamAvatarPath, let nsImage = NSImage(contentsOfFile: avatarPath) {
+                                if let avatarPath = appEnvironment.steamAvatarPath, let nsImage = NSImage(contentsOfFile: avatarPath) {
                                     Image(nsImage: nsImage)
                                         .resizable()
                                         .aspectRatio(contentMode: .fill)
@@ -155,7 +215,7 @@ struct MainView: View {
                             }
                                 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(vm.steamUsername.isEmpty ? "Player" : vm.steamUsername)
+                                Text(appEnvironment.steamUsername.isEmpty ? "Player" : appEnvironment.steamUsername)
                                     .font(.system(size: 15, weight: .bold))
                                     .foregroundColor(.primary)
                                 Text("Steam Account")
@@ -163,7 +223,7 @@ struct MainView: View {
                                     .foregroundColor(.secondary)
                                 
                                 if let activeProfile {
-                                    Text("\(vm.L(L10n.Profiles.titleFull)): \(activeProfile.name)")
+                                    Text("\(localizationStore.L(L10n.Profiles.titleFull)): \(activeProfile.name)")
                                         .font(.system(size: 10, weight: .medium))
                                         .foregroundColor(.accentColor)
                                         .padding(.top, 2)
@@ -184,11 +244,11 @@ struct MainView: View {
                     .pointingHandCursor()
                 }
                 
-                let alertCount = vm.smapiErrors.count + vm.outOfDateMods.count
+                let alertCount = modsStore.smapiErrors.count + modsStore.outOfDateMods.count
                 if alertCount > 0 {
                     Button(action: { currentTab = "Updates" }) {
                         HStack {
-                            Text(vm.smapiErrors.isEmpty ? vm.L(L10n.Main.softwareUpdate) : vm.L(L10n.Main.systemAlerts))
+                            Text(modsStore.smapiErrors.isEmpty ? localizationStore.L(L10n.Main.softwareUpdate) : localizationStore.L(L10n.Main.systemAlerts))
                                 .font(.system(size: 14, weight: .regular))
                                 .foregroundColor(currentTab == "Updates" ? .white : .primary)
                             Spacer()
@@ -214,42 +274,42 @@ struct MainView: View {
                 
                 // Game Section
                 VStack(alignment: .leading, spacing: 2) {
-                    SidebarSectionHeader(title: vm.L(L10n.Main.gameManagement))
-                    if matchesSearch(vm.L(L10n.Saves.saves)) {
+                    SidebarSectionHeader(title: localizationStore.L(L10n.Main.gameManagement))
+                    if matchesSearch(localizationStore.L(L10n.Saves.saves)) {
                         SidebarNavItem(
                             icon: "folder.fill",
                             iconColor: .blue,
-                            label: vm.L(L10n.Saves.saves),
+                            label: localizationStore.L(L10n.Saves.saves),
                             tab: "Saves",
                             currentTab: $currentTab
                         )
                     }
                     
-                    if matchesSearch(vm.L(L10n.Mods.mods)) {
+                    if matchesSearch(localizationStore.L(L10n.Mods.mods)) {
                         SidebarNavItem(
                             icon: "puzzlepiece.extension.fill",
                             iconColor: .purple,
-                            label: vm.L(L10n.Mods.mods),
+                            label: localizationStore.L(L10n.Mods.mods),
                             tab: "Mods",
                             currentTab: $currentTab
                         )
                     }
                     
-                    if matchesSearch(vm.L(L10n.Profiles.title)) {
+                    if matchesSearch(localizationStore.L(L10n.Profiles.title)) {
                         SidebarNavItem(
                             icon: "person.2.fill",
                             iconColor: .orange,
-                            label: vm.L(L10n.Profiles.title),
+                            label: localizationStore.L(L10n.Profiles.title),
                             tab: "Profiles",
                             currentTab: $currentTab
                         )
                     }
                     
-                    if matchesSearch(vm.L(L10n.ModPacks.title)) {
+                    if matchesSearch(localizationStore.L(L10n.ModPacks.title)) {
                         SidebarNavItem(
                             icon: "shippingbox.fill",
                             iconColor: .teal,
-                            label: vm.L(L10n.ModPacks.title),
+                            label: localizationStore.L(L10n.ModPacks.title),
                             tab: "ModPacks",
                             currentTab: $currentTab
                         )
@@ -258,23 +318,23 @@ struct MainView: View {
                 
                 // System & Settings Section
                 VStack(alignment: .leading, spacing: 2) {
-                    SidebarSectionHeader(title: vm.L(L10n.Main.system))
+                    SidebarSectionHeader(title: localizationStore.L(L10n.Main.system))
                     
-                    if matchesSearch(vm.L(L10n.Settings.settings)) {
+                    if matchesSearch(localizationStore.L(L10n.Settings.settings)) {
                         SidebarNavItem(
                             icon: "gearshape.fill",
                             iconColor: .gray,
-                            label: vm.L(L10n.Settings.settings),
+                            label: localizationStore.L(L10n.Settings.settings),
                             tab: "Settings",
                             currentTab: $currentTab
                         )
                     }
                     
-                    if matchesSearch(vm.L(L10n.Main.appChangelog)) {
+                    if matchesSearch(localizationStore.L(L10n.Main.appChangelog)) {
                         SidebarNavItem(
                             icon: "doc.text.magnifyingglass",
                             iconColor: .blue,
-                            label: vm.L(L10n.Main.appChangelog),
+                            label: localizationStore.L(L10n.Main.appChangelog),
                             tab: "AppChangelog",
                             currentTab: $currentTab
                         )
@@ -283,12 +343,12 @@ struct MainView: View {
                 
                 // Thai Hub Section
                 VStack(alignment: .leading, spacing: 2) {
-                    SidebarSectionHeader(title: vm.L(L10n.Main.online))
-                    if matchesSearch(vm.L(L10n.ThaiHub.title)) {
+                    SidebarSectionHeader(title: localizationStore.L(L10n.Main.online))
+                    if matchesSearch(localizationStore.L(L10n.ThaiHub.title)) {
                         SidebarNavItem(
                             icon: "globe.asia.australia.fill",
                             iconColor: .blue,
-                            label: vm.L(L10n.ThaiHub.title),
+                            label: localizationStore.L(L10n.ThaiHub.title),
                             tab: "ThaiHub",
                             currentTab: $currentTab
                         )
@@ -296,11 +356,11 @@ struct MainView: View {
                 }
                 
                 if showDeveloperLogs {
-                    if matchesSearch(vm.L(L10n.Logs.logs)) {
+                    if matchesSearch(localizationStore.L(L10n.Logs.logs)) {
                             SidebarNavItem(
                                 icon: "terminal.fill",
                                 iconColor: .black,
-                                label: vm.L(L10n.Logs.logs),
+                                label: localizationStore.L(L10n.Logs.logs),
                                 tab: "Logs",
                                 currentTab: $currentTab
                             )
@@ -321,10 +381,10 @@ struct MainView: View {
             // ── CONTENT AREA ─────────────────────────────────────────
             detailContent
             .onChange(of: currentTab, perform: { _ in
-                vm.editingSave = nil
-                vm.editingModConfig = nil
-                vm.viewingModDetails = nil
-                vm.viewingThaiMod = nil
+                savesStore.editingSave = nil
+                modsStore.editingModConfig = nil
+                modsStore.viewingModDetails = nil
+                thaiHubStore.viewingThaiMod = nil
                 
                 if !isNavigatingBackOrForward {
                     if tabHistory.last != currentTab {
@@ -343,14 +403,14 @@ struct MainView: View {
             ToolbarItem(placement: .navigation) {
                 HStack(spacing: 8) {
                     Button(action: {
-                        if vm.editingSave != nil {
-                            vm.editingSave = nil
-                        } else if vm.editingModConfig != nil {
-                            vm.editingModConfig = nil
-                        } else if vm.viewingModDetails != nil {
-                            vm.viewingModDetails = nil
-                        } else if vm.viewingThaiMod != nil {
-                            vm.viewingThaiMod = nil
+                        if savesStore.editingSave != nil {
+                            savesStore.editingSave = nil
+                        } else if modsStore.editingModConfig != nil {
+                            modsStore.editingModConfig = nil
+                        } else if modsStore.viewingModDetails != nil {
+                            modsStore.viewingModDetails = nil
+                        } else if thaiHubStore.viewingThaiMod != nil {
+                            thaiHubStore.viewingThaiMod = nil
                         } else if tabHistory.count > 1 {
                             isNavigatingBackOrForward = true
                             let current = tabHistory.removeLast()
@@ -360,7 +420,7 @@ struct MainView: View {
                     }) {
                         Image(systemName: "chevron.left")
                     }
-                    .disabled(vm.editingSave == nil && vm.viewingThaiMod == nil && vm.editingModConfig == nil && vm.viewingModDetails == nil && tabHistory.count <= 1)
+                    .disabled(savesStore.editingSave == nil && thaiHubStore.viewingThaiMod == nil && modsStore.editingModConfig == nil && modsStore.viewingModDetails == nil && tabHistory.count <= 1)
                     
                     Button(action: {
                         if let next = forwardHistory.popLast() {
@@ -379,12 +439,12 @@ struct MainView: View {
             if currentTab == "ModPacks" {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        let name = vm.modProfiles.first { $0.id == vm.activeProfileId }?.name ?? "My Pack"
-                        if let _ = vm.exportModPack(name: name) {
-                            vm.showModal(message: vm.L(L10n.VM.modExported))
+                        let name = profilesStore.modProfiles.first { $0.id == profilesStore.activeProfileId }?.name ?? "My Pack"
+                        if let _ = appCoordinator.exportModPack(name: name) {
+                            alertStore.show( localizationStore.L(L10n.VM.modExported))
                         }
                     } label: {
-                        Label(vm.L(L10n.ModPacks.exportPack), systemImage: "square.and.arrow.up")
+                        Label(localizationStore.L(L10n.ModPacks.exportPack), systemImage: "square.and.arrow.up")
                     }
                 }
             }
@@ -392,10 +452,10 @@ struct MainView: View {
         .navigationTitle(navigationTitleText)
         .frame(minWidth: 820, minHeight: 520)
         .preferredColorScheme(colorScheme)
-        .environment(\.locale, Locale(identifier: vm.currentLanguage))
+        .environment(\.locale, Locale(identifier: localizationStore.currentLanguage))
         .onReceive(NotificationCenter.default.publisher(for: .jumpToMod)) { notification in
             if let modName = notification.object as? String {
-                vm.selectedModID = vm.mods
+                modsStore.selectedModID = modsStore.mods
                     .flatMap { $0.allMods }
                     .first { $0.name.localizedCaseInsensitiveContains(modName) }?
                     .folderName
@@ -404,14 +464,14 @@ struct MainView: View {
         }
         .alert(isPresented: $alertStore.isPresented) {
             Alert(
-                title: Text(vm.L(L10n.Main.alert)),
+                title: Text(localizationStore.L(L10n.Main.alert)),
                 message: Text(alertStore.message),
-                dismissButton: .default(Text(vm.L(L10n.Main.ok)))
+                dismissButton: .default(Text(localizationStore.L(L10n.Main.ok)))
             )
         }
         .onReceive(URLDispatcher.shared.$openedURL) { url in
             if let u = url {
-                vm.handleOpenURL(u)
+                appCoordinator.handleOpenURL(u)
                 URLDispatcher.shared.openedURL = nil
             }
         }
@@ -420,20 +480,18 @@ struct MainView: View {
                 currentTab = tab
             }
         }
-        // Phase 4.9: available to every descendant view via @EnvironmentObject as each
-        // is migrated off `vm`. `vm` still constructs and owns all of these — this just
-        // exposes the same instances through the environment alongside it.
+        // Available to every descendant view via @EnvironmentObject.
         .environmentObject(alertStore)
-        .environmentObject(vm.appCoordinator)
-        .environmentObject(vm.localizationStore)
-        .environmentObject(vm.logStore)
-        .environmentObject(vm.thaiHubStore)
-        .environmentObject(vm.profilesStore)
-        .environmentObject(vm.modPacksStore)
-        .environmentObject(vm.savesStore)
-        .environmentObject(vm.modsStore)
-        .environmentObject(vm.appEnvironment)
-        .environmentObject(vm.appEnvironment.smapiInstaller)
+        .environmentObject(appCoordinator)
+        .environmentObject(localizationStore)
+        .environmentObject(logStore)
+        .environmentObject(thaiHubStore)
+        .environmentObject(profilesStore)
+        .environmentObject(modPacksStore)
+        .environmentObject(savesStore)
+        .environmentObject(modsStore)
+        .environmentObject(appEnvironment)
+        .environmentObject(smapiInstaller)
     }
     
     var colorScheme: ColorScheme? {
