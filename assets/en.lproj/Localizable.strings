@@ -4,9 +4,6 @@
 "main_system" = "System Settings";
 "main_online" = "Online Services";
 "main_app_changelog" = "App Changelog";
-"main_ready_to_play" = "Ready to play!";
-"main_launching_game" = "Launching game...";
-"main_launch_game" = "Launch Game";
 "main_alert" = "Alert";
 "main_ok" = "OK";
 "main_home" = "Home";
@@ -104,8 +101,6 @@
 "saves_spouse_label" = "Spouse";
 "saves_spouse_none" = "Single";
 "saves_spouse_warning" = "⚠️ Note: Children will remain in the farmhouse (same as in-game divorce). A backup will be created automatically before saving.";
-"mods_api_offline" = "API Offline";
-"mods_api_normal" = "API Normal";
 "mods_no_mods_installed" = "No installed mods found\nPlease check your game folder";
 "mods_no_mod_found" = "No mod found for \"%@\"";
 "mods_missing_dependencies" = "Missing: %@";
@@ -120,7 +115,6 @@
 "mods_filter_all" = "All";
 "mods_filter_enabled" = "Enabled";
 "mods_filter_disabled" = "Disabled";
-"mods_filter_type" = "Filter by Type";
 "mods_filter_type_all" = "All Types";
 "mods_filter_date_all" = "Any Time";
 "mods_filter_date_24h" = "Past 24 Hours";
@@ -145,12 +139,7 @@
 "mods_install_drop_hint" = "Drop .zip or folder to install";
 "mods_install_invalid_file" = "Please drop a .zip file";
 "mods_installing" = "Installing…";
-"logs_system_logs" = "System Logs";
 "logs_no_logs" = "No logs for this session";
-"logs_mac_o_s_tips" = "macOS Troubleshooting Tips";
-"logs_mac_o_s_tips_content" = "1. If the game cannot run due to 'Developer cannot be verified', go to System Settings > Privacy & Security and click 'Allow Anyway' next to SMAPI or Stardew Valley.\n2. The mod manager creates a 'Mods_disabled' folder in your game folder to store temporarily disabled mods.";
-"logs_history" = "System Logs";
-"logs_history_subtitle" = "Session history and permission recommendations";
 "logs_clear_logs" = "Clear Logs";
 "logs_logs" = "Logs";
 "logs_developer" = "Developer";
@@ -162,10 +151,8 @@
 "logs_refresh_hint" = "Reload SMAPI-latest.txt";
 "logs_copy_line" = "Copy Line";
 "settings_launch_options" = "Launch Options";
-"settings_discord" = "Join Discord";
 "modpack_title" = "Mod Packs";
 "modpack_export" = "Export Mod Pack";
-"modpack_import" = "Import Mod Pack";
 "modpack_import_hint" = "Drop .starhubpack here";
 "modpack_installed" = "Installed";
 "modpack_missing" = "Missing";
@@ -225,7 +212,6 @@
 "config_reset" = "Reset";
 "config_invalid_json" = "Invalid JSON format";
 "config_saved" = "Config saved successfully";
-"config_title" = "Edit config.json";
 "config_visual_editor" = "Visual Editor";
 "config_code_editor" = "Code Editor";
 "config_backup_mod" = "Backup Mod";
@@ -247,7 +233,6 @@
 "nexus_no_changelog" = "No changelog found.";
 "smapi_downloading" = "Downloading SMAPI...";
 "smapi_download_failed" = "Download failed: %@";
-"smapi_downloaded_file_not_found" = "Downloaded file not found";
 "smapi_extracting" = "Download complete, extracting...";
 "smapi_preparing" = "Preparing to install SMAPI...";
 "smapi_payload_not_found" = "Payload file not found in SMAPI zip";
@@ -306,10 +291,6 @@
 "tag_change" = "Change Tag...";
 "tag_reset" = "Reset to Auto";
 "tag_sync" = "Sync Tag";
-"nexus_api_key_missing" = "Please enter your Nexus API Key in the settings first.";
-"about_title" = "About StarHub TH";
-"thaihub_hub_title" = "Thai Translation Hub";
-"thaihub_subtitle" = "Install supported Thai translation mods with a single click. Powered by AppleBoiy.";
 "thaihub_loading" = "Loading Thai translation mods...";
 "thaihub_status" = "Status";
 "thaihub_reinstall" = "Reinstall";
@@ -323,7 +304,6 @@
 "thaihub_note" = "Note: This is only a translation hub. You must install the original mod first for the translation to work.";
 "thaihub_translator" = "Translator";
 "thaihub_original_mod" = "Original Mod";
-"thaihub_original_mod_status" = "Original Mod Status";
 "thaihub_installed" = "Installed";
 "thaihub_not_installed" = "Not Installed";
 "thaihub_destination_folder" = "Destination Folder";
@@ -331,7 +311,6 @@
 "thaihub_description_prefix" = "This is a Thai translation mod for ";
 "thaihub_description_suffix" = ". Please check the original mod page on Nexus Mods for more details.";
 "thaihub_completed" = "Completed";
-"thaihub_waiting_translation" = "Waiting for translation";
 "thaihub_available_download" = "Available to download";
 "thaihub_missing_original" = "Missing original mod";
 "thaihub_download_and_install" = "Download and Install";
@@ -340,7 +319,6 @@
 "thaihub_thai_translation_mod" = "Thai Translation Mod";
 "profiles_title" = "Mod Profiles";
 "profiles_title_full" = "Mod Profiles";
-"profiles_all_profiles" = "All Mod Profiles";
 "profiles_add_profile" = "Add Profile...";
 "profiles_no_profiles" = "No Mod Profiles yet";
 "profiles_active" = "Active";
@@ -349,10 +327,8 @@
 "profiles_view_details" = "View Profile Details";
 "profiles_profile_name" = "Profile Name";
 "profiles_delete_profile" = "Delete Mod Profile";
-"profiles_delete_this_profile" = "Delete this profile";
 "profiles_delete_note" = "Deleting a profile will not delete your mod files.";
 "profiles_new_profile_note" = "The new profile starts with no active mods. You can configure mods later.";
-"profiles_add_new_profile" = "Add New Profile...";
 "profiles_create_new_profile" = "Create New Mod Profile";
 "profiles_profile_name_placeholder" = "Profile name...";
 "profiles_delete" = "Delete...";
@@ -361,7 +337,6 @@
 "profiles_cancel" = "Cancel";
 "profiles_ok" = "OK";
 "profiles_mods_in_profile" = "Mods in this profile (%d mods)";
-"profiles_mods_in_profile_long" = "Mods in this profile (%lld mods)";
 "profiles_select_mods" = "Select mods to enable for this profile.";
 "profiles_manage" = "Manage...";
 "profiles_manage_mods" = "Manage Mods";
@@ -371,15 +346,6 @@
 "profiles_select_all" = "Select All";
 "profiles_deselect_all" = "Deselect All";
 "vm_default_farmer_name" = "Farmer";
-"vm_launching_vanilla" = "Launching Stardew Valley (Vanilla)...";
-"vm_launch_vanilla_success" = "Vanilla game session launched successfully";
-"vm_launch_vanilla_error" = "Could not open main game executable: %@";
-"vm_cannot_start_vanilla" = "Failed to start Vanilla game";
-"vm_launching_smapi" = "Launching Stardew Valley (SMAPI)...";
-"vm_launch_steam_success" = "Launched via Steam successfully";
-"vm_launch_direct_success" = "Launched game app directly successfully";
-"vm_cannot_start_direct" = "Could not start game, please verify your game folder";
-"vm_cannot_start_game" = "Failed to start game directly";
 "vm_save_success" = "Save saved and backup created successfully!";
 "vm_save_error" = "An error occurred while saving the save";
 "vm_delete_save_success" = "Moved save to trash successfully";
@@ -398,7 +364,6 @@
 "vm_clean_mods_success" = "Deleted Mods_disabled folder successfully";
 "vm_clean_mods_not_found" = "Mods_disabled folder not found";
 "vm_clean_mods_error" = "Failed to delete Mods_disabled folder: %@";
-"vm_url_error" = "An error occurred while creating download URL";
 "vm_downloading_translation" = "Downloading translation: %@...";
 "vm_download_failed" = "Download failed: %@";
 "vm_install_thai_success" = "Thai translation installed successfully for %@!";
@@ -406,11 +371,9 @@
 "vm_unzip_failed" = "Failed to run unzip command: %@";
 "vm_switch_profile" = "Switched mod profile to: %@";
 "saves_inventory_editor" = "Inventory Editor";
-"saves_item_name" = "Item Name";
 "saves_item_quantity" = "Quantity";
 "saves_item_id" = "Item ID";
 "saves_save_inventory" = "Save Inventory";
-"saves_empty_slot" = "Empty Slot";
 "saves_non_object" = "(Cannot edit this item)";
 "saves_inventory_success" = "Inventory saved successfully!";
 "saves_inventory_error" = "Error saving inventory";
@@ -422,8 +385,6 @@
 "vm_collection_import_failed" = "Failed to import collection.";
 "vm_collection_imported" = "Collection imported successfully.";
 "vm_collection_imported_missing" = "Imported. %d mod(s) are missing — opening their Nexus pages one by one so you can download them manually.";
-"mods_sort_update_asc" = "Oldest Update";
-"mods_sort_update_desc" = "Newest Update";
 "tags_spoiler" = "Spoiler";
 "vm_no_dependencies_found" = "No dependencies found.";
 "vm_mod_exported" = "Mod Pack Exported Successfully";
@@ -437,12 +398,6 @@
 "vm_collection_api_key_required" = "A Premium API Key is required to fetch collections.";
 "vm_collection_fetch_failed" = "Failed to fetch collection.";
 "vm_sync_tag_failed" = "Failed to sync tag from Nexus: %@";
-"moddetail_installed_and_enabled" = "Installed & Enabled";
-"moddetail_enable_mod" = "Enable Mod";
-"moddetail_search_nexus" = "Search Nexus";
-"moddetail_required" = "Required";
-"moddetail_optional" = "Optional";
-"moddetail_failed_to_load_image" = "Failed to load image";
 "settings_nexus_handler_title" = "Register as default handler for Nexus Mods links";
 "settings_nexus_handler_desc" = "Allows StarHubTH to automatically intercept and handle 'Mod Manager Download' links (nxm://) from the Nexus Mods website.";
 "settings_set_as_default" = "Set as Default";

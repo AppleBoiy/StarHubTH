@@ -11,9 +11,6 @@ enum L10n {
         static let system               = "main_system"
         static let online               = "main_online"
         static let appChangelog         = "main_app_changelog"
-        static let readyToPlay          = "main_ready_to_play"
-        static let launchingGame        = "main_launching_game"
-        static let launchGame           = "main_launch_game"
         static let alert                = "main_alert"
         static let ok                   = "main_ok"
         static let home                 = "main_home"
@@ -122,11 +119,9 @@ enum L10n {
         static let spouseWarning        = "saves_spouse_warning"
         
         static let inventoryEditor      = "saves_inventory_editor"
-        static let itemName             = "saves_item_name"
         static let itemQuantity         = "saves_item_quantity"
         static let itemId               = "saves_item_id"
         static let saveInventory        = "saves_save_inventory"
-        static let emptySlot            = "saves_empty_slot"
         static let nonObject            = "saves_non_object"
         static let inventorySuccess     = "saves_inventory_success"
         static let inventoryError       = "saves_inventory_error"
@@ -134,8 +129,6 @@ enum L10n {
 
     // MARK: - Mods
     enum Mods {
-        static let apiOffline           = "mods_api_offline"
-        static let apiNormal            = "mods_api_normal"
         static let noModsInstalled      = "mods_no_mods_installed"
         static let noModFound           = "mods_no_mod_found"
         static let missingDependencies  = "mods_missing_dependencies"
@@ -151,7 +144,6 @@ enum L10n {
         static let filterAll            = "mods_filter_all"
         static let filterEnabled        = "mods_filter_enabled"
         static let filterDisabled       = "mods_filter_disabled"
-        static let filterType           = "mods_filter_type"
         static let filterTypeAll        = "mods_filter_type_all"
         static let filterDateAll        = "mods_filter_date_all"
         static let filterDate24h        = "mods_filter_date_24h"
@@ -170,8 +162,6 @@ enum L10n {
         static let sortStatus           = "mods_sort_status"
         static let sortDateAdded        = "mods_sort_date_added"
         static let sortDateModified     = "mods_sort_date_modified"
-        static let sortUpdateAsc        = "mods_sort_update_asc"
-        static let sortUpdateDesc       = "mods_sort_update_desc"
         // Update
         static let updateAvailable      = "mods_update_available"
         static let updateMod            = "mods_update_mod"
@@ -234,12 +224,7 @@ enum L10n {
 
     // MARK: - Logs
     enum Logs {
-        static let systemLogs           = "logs_system_logs"
         static let noLogs               = "logs_no_logs"
-        static let macOSTips            = "logs_mac_o_s_tips"
-        static let macOSTipsContent     = "logs_mac_o_s_tips_content"
-        static let history              = "logs_history"
-        static let historySubtitle      = "logs_history_subtitle"
         static let clearLogs            = "logs_clear_logs"
         static let logs                 = "logs_logs"
         static let developer            = "logs_developer"
@@ -257,7 +242,6 @@ enum L10n {
     enum ModPacks {
         static let title                = "modpack_title"
         static let exportPack           = "modpack_export"
-        static let importPack           = "modpack_import"
         static let importHint           = "modpack_import_hint"
         static let installed            = "modpack_installed"
         static let missing              = "modpack_missing"
@@ -319,7 +303,6 @@ enum L10n {
         static let nexusApiKeyPlaceholder = "nexus_api_key_placeholder"
         static let nexusGetApiKey       = "nexus_get_api_key"
         static let nexusApiSectionFooter = "nexus_api_section_footer"
-        static let nexusApiKeyMissing   = "nexus_api_key_missing"
         
         // Mod Config
         static let configEditor         = "config_editor"
@@ -327,7 +310,6 @@ enum L10n {
         static let configReset          = "config_reset"
         static let configInvalidJson    = "config_invalid_json"
         static let configSaved          = "config_saved"
-        static let configTitle          = "config_title"
         static let configVisualEditor   = "config_visual_editor"
         static let configCodeEditor     = "config_code_editor"
         static let configBackupMod      = "config_backup_mod"
@@ -354,7 +336,6 @@ enum L10n {
     enum Smapi {
         static let downloading          = "smapi_downloading"
         static let downloadFailed       = "smapi_download_failed"
-        static let downloadedFileNotFound = "smapi_downloaded_file_not_found"
         static let extracting           = "smapi_extracting"
         static let preparing            = "smapi_preparing"
         static let payloadNotFound      = "smapi_payload_not_found"
@@ -382,8 +363,6 @@ enum L10n {
     // MARK: - ThaiHub
     enum ThaiHub {
         static let title                = "thaihub_title"
-        static let hubTitle             = "thaihub_hub_title"
-        static let subtitle             = "thaihub_subtitle"
         static let loading              = "thaihub_loading"
         static let status               = "thaihub_status"
         static let reinstall            = "thaihub_reinstall"
@@ -397,7 +376,6 @@ enum L10n {
         static let note                 = "thaihub_note"
         static let translator           = "thaihub_translator"
         static let originalMod          = "thaihub_original_mod"
-        static let originalModStatus    = "thaihub_original_mod_status"
         static let installed            = "thaihub_installed"
         static let notInstalled         = "thaihub_not_installed"
         static let destinationFolder    = "thaihub_destination_folder"
@@ -405,7 +383,6 @@ enum L10n {
         static let descriptionPrefix    = "thaihub_description_prefix"
         static let descriptionSuffix    = "thaihub_description_suffix"
         static let completed            = "thaihub_completed"
-        static let waitingTranslation   = "thaihub_waiting_translation"
         static let availableDownload    = "thaihub_available_download"
         static let missingOriginal      = "thaihub_missing_original"
         static let downloadAndInstall   = "thaihub_download_and_install"
@@ -418,7 +395,6 @@ enum L10n {
     enum Profiles {
         static let title                = "profiles_title"
         static let titleFull            = "profiles_title_full"
-        static let allProfiles          = "profiles_all_profiles"
         static let addProfile           = "profiles_add_profile"
         static let noProfiles           = "profiles_no_profiles"
         static let active               = "profiles_active"
@@ -427,10 +403,8 @@ enum L10n {
         static let viewDetails          = "profiles_view_details"
         static let profileName          = "profiles_profile_name"
         static let deleteProfile        = "profiles_delete_profile"
-        static let deleteThisProfile    = "profiles_delete_this_profile"
         static let deleteNote           = "profiles_delete_note"
         static let newProfileNote       = "profiles_new_profile_note"
-        static let addNewProfile        = "profiles_add_new_profile"
         static let createNewProfile     = "profiles_create_new_profile"
         static let profileNamePlaceholder = "profiles_profile_name_placeholder"
         static let delete               = "profiles_delete"
@@ -439,7 +413,6 @@ enum L10n {
         static let cancel               = "profiles_cancel"
         static let ok                   = "profiles_ok"
         static let modsInProfile        = "profiles_mods_in_profile"
-        static let modsInProfileLong    = "profiles_mods_in_profile_long"
         static let selectMods           = "profiles_select_mods"
         static let exportCollection     = "profiles_export_collection"
         static let exportCollectionHint = "profiles_export_collection_hint"
@@ -456,15 +429,6 @@ enum L10n {
     // MARK: - VM
     enum VM {
         static let defaultFarmerName    = "vm_default_farmer_name"
-        static let launchingVanilla     = "vm_launching_vanilla"
-        static let launchVanillaSuccess = "vm_launch_vanilla_success"
-        static let launchVanillaError   = "vm_launch_vanilla_error"
-        static let cannotStartVanilla   = "vm_cannot_start_vanilla"
-        static let launchingSmapi       = "vm_launching_smapi"
-        static let launchSteamSuccess   = "vm_launch_steam_success"
-        static let launchDirectSuccess  = "vm_launch_direct_success"
-        static let cannotStartDirect    = "vm_cannot_start_direct"
-        static let cannotStartGame      = "vm_cannot_start_game"
         static let saveSuccess          = "vm_save_success"
         static let saveError            = "vm_save_error"
         static let deleteSaveSuccess    = "vm_delete_save_success"
@@ -489,7 +453,6 @@ enum L10n {
         static let noDependenciesFound    = "vm_no_dependencies_found"
         static let cleanModsNotFound    = "vm_clean_mods_not_found"
         static let cleanModsError       = "vm_clean_mods_error"
-        static let urlError             = "vm_url_error"
         static let downloadingTranslation = "vm_downloading_translation"
         static let downloadFailed       = "vm_download_failed"
         static let installThaiSuccess   = "vm_install_thai_success"
@@ -507,16 +470,6 @@ enum L10n {
         static let collectionApiKeyRequired = "vm_collection_api_key_required"
         static let collectionFetchFailed = "vm_collection_fetch_failed"
         static let syncTagFailed        = "vm_sync_tag_failed"
-    }
-    
-    // MARK: - ModDetail Extra
-    enum ModDetailExtra {
-        static let installedAndEnabled  = "moddetail_installed_and_enabled"
-        static let enableMod            = "moddetail_enable_mod"
-        static let searchNexus          = "moddetail_search_nexus"
-        static let required             = "moddetail_required"
-        static let optional             = "moddetail_optional"
-        static let failedToLoadImage    = "moddetail_failed_to_load_image"
     }
     
     // MARK: - Settings Extra
