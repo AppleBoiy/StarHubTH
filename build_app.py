@@ -5,6 +5,7 @@ import glob
 import subprocess
 import plistlib
 import json
+import sys
 
 APP_NAME = "StarHubTH"
 APP_DIR = f"{APP_NAME}.app"
@@ -99,10 +100,26 @@ def concurrency_check_flags():
     print("[WARN] This swiftc accepts none of the known concurrency-check flags; continuing without.")
     return []
 
+def run_standards_check():
+    """Run scripts/check_standards.py (Refactor Phase 9.1/9.2).
+
+    Warnings-only by default — see docs/REFACTOR_PLAN.md Phase 9. Set
+    STARHUB_STANDARDS_STRICT=1 to promote findings to a build failure once
+    the codebase is clean enough for that to be worth enforcing.
+    """
+    script_path = os.path.join("scripts", "check_standards.py")
+    if not os.path.exists(script_path):
+        return
+    result = subprocess.run([sys.executable, script_path])
+    if result.returncode != 0:
+        print("[ERROR] check_standards.py failed under STARHUB_STANDARDS_STRICT.")
+        raise SystemExit(1)
+
 def create_app_bundle():
     print(f"[INFO] Starting build process for {APP_DIR}...")
+    run_standards_check()
     generate_localizable_strings()
-    
+
     # 1. Clean old build
     if os.path.exists(APP_DIR):
         shutil.rmtree(APP_DIR)
