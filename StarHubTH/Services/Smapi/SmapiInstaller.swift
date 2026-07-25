@@ -20,6 +20,11 @@ struct SmapiReleaseLookupError: Error {
     let detail: String?
 }
 
+/// Most `try?` in this file are best-effort steps around the install/uninstall flow this
+/// type's own `SmapiInstallOutcome` already reports on — a stale zip/extract-dir cleanup,
+/// clearing the quarantine flag, closing a pipe/file handle. None of those failing changes
+/// whether the install itself succeeded, so there's no better outcome to report than the
+/// one already computed.
 @MainActor
 final class SmapiInstaller: ObservableObject {
     @Published var isInstalling = false

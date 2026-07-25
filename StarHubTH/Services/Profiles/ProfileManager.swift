@@ -10,21 +10,26 @@ final class ProfileManager: Sendable {
     func loadProfiles() -> (profiles: [ModProfile], activeId: UUID?) {
         var loadedProfiles: [ModProfile] = []
         var loadedActiveId: UUID? = nil
-        
+
+        // No stored data (first run) and corrupt stored data both resolve to "no profiles
+        // yet" — indistinguishable in practice, since either way there is nothing to
+        // recover and the correct UI state is the same empty list.
         if let data = UserDefaults.standard.data(forKey: "modProfiles"),
            let profiles = try? JSONDecoder().decode([ModProfile].self, from: data) {
             loadedProfiles = profiles
         }
-        
+
         if let activeIdStr = UserDefaults.standard.string(forKey: "activeProfileId"),
            let activeId = UUID(uuidString: activeIdStr) {
             loadedActiveId = activeId
         }
-        
+
         return (loadedProfiles, loadedActiveId)
     }
-    
+
     func saveProfiles(_ profiles: [ModProfile], activeProfileId: UUID?) {
+        // Encoding a plain Codable struct array cannot practically fail here — there's no
+        // realistic error path for JSONEncoder on this type, unlike a filesystem write.
         if let data = try? JSONEncoder().encode(profiles) {
             UserDefaults.standard.set(data, forKey: "modProfiles")
         }
@@ -35,7 +40,9 @@ final class ProfileManager: Sendable {
         }
     }
     
-    /// Moves mod files to match the given profile's enabledModIds.
+    /// Moves mod files to match the given profile's enabledModIds. Every `try?` below is
+    /// best-effort backup/rollback bookkeeping around a per-mod move that's already being
+    /// caught into `failedModNames` — same reasoning as `ModInstaller`'s own doc comment.
     func applyProfileToFilesystem(profile: ModProfile, mods: [Mod], gameDir: String) throws(ProfileApplyError) {
         let fileManager = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")

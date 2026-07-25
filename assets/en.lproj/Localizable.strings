@@ -436,6 +436,7 @@
 "vm_pack_save_failed" = "Failed to save Mod Pack.";
 "vm_collection_api_key_required" = "A Premium API Key is required to fetch collections.";
 "vm_collection_fetch_failed" = "Failed to fetch collection.";
+"vm_sync_tag_failed" = "Failed to sync tag from Nexus: %@";
 "moddetail_installed_and_enabled" = "Installed & Enabled";
 "moddetail_enable_mod" = "Enable Mod";
 "moddetail_search_nexus" = "Search Nexus";

@@ -386,7 +386,7 @@ struct ModConfigEditorView: View {
                 alertStore.show("Restored config from config.json.bak successfully!")
                 return
             } catch {
-                print("Failed to restore .bak: \(error)")
+                alertStore.show("Failed to restore config.json.bak: \(error.localizedDescription)")
             }
         }
         

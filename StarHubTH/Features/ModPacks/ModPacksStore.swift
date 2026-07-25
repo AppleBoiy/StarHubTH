@@ -72,7 +72,7 @@ final class ModPacksStore: ObservableObject {
         do {
             return try decoder.decode(StarHubPack.self, from: data)
         } catch {
-            print("Failed to decode Mod Pack: \(error)")
+            logStore.log("Failed to decode Mod Pack: \(error.localizedDescription)")
             return nil
         }
     }

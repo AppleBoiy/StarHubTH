@@ -19,6 +19,12 @@ enum ModInstallerError: Error, LocalizedError {
 /// No stored properties — a plain, explicit `Sendable` conformance declared here (not just
 /// inferred via the `ModInstalling` conformance in a different file, which Swift requires
 /// for retroactive conformance to be explicit and same-file).
+///
+/// Every `try?` in this file is cleanup/rollback work running on an error path that's
+/// already throwing (or already about to return a success it earned) — a temp dir removal,
+/// a backup restore, a stale backup trash. A failure in any of those is real disk state
+/// worth not masking, but there's no *better* error to surface than the one already in
+/// flight, so best-effort is the correct choice, not a swallowed bug.
 struct ModInstaller: Sendable {
     static func installFromZip(url: URL, gameDir: String) async throws(ModInstallerError) -> [String] {
         let fileManager = FileManager.default

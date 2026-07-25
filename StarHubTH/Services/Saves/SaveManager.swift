@@ -271,6 +271,9 @@ final class SaveManager: Sendable {
         let saveGameInfoURL = folderURL.appendingPathComponent("SaveGameInfo")
         let mainSaveURL = folderURL.appendingPathComponent(newSaveName)
 
+        // Its Bool return isn't a swallowed failure — `succeeded` below is checked at the
+        // end of this function and thrown as `.internalNameUpdateFailed`, so a read/write
+        // failure here does reach the caller, just aggregated across both files first.
         func updateFile(at url: URL) -> Bool {
             guard let content = try? String(contentsOf: url, encoding: .utf8) else { return false }
             var modified = replaceFirstTag(tag: "name", with: newPlayerName, in: content)
@@ -432,7 +435,10 @@ final class SaveManager: Sendable {
                 // an overall restore failure.
                 try? fileManager.trashItem(at: tempTrash, resultingItemURL: nil)
             } catch {
-                // Rollback: restore original save from tempTrash
+                // Rollback: restore original save from tempTrash. Best-effort — we're
+                // already in the failure path of the primary operation, and there's no
+                // further fallback if the rollback itself fails; the `.moveFailed` thrown
+                // below is the only signal the caller gets either way.
                 if fileManager.fileExists(atPath: tempTrash.path) && !fileManager.fileExists(atPath: saveFolder.path) {
                     try? fileManager.moveItem(at: tempTrash, to: saveFolder)
                 }

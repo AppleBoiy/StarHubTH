@@ -436,6 +436,7 @@
 "vm_pack_save_failed" = "บันทึกม็อดแพ็คไม่สำเร็จ";
 "vm_collection_api_key_required" = "ต้องใช้ Premium API Key เพื่อดึงข้อมูลคอลเลกชัน";
 "vm_collection_fetch_failed" = "ดึงข้อมูลคอลเลกชันไม่สำเร็จ";
+"vm_sync_tag_failed" = "ซิงก์แท็กจาก Nexus ไม่สำเร็จ: %@";
 "moddetail_installed_and_enabled" = "ติดตั้งและเปิดใช้งานแล้ว";
 "moddetail_enable_mod" = "เปิดใช้งานม็อด";
 "moddetail_search_nexus" = "ค้นหาใน Nexus";

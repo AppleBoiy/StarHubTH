@@ -68,12 +68,13 @@ struct ModManifestParser {
         var installDate: Date? = nil
         var lastModifiedDate: Date? = nil
         
-        do {
-            let attributes = try FileManager.default.attributesOfItem(atPath: path)
+        // Non-fatal: the mod still parses and installs fine with unknown dates. This is a
+        // stateless parser (no Store/LogStore reachable per the layering rule in
+        // SWIFT_STANDARDS.md §3.1), so there's nowhere to route a diagnostic even if we
+        // wanted to — and there's no user-facing impact worth one.
+        if let attributes = try? FileManager.default.attributesOfItem(atPath: path) {
             installDate = attributes[.creationDate] as? Date
             lastModifiedDate = attributes[.modificationDate] as? Date
-        } catch {
-            print("Could not get attributes for mod path: \(path) - \(error)")
         }
         
         return Mod(

@@ -133,12 +133,17 @@ final class AppCoordinator: ObservableObject {
             for: mod,
             nexusApiKey: appEnvironment.nexusApiKey,
             shouldRefresh: shouldRefresh,
+            showModal: { [weak self] message in self?.alertStore.show(message) },
             refresh: { [weak self] in self?.refresh() }
         )
     }
 
     func syncAllTagsFromNexus() async {
-        await modsStore.syncAllTagsFromNexus(nexusApiKey: appEnvironment.nexusApiKey, refresh: { [weak self] in self?.refresh() })
+        await modsStore.syncAllTagsFromNexus(
+            nexusApiKey: appEnvironment.nexusApiKey,
+            showModal: { [weak self] message in self?.alertStore.show(message) },
+            refresh: { [weak self] in self?.refresh() }
+        )
     }
 
     func openInstallModPanel() async {

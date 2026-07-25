@@ -106,16 +106,22 @@ final class ModsStore: ObservableObject {
     }
 
     /// No-ops (rather than surfacing an error) when the mod has no valid Nexus URL — that's
-    /// an expected, silent case for locally-added mods, not a failure. A real API failure
-    /// underneath `nexusAPIClient.modInfo` is swallowed too — see the tracked follow-up to
-    /// give this a real `showModal` path, same as `syncTagFromNexus`'s siblings.
-    func syncTagFromNexus(for mod: Mod, nexusApiKey: String, shouldRefresh: Bool = true, refresh: @escaping () -> Void) async {
+    /// an expected, silent case for locally-added mods, not a failure.
+    func syncTagFromNexus(for mod: Mod, nexusApiKey: String, shouldRefresh: Bool = true, showModal: @escaping (String) -> Void, refresh: @escaping () -> Void) async {
         guard !nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let modId = Int(url.lastPathComponent) else {
             return
         }
 
-        guard let info = try? await nexusAPIClient.modInfo(modId: modId, apiKey: nexusApiKey),
-              let categoryId = info.categoryId else {
+        let info: LiveNexusAPIClient.ModInfo
+        do {
+            info = try await nexusAPIClient.modInfo(modId: modId, apiKey: nexusApiKey)
+        } catch {
+            showModal(String(format: localization.L(L10n.VM.syncTagFailed), error.localizedDescription))
+            return
+        }
+
+        guard let categoryId = info.categoryId else {
+            showModal(String(format: localization.L(L10n.VM.syncTagFailed), "No category information available"))
             return
         }
 
@@ -157,7 +163,7 @@ final class ModsStore: ObservableObject {
     /// Sequential, not concurrent — mirrors `ModPacksStore.downloadAllMissing`'s throttling:
     /// firing every mod's Nexus lookup in parallel risks the same rate-limiting bulk installs
     /// already hit.
-    func syncAllTagsFromNexus(nexusApiKey: String, refresh: @escaping () -> Void) async {
+    func syncAllTagsFromNexus(nexusApiKey: String, showModal: @escaping (String) -> Void, refresh: @escaping () -> Void) async {
         guard !nexusApiKey.isEmpty else { return }
 
         isSyncingAllTags = true
@@ -171,7 +177,7 @@ final class ModsStore: ObservableObject {
         }
 
         for (index, mod) in modsToSync.enumerated() {
-            await syncTagFromNexus(for: mod, nexusApiKey: nexusApiKey, shouldRefresh: false, refresh: refresh)
+            await syncTagFromNexus(for: mod, nexusApiKey: nexusApiKey, shouldRefresh: false, showModal: showModal, refresh: refresh)
             syncAllTagsProgress = Double(index + 1) / Double(modsToSync.count)
         }
 
@@ -340,7 +346,7 @@ final class ModsStore: ObservableObject {
                     throw error
                 }
             } catch {
-                print("Failed to toggle \(m.name): \(error.localizedDescription)")
+                log("Failed to toggle \(m.name): \(error.localizedDescription)")
             }
         }
 

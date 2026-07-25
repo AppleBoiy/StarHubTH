@@ -506,6 +506,7 @@ enum L10n {
         static let packSaveFailed       = "vm_pack_save_failed"
         static let collectionApiKeyRequired = "vm_collection_api_key_required"
         static let collectionFetchFailed = "vm_collection_fetch_failed"
+        static let syncTagFailed        = "vm_sync_tag_failed"
     }
     
     // MARK: - ModDetail Extra
