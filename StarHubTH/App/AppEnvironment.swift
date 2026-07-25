@@ -12,7 +12,6 @@ final class AppEnvironment: ObservableObject {
     @Published var steamUsername: String = ""
     @Published var steamAvatarPath: String?
     @Published var smapiInstalledVersion: String?   // nil = not installed
-    @Published var areSmapiAlertsPresented: Bool = false
 
     let smapiInstaller = SmapiInstaller()
 

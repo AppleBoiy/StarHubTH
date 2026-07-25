@@ -60,10 +60,6 @@ extension View {
     func glassCard(cornerRadius: CGFloat = 18) -> some View {
         modifier(GlassCard(cornerRadius: cornerRadius))
     }
-
-    // Legacy compat
-    func stardewPanel(title: String? = nil) -> some View { self.glassCard() }
-    func appPanel(title: String? = nil) -> some View { self.glassCard() }
 }
 
 // MARK: - iOS-style Toggle
