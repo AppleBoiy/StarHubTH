@@ -80,23 +80,15 @@ class ModUpdateTests {
         }
         
         // Step 4: Install the update
-        let installSemaphore = DispatchSemaphore(value: 0)
         var installSuccess = false
-        ModInstaller.installFromZip(url: zipURL, gameDir: tempGameDir.path) { result in
-            switch result {
-            case .success(let names):
-                print("Installed update for mods: \(names)")
-                installSuccess = true
-            case .failure(let error):
-                print("Update install error: \(error.localizedDescription)")
-            }
-            installSemaphore.signal()
+        do {
+            let names = try await ModInstaller.installFromZip(url: zipURL, gameDir: tempGameDir.path)
+            print("Installed update for mods: \(names)")
+            installSuccess = true
+        } catch {
+            print("Update install error: \(error.localizedDescription)")
         }
-        guard installSemaphore.wait(timeout: .now() + .seconds(30)) == .success else {
-            SimpleTestFramework.assertTrue(false, "Timed out installing update")
-            return
-        }
-        
+
         SimpleTestFramework.assertTrue(installSuccess, "Auto-update mod download and install should succeed")
         
         let contents = (try? FileManager.default.contentsOfDirectory(atPath: tempModsDir.path)) ?? []

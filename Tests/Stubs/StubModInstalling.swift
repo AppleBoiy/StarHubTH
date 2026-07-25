@@ -4,11 +4,11 @@ final class StubModInstalling: ModInstalling {
     var installFromZipResult: Result<[String], ModInstallerError> = .success([])
     var installFromFolderResult: Result<[String], ModInstallerError> = .success([])
 
-    func installFromZip(url: URL, gameDir: String, completion: @escaping (Result<[String], ModInstallerError>) -> Void) {
-        completion(installFromZipResult)
+    func installFromZip(url: URL, gameDir: String) async throws(ModInstallerError) -> [String] {
+        try installFromZipResult.get()
     }
 
-    func installFromFolder(url: URL, gameDir: String, completion: @escaping (Result<[String], ModInstallerError>) -> Void) {
-        completion(installFromFolderResult)
+    func installFromFolder(url: URL, gameDir: String) async throws(ModInstallerError) -> [String] {
+        try installFromFolderResult.get()
     }
 }

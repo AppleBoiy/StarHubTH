@@ -66,7 +66,7 @@ struct ModListView: View {
                                         .foregroundColor(.secondary)
                                     // Empty-state install hint
                                     Button {
-                                        appCoordinator.openInstallModPanel()
+                                        Task { await appCoordinator.openInstallModPanel() }
                                     } label: {
                                         HStack(spacing: 6) {
                                             Image(systemName: "plus.circle.fill")
@@ -171,7 +171,7 @@ struct ModListView: View {
                         var isDir: ObjCBool = false
                         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
                         guard ext == "zip" || isDir.boolValue else { return }
-                        DispatchQueue.main.async { appCoordinator.installMod(url: url) }
+                        Task { @MainActor in await appCoordinator.installMod(url: url) }
                     }
                     handled = true
                 }
@@ -373,7 +373,7 @@ struct ModControlsBar: View {
 
             // Install Mod button
             Button {
-                appCoordinator.openInstallModPanel()
+                Task { await appCoordinator.openInstallModPanel() }
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "plus.circle.fill")

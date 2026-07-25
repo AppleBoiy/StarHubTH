@@ -16,13 +16,13 @@ SaveManagerTests.run()
 SmapiLogParserTests.run()
 SmapiInstallerTests.run()
 
-// Every suite below either awaits real async work or still ends in a
-// DispatchQueue.main.async-wrapped completion (ModInstaller.installFromZip hasn't been
-// converted yet — that's Phase 5.2's install cluster). All of them run the same way: on a
-// background thread via Task.detached, while this (real) main thread pumps its RunLoop so
-// any DispatchQueue.main.async hop still has somewhere to land. Mixing plain top-level
-// `await` in here with this manual pumping starves the pump at unpredictable points — every
-// suite goes through the identical pattern so there's one thread model, not two.
+// Every suite below either awaits real async work or still touches a method that hasn't
+// been converted off DispatchQueue.main.async yet (ModsStore.scanMods, as of Phase 5.2's
+// install cluster). All of them run the same way: on a background thread via Task.detached,
+// while this (real) main thread pumps its RunLoop so any DispatchQueue.main.async hop still
+// has somewhere to land. Mixing plain top-level `await` in here with this manual pumping
+// starves the pump at unpredictable points — every suite goes through the identical pattern
+// so there's one thread model, not two.
 func runSuite(deadline seconds: TimeInterval, _ body: @escaping () async -> Void) {
     let done = DispatchSemaphore(value: 0)
     Task.detached {
@@ -39,6 +39,6 @@ runSuite(deadline: 120) { await NXMParserTests.run() }
 runSuite(deadline: 30) { await NexusCollectionTests.run() }
 runSuite(deadline: 120) { await ModUpdateTests.run() }
 runSuite(deadline: 5) { await ModPacksStoreTests.run() }
-runSuite(deadline: 10) { ModsStoreTests.run() }
+runSuite(deadline: 10) { await ModsStoreTests.run() }
 
 SimpleTestFramework.report()

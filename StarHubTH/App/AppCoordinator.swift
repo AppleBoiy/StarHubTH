@@ -140,16 +140,17 @@ final class AppCoordinator: ObservableObject {
         await modsStore.syncAllTagsFromNexus(nexusApiKey: appEnvironment.nexusApiKey, refresh: { [weak self] in self?.refresh() })
     }
 
-    func openInstallModPanel() {
-        modsStore.openInstallModPanel(
+    func openInstallModPanel() async {
+        await modsStore.openInstallModPanel(
             gameDir: appEnvironment.gameDir,
             showModal: { [weak self] message in self?.alertStore.show(message) },
             log: { [weak self] message in self?.logStore.log(message) }
         )
     }
 
-    func installMod(url: URL) {
-        modsStore.installMod(
+    @discardableResult
+    func installMod(url: URL) async -> Bool {
+        await modsStore.installMod(
             url: url,
             gameDir: appEnvironment.gameDir,
             showModal: { [weak self] message in self?.alertStore.show(message) },
@@ -157,18 +158,19 @@ final class AppCoordinator: ObservableObject {
         )
     }
 
-    func installModFromZip(url: URL, completion: ((Bool) -> Void)? = nil) {
-        modsStore.installModFromZip(
+    @discardableResult
+    func installModFromZip(url: URL) async -> Bool {
+        await modsStore.installModFromZip(
             url: url,
             gameDir: appEnvironment.gameDir,
             showModal: { [weak self] message in self?.alertStore.show(message) },
-            log: { [weak self] message in self?.logStore.log(message) },
-            completion: completion
+            log: { [weak self] message in self?.logStore.log(message) }
         )
     }
 
-    func installModFromFolder(url: URL) {
-        modsStore.installModFromFolder(
+    @discardableResult
+    func installModFromFolder(url: URL) async -> Bool {
+        await modsStore.installModFromFolder(
             url: url,
             gameDir: appEnvironment.gameDir,
             showModal: { [weak self] message in self?.alertStore.show(message) },
@@ -335,7 +337,12 @@ final class AppCoordinator: ObservableObject {
             key: key,
             expires: expires,
             nexusApiKey: appEnvironment.nexusApiKey,
-            installModFromZip: { [weak self] url, completion in self?.installModFromZip(url: url, completion: completion) },
+            installModFromZip: { [weak self] url, completion in
+                Task {
+                    let success = await self?.installModFromZip(url: url) ?? false
+                    completion(success)
+                }
+            },
             showModal: { [weak self] message in self?.alertStore.show(message) }
         )
     }
@@ -345,7 +352,12 @@ final class AppCoordinator: ObservableObject {
             from: pack.mods,
             currentMods: modsStore.mods,
             nexusApiKey: appEnvironment.nexusApiKey,
-            installModFromZip: { [weak self] url, completion in self?.installModFromZip(url: url, completion: completion) },
+            installModFromZip: { [weak self] url, completion in
+                Task {
+                    let success = await self?.installModFromZip(url: url) ?? false
+                    completion(success)
+                }
+            },
             showModal: { [weak self] message in self?.alertStore.show(message) }
         )
     }

@@ -7,24 +7,23 @@ import Foundation
 /// Process/FileManager work with no injection seam — same reasoning as LogStore's
 /// loadSmapiLog() and ModPacksStore's exportModPack.
 struct ModsStoreTests {
-    static func run() {
+    static func run() async {
         print("Running ModsStoreTests...")
         testDependencyDelegationToModGraph()
         testCustomModTagsRoundTrip()
         testSetCustomTagRefreshesConditionally()
         testResetCustomTagAlwaysRefreshes()
         testScanModsPopulatesStateFromStub()
-        testInstallModRequiresGameDir()
-        testInstallModFromZipUsesModInstalling()
-        testOpenInstallModPanelInstallsEachPickedURL()
+        await testInstallModRequiresGameDir()
+        await testInstallModFromZipUsesModInstalling()
+        await testOpenInstallModPanelInstallsEachPickedURL()
     }
 
-    /// scanMods/installModFromZip/handleInstallResult wrap their state updates in
-    /// DispatchQueue.main.async with no completion callback to hook into. Queueing another
-    /// block on the main queue afterward and waiting for it runs after anything already
-    /// pending there, since it's a serial FIFO queue — this only resolves because
-    /// Tests/main.swift runs this whole suite on a background thread while pumping
-    /// RunLoop.main, the same pattern ModPacksStoreTests needed.
+    /// scanMods still wraps its state update in DispatchQueue.main.async (unconverted —
+    /// out of scope for the install cluster). Queueing another block on the main queue
+    /// afterward and waiting for it runs after anything already pending there, since it's
+    /// a serial FIFO queue — this only resolves because Tests/main.swift runs this whole
+    /// suite on a background thread while pumping RunLoop.main.
     private static func drainMainQueue() {
         let sem = DispatchSemaphore(value: 0)
         DispatchQueue.main.async { sem.signal() }
@@ -116,39 +115,37 @@ struct ModsStoreTests {
         SimpleTestFramework.assertTrue(store.isThaiTranslationInstalled, "scanMods detects an installed, enabled Thai translation mod")
     }
 
-    private static func testInstallModRequiresGameDir() {
+    private static func testInstallModRequiresGameDir() async {
         let (store, _, _, _, _) = makeStore()
         var modalMessage: String?
-        store.installMod(url: URL(fileURLWithPath: "/tmp/mod.zip"), gameDir: "", showModal: { modalMessage = $0 }, log: { _ in })
+        _ = await store.installMod(url: URL(fileURLWithPath: "/tmp/mod.zip"), gameDir: "", showModal: { modalMessage = $0 }, log: { _ in })
         SimpleTestFramework.assertTrue(modalMessage != nil, "installMod shows a modal when gameDir is empty")
     }
 
-    private static func testInstallModFromZipUsesModInstalling() {
+    private static func testInstallModFromZipUsesModInstalling() async {
         let (store, _, installing, _, _) = makeStore()
         installing.installFromZipResult = .success(["MyMod"])
 
         var successMessage: String?
         var logged: String?
-        store.installModFromZip(
+        _ = await store.installModFromZip(
             url: URL(fileURLWithPath: "/tmp/mod.zip"),
             gameDir: "/fake/gamedir",
             showModal: { successMessage = $0 },
             log: { logged = $0 }
         )
-        drainMainQueue()
         SimpleTestFramework.assertTrue(successMessage != nil, "a successful install shows a modal")
         SimpleTestFramework.assertTrue(logged != nil, "a successful install logs a message")
         SimpleTestFramework.assertFalse(store.isInstallingMod, "isInstallingMod resets to false after completion")
     }
 
-    private static func testOpenInstallModPanelInstallsEachPickedURL() {
+    private static func testOpenInstallModPanelInstallsEachPickedURL() async {
         let (store, _, installing, filePicking, _) = makeStore()
         installing.installFromZipResult = .success(["MyMod"])
         filePicking.filesToReturn = [URL(fileURLWithPath: "/tmp/one.zip"), URL(fileURLWithPath: "/tmp/two.zip")]
 
         var modalCount = 0
-        store.openInstallModPanel(gameDir: "/fake/gamedir", showModal: { _ in modalCount += 1 }, log: { _ in })
-        drainMainQueue()
+        await store.openInstallModPanel(gameDir: "/fake/gamedir", showModal: { _ in modalCount += 1 }, log: { _ in })
         SimpleTestFramework.assertEqual(modalCount, 2, "openInstallModPanel installs every URL FilePicking returns")
     }
 }

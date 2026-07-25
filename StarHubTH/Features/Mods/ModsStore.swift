@@ -358,7 +358,7 @@ final class ModsStore: ObservableObject {
 
     // MARK: - Install Mod (ZIP or Folder)
 
-    func openInstallModPanel(gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) {
+    func openInstallModPanel(gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
         let urls = filePicking.pickFiles(
             title: localization.L(L10n.Mods.installMod),
             allowedContentTypes: [.init(filenameExtension: "zip")!],
@@ -366,73 +366,78 @@ final class ModsStore: ObservableObject {
             canChooseDirectories: true   // ← also accept extracted folders
         )
         for url in urls {
-            installMod(url: url, gameDir: gameDir, showModal: showModal, log: log)
+            _ = await installMod(url: url, gameDir: gameDir, showModal: showModal, log: log)
         }
     }
 
     /// Entry point — detects whether the URL is a .zip or a folder and routes accordingly.
-    func installMod(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void, completion: ((Bool) -> Void)? = nil) {
+    @discardableResult
+    func installMod(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async -> Bool {
         guard !gameDir.isEmpty else {
             showModal(localization.L(L10n.Settings.gameDirNotSet))
-            completion?(false)
-            return
+            return false
         }
         var isDir: ObjCBool = false
         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
 
         if isDir.boolValue {
-            installModFromFolder(url: url, gameDir: gameDir, showModal: showModal, log: log)
+            return await installModFromFolder(url: url, gameDir: gameDir, showModal: showModal, log: log)
         } else if url.pathExtension.lowercased() == "zip" {
-            installModFromZip(url: url, gameDir: gameDir, showModal: showModal, log: log, completion: completion)
+            return await installModFromZip(url: url, gameDir: gameDir, showModal: showModal, log: log)
         } else {
             showModal(localization.L(L10n.Mods.installInvalidFile))
-            completion?(false)
+            return false
         }
     }
 
     /// Installs a mod from a .zip file
-    func installModFromZip(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void, completion: ((Bool) -> Void)? = nil) {
-        DispatchQueue.main.async { self.isInstallingMod = true }
-        modInstalling.installFromZip(url: url, gameDir: gameDir) { [weak self] result in
-            guard let self = self else { completion?(false); return }
-            self.handleInstallResult(result, gameDir: gameDir, showModal: showModal, log: log, completion: completion)
+    @discardableResult
+    func installModFromZip(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async -> Bool {
+        isInstallingMod = true
+        do {
+            let installedNames = try await modInstalling.installFromZip(url: url, gameDir: gameDir)
+            return handleInstallResult(.success(installedNames), gameDir: gameDir, showModal: showModal, log: log)
+        } catch {
+            return handleInstallResult(.failure(error), gameDir: gameDir, showModal: showModal, log: log)
         }
     }
 
     /// Installs a mod from an already-extracted folder.
-    func installModFromFolder(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) {
-        DispatchQueue.main.async { self.isInstallingMod = true }
-        modInstalling.installFromFolder(url: url, gameDir: gameDir) { [weak self] result in
-            guard let self = self else { return }
-            self.handleInstallResult(result, gameDir: gameDir, showModal: showModal, log: log)
+    @discardableResult
+    func installModFromFolder(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async -> Bool {
+        isInstallingMod = true
+        do {
+            let installedNames = try await modInstalling.installFromFolder(url: url, gameDir: gameDir)
+            return handleInstallResult(.success(installedNames), gameDir: gameDir, showModal: showModal, log: log)
+        } catch {
+            return handleInstallResult(.failure(error), gameDir: gameDir, showModal: showModal, log: log)
         }
     }
 
-    private func handleInstallResult(_ result: Result<[String], ModInstallerError>, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void, completion: ((Bool) -> Void)? = nil) {
-        DispatchQueue.main.async {
-            self.isInstallingMod = false
-            switch result {
-            case .success(let installedNames):
-                let names = installedNames.joined(separator: ", ")
-                let msg = String(format: self.localization.L(L10n.Mods.installSuccess), names)
-                showModal(msg)
-                log(msg)
-                self.scanMods(gameDir: gameDir)
-                completion?(true)
-            case .failure(let error):
-                switch error {
-                case .noModFound:
-                    log("Install failed: No manifest.json found in extracted content (gameDir: \(gameDir))")
-                    showModal(self.localization.L(L10n.Mods.installNoModFound))
-                case .unzipProcessError:
-                    log("Install failed: unzip process error")
-                    showModal(self.localization.L(L10n.VM.unzipError))
-                case .unzipFailed(let msg), .other(let msg):
-                    log("Install failed: \(msg)")
-                    showModal(String(format: self.localization.L(L10n.VM.unzipFailed), msg))
-                }
-                completion?(false)
+    @discardableResult
+    private func handleInstallResult(_ result: Result<[String], ModInstallerError>, gameDir: String, showModal: (String) -> Void, log: (String) -> Void) -> Bool {
+        isInstallingMod = false
+        switch result {
+        case .success(let installedNames):
+            let names = installedNames.joined(separator: ", ")
+            let msg = String(format: localization.L(L10n.Mods.installSuccess), names)
+            showModal(msg)
+            log(msg)
+            scanMods(gameDir: gameDir)
+            return true
+        case .failure(let error):
+            switch error {
+            case .noModFound:
+                log("Install failed: No manifest.json found in extracted content (gameDir: \(gameDir))")
+                showModal(localization.L(L10n.Mods.installNoModFound))
+            case .unzipProcessError:
+                log("Install failed: unzip process error")
+                showModal(localization.L(L10n.VM.unzipError))
+            case .unzipFailed(let msg), .other(let msg):
+                log("Install failed: \(msg)")
+                showModal(String(format: localization.L(L10n.VM.unzipFailed), msg))
             }
+            return false
         }
     }
 
@@ -444,7 +449,7 @@ final class ModsStore: ObservableObject {
         do {
             let zipUrl = try await NexusDownloader.downloadUpdate(nexusId: nexusId, apiKey: nexusApiKey)
             downloadingMods.remove(mod.name)
-            installModFromZip(url: zipUrl, gameDir: gameDir, showModal: showModal, log: log)
+            await installModFromZip(url: zipUrl, gameDir: gameDir, showModal: showModal, log: log)
         } catch {
             downloadingMods.remove(mod.name)
             if let downloaderError = error as? NexusDownloaderError, case .premiumRequired = downloaderError {

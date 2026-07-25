@@ -131,23 +131,15 @@ class NXMParserTests {
         print("Downloaded zip to: \(zipURL.path)")
         
         // Step 3: Install via ModInstaller directly (no ViewModel, no DispatchQueue.main dependency)
-        let installSemaphore = DispatchSemaphore(value: 0)
         var installSuccess = false
-        ModInstaller.installFromZip(url: zipURL, gameDir: tempGameDir.path) { result in
-            switch result {
-            case .success(let names):
-                print("Installed mods: \(names)")
-                installSuccess = true
-            case .failure(let error):
-                print("Install error: \(error.localizedDescription)")
-            }
-            installSemaphore.signal()
+        do {
+            let names = try await ModInstaller.installFromZip(url: zipURL, gameDir: tempGameDir.path)
+            print("Installed mods: \(names)")
+            installSuccess = true
+        } catch {
+            print("Install error: \(error.localizedDescription)")
         }
-        guard installSemaphore.wait(timeout: .now() + .seconds(30)) == .success else {
-            SimpleTestFramework.assertTrue(false, "Timed out installing mod from zip")
-            return
-        }
-        
+
         SimpleTestFramework.assertTrue(installSuccess, "Mod download and install from NXM link should succeed")
         
         let contents = (try? FileManager.default.contentsOfDirectory(atPath: tempModsDir.path)) ?? []

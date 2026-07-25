@@ -17,46 +17,43 @@ enum ModInstallerError: Error, LocalizedError {
 }
 
 struct ModInstaller {
-    static func installFromZip(url: URL, gameDir: String, completion: @escaping (Result<[String], ModInstallerError>) -> Void) {
+    static func installFromZip(url: URL, gameDir: String) async throws(ModInstallerError) -> [String] {
         let fm = FileManager.default
         let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
-                let unzip = Process()
-                unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-                unzip.arguments = ["-o", "-q", url.path, "-d", tempDir.path]
-                try unzip.run()
-                unzip.waitUntilExit()
-                
-                guard unzip.terminationStatus == 0 else {
-                    try? fm.removeItem(at: tempDir)
-                    DispatchQueue.main.async { completion(.failure(.unzipProcessError)) }
-                    return
-                }
-                
-                let fallback = url.deletingPathExtension().lastPathComponent
-                // Resolve symlinks so /var and /private/var paths are consistent
-                let resolvedTempDir = tempDir.resolvingSymlinksInPath()
-                installExtractedContent(from: resolvedTempDir, gameDir: gameDir, fallbackRootName: fallback, cleanup: true, completion: completion)
-            } catch {
+
+        do {
+            try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            let unzip = Process()
+            unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+            unzip.arguments = ["-o", "-q", url.path, "-d", tempDir.path]
+            try unzip.run()
+            unzip.waitUntilExit()
+
+            guard unzip.terminationStatus == 0 else {
                 try? fm.removeItem(at: tempDir)
-                DispatchQueue.main.async { completion(.failure(.unzipFailed(error.localizedDescription))) }
+                throw ModInstallerError.unzipProcessError
             }
+
+            let fallback = url.deletingPathExtension().lastPathComponent
+            // Resolve symlinks so /var and /private/var paths are consistent
+            let resolvedTempDir = tempDir.resolvingSymlinksInPath()
+            return try installExtractedContent(from: resolvedTempDir, gameDir: gameDir, fallbackRootName: fallback, cleanup: true)
+        } catch let error as ModInstallerError {
+            throw error
+        } catch {
+            try? fm.removeItem(at: tempDir)
+            throw .unzipFailed(error.localizedDescription)
         }
     }
-    
-    static func installFromFolder(url: URL, gameDir: String, completion: @escaping (Result<[String], ModInstallerError>) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async {
-            installExtractedContent(from: url.deletingLastPathComponent(), gameDir: gameDir, specificRoot: url.lastPathComponent, fallbackRootName: url.lastPathComponent, cleanup: false, completion: completion)
-        }
+
+    static func installFromFolder(url: URL, gameDir: String) async throws(ModInstallerError) -> [String] {
+        try installExtractedContent(from: url.deletingLastPathComponent(), gameDir: gameDir, specificRoot: url.lastPathComponent, fallbackRootName: url.lastPathComponent, cleanup: false)
     }
-    
-    private static func installExtractedContent(from rootDir: URL, gameDir: String, specificRoot: String? = nil, fallbackRootName: String? = nil, cleanup: Bool, completion: @escaping (Result<[String], ModInstallerError>) -> Void) {
+
+    private static func installExtractedContent(from rootDir: URL, gameDir: String, specificRoot: String? = nil, fallbackRootName: String? = nil, cleanup: Bool) throws(ModInstallerError) -> [String] {
         let fm = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
-        
+
         do {
             // 1. Collect all folders that contain a manifest.json
             var manifestDirs: [URL] = []
@@ -83,8 +80,7 @@ struct ModInstaller {
             
             guard !topLevelDirs.isEmpty else {
                 if cleanup { try? fm.removeItem(at: rootDir) }
-                DispatchQueue.main.async { completion(.failure(.noModFound)) }
-                return
+                throw ModInstallerError.noModFound
             }
             
             // 3. Create Mods dir if needed
@@ -178,11 +174,13 @@ struct ModInstaller {
             }
 
             if cleanup { try? fm.removeItem(at: rootDir) }
-            DispatchQueue.main.async { completion(.success(installedNames)) }
+            return installedNames
 
+        } catch let error as ModInstallerError {
+            throw error
         } catch {
             if cleanup { try? fm.removeItem(at: rootDir) }
-            DispatchQueue.main.async { completion(.failure(.other(error.localizedDescription))) }
+            throw .other(error.localizedDescription)
         }
     }
 }
