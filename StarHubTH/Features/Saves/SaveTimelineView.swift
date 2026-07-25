@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct SaveTimelineView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var savesStore: SavesStore
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     let save: SaveGameInfo
     
     @State private var backups: [SaveBackup] = []
@@ -13,11 +15,11 @@ struct SaveTimelineView: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Button(action: { vm.viewingSaveTimeline = nil }) {
+                Button(action: { savesStore.viewingSaveTimeline = nil }) {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 14, weight: .bold))
-                        Text(vm.L(L10n.Saves.saves))
+                        Text(localizationStore.L(L10n.Saves.saves))
                     }
                     .foregroundColor(isHoveredReturn ? .accentColor : .secondary)
                     .padding(.vertical, 8)
@@ -37,13 +39,13 @@ struct SaveTimelineView: View {
                 Spacer()
                 // Backup Button
                 Button(action: {
-                    if vm.createBackup(info: save) {
+                    if savesStore.createBackup(info: save) {
                         loadBackups()
                     }
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "plus.circle.fill")
-                        Text(vm.L(L10n.Saves.backupLabel))
+                        Text(localizationStore.L(L10n.Saves.backupLabel))
                     }
                     .font(.system(size: 12, weight: .medium))
                 }
@@ -63,7 +65,7 @@ struct SaveTimelineView: View {
                     Image(systemName: "clock.badge.xmark")
                         .font(.system(size: 40))
                         .foregroundColor(.secondary.opacity(0.5))
-                    Text(vm.L(L10n.Saves.noBackups))
+                    Text(localizationStore.L(L10n.Saves.noBackups))
                         .multilineTextAlignment(.center)
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
@@ -78,7 +80,6 @@ struct SaveTimelineView: View {
                             let isLast = index == backups.count - 1
                             
                             BackupRow(
-                                vm: vm,
                                 backup: backup,
                                 isLast: isLast,
                                 onRestore: {
@@ -86,7 +87,7 @@ struct SaveTimelineView: View {
                                     showRestoreConfirm = true
                                 },
                                 onDelete: {
-                                    if vm.deleteBackup(backup) {
+                                    if savesStore.deleteBackup(backup) {
                                         loadBackups()
                                     }
                                 }
@@ -103,51 +104,40 @@ struct SaveTimelineView: View {
         }
         .alert(isPresented: $showRestoreConfirm) {
             Alert(
-                title: Text(vm.L(L10n.Saves.confirmRestore)),
-                message: Text(vm.L(L10n.Saves.confirmRestoreMsg)),
-                primaryButton: .destructive(Text(vm.L(L10n.Saves.restore))) {
+                title: Text(localizationStore.L(L10n.Saves.confirmRestore)),
+                message: Text(localizationStore.L(L10n.Saves.confirmRestoreMsg)),
+                primaryButton: .destructive(Text(localizationStore.L(L10n.Saves.restore))) {
                     if let b = backupToRestore {
-                        vm.restoreBackup(backup: b, info: save)
+                        appCoordinator.restoreBackup(backup: b, info: save)
                     }
                 },
-                secondaryButton: .cancel(Text(vm.L(L10n.Main.ok)))
+                secondaryButton: .cancel(Text(localizationStore.L(L10n.Main.ok)))
             )
         }
-        .sheet(item: $vm.backupToBranch) { backup in
-            BranchBackupSheet(vm: vm, backup: backup)
+        .sheet(item: $savesStore.backupToBranch) { backup in
+            BranchBackupSheet(backup: backup)
         }
     }
     
     private func loadBackups() {
-        backups = vm.listBackups(for: save)
+        backups = savesStore.listBackups(for: save)
     }
 }
 
 struct BackupRow: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var savesStore: SavesStore
+    @EnvironmentObject var localizationStore: LocalizationStore
     let backup: SaveBackup
     let isLast: Bool
     let onRestore: () -> Void
     let onDelete: () -> Void
-    
-    @State private var noteTag: String
-    @State private var noteText: String
+
+    @State private var noteTag: String = ""
+    @State private var noteText: String = ""
     @State private var isEditingNote = false
-    
+
     let availableTags = ["", "⭐", "🏆", "🧪", "❤️", "💎", "📅"]
-    
-    init(vm: StarHubTHViewModel, backup: SaveBackup, isLast: Bool, onRestore: @escaping () -> Void, onDelete: @escaping () -> Void) {
-        self.vm = vm
-        self.backup = backup
-        self.isLast = isLast
-        self.onRestore = onRestore
-        self.onDelete = onDelete
-        
-        let note = vm.getNote(for: backup.folderPath.lastPathComponent)
-        _noteTag = State(initialValue: note.tag)
-        _noteText = State(initialValue: note.note)
-    }
-    
+
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
             // Timeline line & dot
@@ -190,11 +180,11 @@ struct BackupRow: View {
                         }
                         .frame(width: 60)
                         
-                        TextField(vm.L(L10n.Saves.saveNote), text: $noteText)
+                        TextField(localizationStore.L(L10n.Saves.saveNote), text: $noteText)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                         
-                        Button(vm.L(L10n.Profiles.save)) {
-                            vm.setNote(for: backup.folderPath.lastPathComponent, tag: noteTag, note: noteText)
+                        Button(localizationStore.L(L10n.Profiles.save)) {
+                            savesStore.setNote(for: backup.folderPath.lastPathComponent, tag: noteTag, note: noteText)
                             isEditingNote = false
                         }
                         .buttonStyle(.borderedProminent)
@@ -208,7 +198,7 @@ struct BackupRow: View {
                 }
                 
                 HStack {
-                    Text(vm.L(L10n.Saves.backupLabel))
+                    Text(localizationStore.L(L10n.Saves.backupLabel))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 8)
@@ -227,11 +217,11 @@ struct BackupRow: View {
                     .padding(.trailing, 4)
                     
                     Button(action: {
-                        vm.backupToBranch = backup
+                        savesStore.backupToBranch = backup
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.triangle.branch")
-                            Text(vm.L(L10n.Saves.branch))
+                            Text(localizationStore.L(L10n.Saves.branch))
                         }
                         .font(.system(size: 12, weight: .medium))
                     }
@@ -242,7 +232,7 @@ struct BackupRow: View {
                     Button(action: onRestore) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.uturn.backward.circle.fill")
-                            Text(vm.L(L10n.Saves.restore))
+                            Text(localizationStore.L(L10n.Saves.restore))
                         }
                         .font(.system(size: 12, weight: .medium))
                     }
@@ -267,10 +257,15 @@ struct BackupRow: View {
             )
             .padding(.bottom, isLast ? 20 : 16)
         }
+        .onAppear {
+            let note = savesStore.getNote(for: backup.folderPath.lastPathComponent)
+            noteTag = note.tag
+            noteText = note.note
+        }
     }
-    
+
     private var formattedDate: String {
-        let formatter = vm.makeDateFormatter(dateStyle: .medium)
+        let formatter = localizationStore.makeDateFormatter(dateStyle: .medium)
         formatter.timeStyle = .short
         return formatter.string(from: backup.timestamp)
     }
@@ -278,14 +273,14 @@ struct BackupRow: View {
     private var relativeLabel: String {
         let seconds = Date().timeIntervalSince(backup.timestamp)
         if seconds < 60 {
-            return vm.L(L10n.Saves.relativeJustNow)
+            return localizationStore.L(L10n.Saves.relativeJustNow)
         }
         if seconds < 3600 {
-            return String(format: vm.L(L10n.Saves.relativeMinutesAgo), Int64(seconds / 60))
+            return String(format: localizationStore.L(L10n.Saves.relativeMinutesAgo), Int64(seconds / 60))
         }
         if seconds < 86400 {
-            return String(format: vm.L(L10n.Saves.relativeHoursAgo), Int64(seconds / 3600))
+            return String(format: localizationStore.L(L10n.Saves.relativeHoursAgo), Int64(seconds / 3600))
         }
-        return String(format: vm.L(L10n.Saves.relativeDaysAgo), Int64(seconds / 86400))
+        return String(format: localizationStore.L(L10n.Saves.relativeDaysAgo), Int64(seconds / 86400))
     }
 }

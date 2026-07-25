@@ -7,7 +7,7 @@ import AppKit
 struct SaveAvatarView: View {
     let folderName: String
     let size: CGFloat
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var savesStore: SavesStore
     
     private let presets: [(String, String)] = [
         ("preset:person", "person.crop.circle.fill"),
@@ -21,7 +21,7 @@ struct SaveAvatarView: View {
     ]
     
     var body: some View {
-        let iconPath = vm.getNote(for: folderName).customIconPath ?? ""
+        let iconPath = savesStore.getNote(for: folderName).customIconPath ?? ""
         
         ZStack {
             Circle()
@@ -96,16 +96,17 @@ struct SaveAvatarViewLocal: View {
 
 // MARK: - SavesView
 struct SavesView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var savesStore: SavesStore
+    @EnvironmentObject var localizationStore: LocalizationStore
     @State private var searchText = ""
 
     var filteredSaves: [SaveGameInfo] {
-        vm.saves.filter { save in
+        savesStore.saves.filter { save in
             let searchMatch = searchText.isEmpty ||
                 save.playerName.localizedCaseInsensitiveContains(searchText) ||
                 save.farmName.localizedCaseInsensitiveContains(searchText)
-            let tagMatch = vm.saveFilterTag.isEmpty ||
-                SaveNotesStore.shared.note(for: save.folderName).tag == vm.saveFilterTag
+            let tagMatch = savesStore.saveFilterTag.isEmpty ||
+                savesStore.getNote(for: save.folderName).tag == savesStore.saveFilterTag
             return searchMatch && tagMatch
         }
     }
@@ -116,25 +117,25 @@ struct SavesView: View {
             HStack(spacing: 8) {
                 // View mode toggle
                 HStack(spacing: 2) {
-                    Button(action: { withAnimation { vm.saveViewMode = .list } }) {
+                    Button(action: { withAnimation { savesStore.saveViewMode = .list } }) {
                         Image(systemName: "list.bullet")
                             .font(.system(size: 12, weight: .medium))
                             .padding(5)
-                            .background(vm.saveViewMode == .list ? Color.accentColor.opacity(0.15) : Color.clear)
+                            .background(savesStore.saveViewMode == .list ? Color.accentColor.opacity(0.15) : Color.clear)
                             .cornerRadius(5)
                     }
                     .buttonStyle(.plain)
-                    .foregroundColor(vm.saveViewMode == .list ? .accentColor : .secondary)
+                    .foregroundColor(savesStore.saveViewMode == .list ? .accentColor : .secondary)
 
-                    Button(action: { withAnimation { vm.saveViewMode = .grid } }) {
+                    Button(action: { withAnimation { savesStore.saveViewMode = .grid } }) {
                         Image(systemName: "square.grid.2x2")
                             .font(.system(size: 12, weight: .medium))
                             .padding(5)
-                            .background(vm.saveViewMode == .grid ? Color.accentColor.opacity(0.15) : Color.clear)
+                            .background(savesStore.saveViewMode == .grid ? Color.accentColor.opacity(0.15) : Color.clear)
                             .cornerRadius(5)
                     }
                     .buttonStyle(.plain)
-                    .foregroundColor(vm.saveViewMode == .grid ? .accentColor : .secondary)
+                    .foregroundColor(savesStore.saveViewMode == .grid ? .accentColor : .secondary)
                 }
                 .padding(2)
                 .background(Color(nsColor: .controlBackgroundColor))
@@ -144,24 +145,24 @@ struct SavesView: View {
                 
                 // Sort
                 Menu {
-                    Button(action: { vm.saveSortOption = .lastPlayed }) {
-                        HStack { Image(systemName: "clock"); Text(vm.L(L10n.Saves.sortLastPlayed)) }
-                        if vm.saveSortOption == .lastPlayed { Image(systemName: "checkmark") }
+                    Button(action: { savesStore.saveSortOption = .lastPlayed }) {
+                        HStack { Image(systemName: "clock"); Text(localizationStore.L(L10n.Saves.sortLastPlayed)) }
+                        if savesStore.saveSortOption == .lastPlayed { Image(systemName: "checkmark") }
                     }
-                    Button(action: { vm.saveSortOption = .name }) {
+                    Button(action: { savesStore.saveSortOption = .name }) {
                         HStack {
-                            if vm.currentLanguage == "th" {
+                            if localizationStore.currentLanguage == "th" {
                                 Image(systemName: "character.textbox.th") // Icon ก ในช่องสี่เหลี่ยม
                             } else {
                                 Image(systemName: "a.square")
                             }
-                            Text(vm.L(L10n.Saves.sortName))
+                            Text(localizationStore.L(L10n.Saves.sortName))
                         }
-                        if vm.saveSortOption == .name { Image(systemName: "checkmark") }
+                        if savesStore.saveSortOption == .name { Image(systemName: "checkmark") }
                     }
-                    Button(action: { vm.saveSortOption = .money }) {
-                        HStack { Image(systemName: "dollarsign"); Text(vm.L(L10n.Saves.sortMoney)) }
-                        if vm.saveSortOption == .money { Image(systemName: "checkmark") }
+                    Button(action: { savesStore.saveSortOption = .money }) {
+                        HStack { Image(systemName: "dollarsign"); Text(localizationStore.L(L10n.Saves.sortMoney)) }
+                        if savesStore.saveSortOption == .money { Image(systemName: "checkmark") }
                     }
                 } label: {
                     HStack(spacing: 3) {
@@ -181,28 +182,28 @@ struct SavesView: View {
                 
                 // Tag Filter
                 Menu {
-                    Button(action: { vm.saveFilterTag = "" }) {
-                        HStack { Image(systemName: "tray.2"); Text(vm.L(L10n.Saves.filterAll)) }
-                        if vm.saveFilterTag.isEmpty { Image(systemName: "checkmark") }
+                    Button(action: { savesStore.saveFilterTag = "" }) {
+                        HStack { Image(systemName: "tray.2"); Text(localizationStore.L(L10n.Saves.filterAll)) }
+                        if savesStore.saveFilterTag.isEmpty { Image(systemName: "checkmark") }
                     }
                     Divider()
-                    ForEach(vm.availableFilterTags, id: \.self) { tag in
-                        Button(action: { vm.saveFilterTag = (vm.saveFilterTag == tag ? "" : tag) }) {
+                    ForEach(savesStore.availableFilterTags, id: \.self) { tag in
+                        Button(action: { savesStore.saveFilterTag = (savesStore.saveFilterTag == tag ? "" : tag) }) {
                             Text("\(tag) \(tag)")
-                            if vm.saveFilterTag == tag { Image(systemName: "checkmark") }
+                            if savesStore.saveFilterTag == tag { Image(systemName: "checkmark") }
                         }
                     }
                 } label: {
                     HStack(spacing: 3) {
-                        Image(systemName: vm.saveFilterTag.isEmpty ? "tag" : "tag.fill")
+                        Image(systemName: savesStore.saveFilterTag.isEmpty ? "tag" : "tag.fill")
                             .font(.system(size: 11))
-                        Text(vm.saveFilterTag.isEmpty ? vm.L(L10n.Saves.filterTag) : vm.saveFilterTag)
+                        Text(savesStore.saveFilterTag.isEmpty ? localizationStore.L(L10n.Saves.filterTag) : savesStore.saveFilterTag)
                             .font(.system(size: 12))
                     }
-                    .foregroundColor(vm.saveFilterTag.isEmpty ? .secondary : .accentColor)
+                    .foregroundColor(savesStore.saveFilterTag.isEmpty ? .secondary : .accentColor)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
-                    .background(vm.saveFilterTag.isEmpty ? Color(nsColor: .controlBackgroundColor) : Color.accentColor.opacity(0.12))
+                    .background(savesStore.saveFilterTag.isEmpty ? Color(nsColor: .controlBackgroundColor) : Color.accentColor.opacity(0.12))
                     .cornerRadius(6)
                 }
                 .menuStyle(.borderlessButton)
@@ -210,7 +211,7 @@ struct SavesView: View {
                 
                 Spacer()
                 
-                Button(action: { vm.reloadSaves() }) {
+                Button(action: { savesStore.reloadSaves() }) {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 12))
                 }
@@ -224,37 +225,37 @@ struct SavesView: View {
             Divider()
             
             // MARK: Content
-            if vm.saves.isEmpty {
+            if savesStore.saves.isEmpty {
                 VStack(spacing: 16) {
                     Spacer()
                     Image(systemName: "cloud.bolt")
                         .font(.system(size: 40))
                         .foregroundColor(.secondary.opacity(0.5))
-                    Text(vm.L(L10n.Saves.noSaves))
+                    Text(localizationStore.L(L10n.Saves.noSaves))
                         .multilineTextAlignment(.center)
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                     Spacer()
                 }
-            } else if vm.saveViewMode == .grid {
-                SavesGridView(vm: vm, saves: filteredSaves)
+            } else if savesStore.saveViewMode == .grid {
+                SavesGridView(saves: filteredSaves)
             } else {
                 Form {
                     Section {
                         if searchText.isEmpty {
-                            SaveTreeListView(vm: vm, nodes: vm.savesHierarchy, depth: 0)
+                            SaveTreeListView(nodes: savesStore.savesHierarchy, depth: 0)
                         } else {
                             ForEach(filteredSaves, id: \.id) { save in
-                                Button(action: { vm.editingSave = save }) {
-                                    SaveRow(vm: vm, save: save, depth: 0, hasChildren: false, isExpanded: false, onToggleExpand: nil)
+                                Button(action: { savesStore.editingSave = save }) {
+                                    SaveRow(save: save, depth: 0, hasChildren: false, isExpanded: false, onToggleExpand: nil)
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
                     } header: {
-                        Text(String(format: vm.L(L10n.Saves.allSaves), Int64(searchText.isEmpty ? vm.savesHierarchy.count : filteredSaves.count)))
+                        Text(String(format: localizationStore.L(L10n.Saves.allSaves), Int64(searchText.isEmpty ? savesStore.savesHierarchy.count : filteredSaves.count)))
                     } footer: {
-                        Text(vm.L(L10n.Saves.autoFetch))
+                        Text(localizationStore.L(L10n.Saves.autoFetch))
                     }
                 }
                 .formStyle(.grouped)
@@ -262,37 +263,36 @@ struct SavesView: View {
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
-        .searchable(text: $searchText, prompt: Text(vm.L(L10n.Main.search)))
+        .searchable(text: $searchText, prompt: Text(localizationStore.L(L10n.Main.search)))
         .toolbar {
             ToolbarItem {
                 Button {
-                    vm.reloadSaves()
+                    savesStore.reloadSaves()
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.triangle.2.circlepath")
-                        Text(vm.L(L10n.Tags.sync))
+                        Text(localizationStore.L(L10n.Tags.sync))
                     }
                 }
-                .help(vm.L(L10n.Tags.sync))
+                .help(localizationStore.L(L10n.Tags.sync))
             }
         }
-        .sheet(item: $vm.saveToDuplicate) { save in
-            DuplicateSaveSheet(vm: vm, save: save)
+        .sheet(item: $savesStore.saveToDuplicate) { save in
+            DuplicateSaveSheet(save: save)
         }
     }
     
     var sortLabel: String {
-        switch vm.saveSortOption {
-        case .name:       return vm.L(L10n.Saves.sortLabelName)
-        case .lastPlayed: return vm.L(L10n.Saves.sortLabelLastPlayed)
-        case .money:      return vm.L(L10n.Saves.sortLabelMoney)
+        switch savesStore.saveSortOption {
+        case .name:       return localizationStore.L(L10n.Saves.sortLabelName)
+        case .lastPlayed: return localizationStore.L(L10n.Saves.sortLabelLastPlayed)
+        case .money:      return localizationStore.L(L10n.Saves.sortLabelMoney)
         }
     }
 }
 
 // MARK: - Grid View
 struct SavesGridView: View {
-    @ObservedObject var vm: StarHubTHViewModel
     let saves: [SaveGameInfo]
     let columns = [GridItem(.adaptive(minimum: 130, maximum: 170), spacing: 16)]
     
@@ -300,7 +300,7 @@ struct SavesGridView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(saves) { save in
-                    SaveCardView(vm: vm, save: save)
+                    SaveCardView(save: save)
                 }
             }
             .padding(20)
@@ -309,17 +309,19 @@ struct SavesGridView: View {
 }
 
 struct SaveCardView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var savesStore: SavesStore
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     let save: SaveGameInfo
     @State private var isHovered = false
     
     var body: some View {
-        Button(action: { vm.editingSave = save }) {
+        Button(action: { savesStore.editingSave = save }) {
             VStack(spacing: 10) {
-                SaveAvatarView(folderName: save.folderName, size: 64, vm: vm)
+                SaveAvatarView(folderName: save.folderName, size: 64)
                 
                 VStack(spacing: 2) {
-                    let note = vm.getNote(for: save.folderName)
+                    let note = savesStore.getNote(for: save.folderName)
                     HStack(spacing: 4) {
                         if !note.tag.isEmpty {
                             Text(note.tag).font(.system(size: 13))
@@ -332,7 +334,7 @@ struct SaveCardView: View {
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
-                    Text(String(format: vm.L(L10n.Saves.yearDayFormat), save.year, vm.L(save.seasonName), save.day))
+                    Text(String(format: localizationStore.L(L10n.Saves.yearDayFormat), save.year, localizationStore.L(save.seasonName), save.day))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
@@ -353,32 +355,31 @@ struct SaveCardView: View {
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .contextMenu {
-            Button(vm.L(L10n.Saves.edit)) { vm.editingSave = save }
-            Button(vm.L(L10n.Saves.timeline)) { vm.viewingSaveTimeline = save }
+            Button(localizationStore.L(L10n.Saves.edit)) { savesStore.editingSave = save }
+            Button(localizationStore.L(L10n.Saves.timeline)) { savesStore.viewingSaveTimeline = save }
             Divider()
-            Button(vm.L(L10n.Saves.duplicate)) { vm.saveToDuplicate = save }
-            Button(vm.L(L10n.Saves.openFolder)) { vm.openSaveInFinder(info: save) }
+            Button(localizationStore.L(L10n.Saves.duplicate)) { savesStore.saveToDuplicate = save }
+            Button(localizationStore.L(L10n.Saves.openFolder)) { savesStore.openSaveInFinder(info: save) }
             Divider()
-            Button(vm.L(L10n.Saves.deleteSave), role: .destructive) { vm.deleteSave(info: save) }
+            Button(localizationStore.L(L10n.Saves.deleteSave), role: .destructive) { appCoordinator.deleteSave(info: save) }
         }
     }
 }
 
 // MARK: - Tree List View
 struct SaveTreeListView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var savesStore: SavesStore
     let nodes: [SaveNode]
     let depth: Int
     @State private var expandedSaves: Set<String> = []
-    
+
     var body: some View {
         ForEach(nodes) { node in
             let hasChildren = !node.children.isEmpty
             let isExpanded = expandedSaves.contains(node.info.folderName)
-            
-            Button(action: { vm.editingSave = node.info }) {
+
+            Button(action: { savesStore.editingSave = node.info }) {
                 SaveRow(
-                    vm: vm,
                     save: node.info,
                     depth: depth,
                     hasChildren: hasChildren,
@@ -397,7 +398,7 @@ struct SaveTreeListView: View {
             .buttonStyle(.plain)
             
             if hasChildren && isExpanded {
-                SaveTreeListView(vm: vm, nodes: node.children, depth: depth + 1)
+                SaveTreeListView(nodes: node.children, depth: depth + 1)
             }
         }
     }
@@ -405,7 +406,9 @@ struct SaveTreeListView: View {
 
 // MARK: - Save Row (List)
 struct SaveRow: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var savesStore: SavesStore
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     let save: SaveGameInfo
     let depth: Int
     
@@ -440,10 +443,10 @@ struct SaveRow: View {
                 Spacer().frame(width: 32)
             }
             
-            SaveAvatarView(folderName: save.folderName, size: 36, vm: vm)
+            SaveAvatarView(folderName: save.folderName, size: 36)
             
             VStack(alignment: .leading, spacing: 2) {
-                let note = vm.getNote(for: save.folderName)
+                let note = savesStore.getNote(for: save.folderName)
                 HStack(spacing: 6) {
                     if !note.tag.isEmpty {
                         Text(note.tag)
@@ -453,14 +456,14 @@ struct SaveRow: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.primary)
                 }
-                let format = vm.L(L10n.Saves.farmFormat)
+                let format = localizationStore.L(L10n.Saves.farmFormat)
                 let moneyStr = NumberFormatter.localizedString(from: NSNumber(value: save.money), number: .decimal)
-                let formattedStr = String(format: format, save.farmName, save.year, vm.L(save.seasonName), save.day, moneyStr)
+                let formattedStr = String(format: format, save.farmName, save.year, localizationStore.L(save.seasonName), save.day, moneyStr)
                 Text(formattedStr)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 let earnedStr = NumberFormatter.localizedString(from: NSNumber(value: save.totalMoneyEarned), number: .decimal)
-                Text("\(vm.L(L10n.Saves.totalMoneyEarned)): \(earnedStr)")
+                Text("\(localizationStore.L(L10n.Saves.totalMoneyEarned)): \(earnedStr)")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary.opacity(0.8))
             }
@@ -468,22 +471,22 @@ struct SaveRow: View {
             Spacer()
             
             Menu {
-                Button(action: { vm.editingSave = save }) {
-                    Label(vm.L(L10n.Saves.saveManagement), systemImage: "pencil")
+                Button(action: { savesStore.editingSave = save }) {
+                    Label(localizationStore.L(L10n.Saves.saveManagement), systemImage: "pencil")
                 }
-                Button(action: { vm.viewingSaveTimeline = save }) {
-                    Label(vm.L(L10n.Saves.timeline), systemImage: "clock.arrow.circlepath")
-                }
-                Divider()
-                Button(action: { vm.openSaveInFinder(info: save) }) {
-                    Label(vm.L(L10n.Saves.openFolder), systemImage: "folder")
-                }
-                Button(action: { vm.saveToDuplicate = save }) {
-                    Label(vm.L(L10n.Saves.duplicate), systemImage: "doc.on.doc")
+                Button(action: { savesStore.viewingSaveTimeline = save }) {
+                    Label(localizationStore.L(L10n.Saves.timeline), systemImage: "clock.arrow.circlepath")
                 }
                 Divider()
-                Button(role: .destructive, action: { vm.deleteSave(info: save) }) {
-                    Label(vm.L(L10n.Saves.deleteSave), systemImage: "trash")
+                Button(action: { savesStore.openSaveInFinder(info: save) }) {
+                    Label(localizationStore.L(L10n.Saves.openFolder), systemImage: "folder")
+                }
+                Button(action: { savesStore.saveToDuplicate = save }) {
+                    Label(localizationStore.L(L10n.Saves.duplicate), systemImage: "doc.on.doc")
+                }
+                Divider()
+                Button(role: .destructive, action: { appCoordinator.deleteSave(info: save) }) {
+                    Label(localizationStore.L(L10n.Saves.deleteSave), systemImage: "trash")
                 }
             } label: {
                 Image(systemName: "info.circle")
@@ -502,7 +505,9 @@ struct SaveRow: View {
 
 // MARK: - Editor View
 struct SaveEditorView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var savesStore: SavesStore
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     let save: SaveGameInfo
     
     @State private var name: String
@@ -541,8 +546,11 @@ struct SaveEditorView: View {
         ("preset:ant",    "ant.fill",                "Ant"),
     ]
     
-    init(vm: StarHubTHViewModel, save: SaveGameInfo) {
-        self.vm = vm
+    /// `noteTag`/`noteText`/`iconPath` can't be seeded from `savesStore` here — as an
+    /// `@EnvironmentObject`, it isn't available until the view is placed in the
+    /// hierarchy, unlike the old `vm:` init parameter. They default empty and get their
+    /// real values in `.onAppear` instead.
+    init(save: SaveGameInfo) {
         self.save = save
         _name = State(initialValue: save.playerName)
         _farm = State(initialValue: save.farmName)
@@ -555,11 +563,10 @@ struct SaveEditorView: View {
         _clubCoinsStr = State(initialValue: "\(save.clubCoins)")
         _totalMoneyEarnedStr = State(initialValue: "\(save.totalMoneyEarned)")
         _spouse = State(initialValue: save.spouse)
-        
-        let note = vm.getNote(for: save.folderName)
-        _noteTag = State(initialValue: note.tag)
-        _noteText = State(initialValue: note.note)
-        _iconPath = State(initialValue: note.customIconPath ?? "")
+
+        _noteTag = State(initialValue: "")
+        _noteText = State(initialValue: "")
+        _iconPath = State(initialValue: "")
     }
     
     var body: some View {
@@ -569,10 +576,10 @@ struct SaveEditorView: View {
                 Text(save.playerName)
                     .font(.headline)
                 Spacer()
-                Button(action: { vm.viewingSaveTimeline = save }) {
+                Button(action: { savesStore.viewingSaveTimeline = save }) {
                     HStack(spacing: 4) {
                         Image(systemName: "clock.arrow.circlepath")
-                        Text(vm.L(L10n.Saves.timeline))
+                        Text(localizationStore.L(L10n.Saves.timeline))
                     }
                     .font(.system(size: 12, weight: .medium))
                 }
@@ -580,7 +587,7 @@ struct SaveEditorView: View {
                 .foregroundColor(.accentColor)
                 .padding(.trailing, 8)
                 
-                Button(action: { vm.editingSave = nil }) {
+                Button(action: { savesStore.editingSave = nil }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
                         .font(.title3)
@@ -594,13 +601,13 @@ struct SaveEditorView: View {
             // Form
             Form {
                 // MARK: Avatar Section
-                Section(vm.L(L10n.Saves.avatarSection)) {
+                Section(localizationStore.L(L10n.Saves.avatarSection)) {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 12) {
                             SaveAvatarViewLocal(iconPath: iconPath, size: 56)
                             
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(vm.L(L10n.Saves.avatarPreset))
+                                Text(localizationStore.L(L10n.Saves.avatarPreset))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 
@@ -608,9 +615,7 @@ struct SaveEditorView: View {
                                     ForEach(presetIcons, id: \.0) { (key, sfName, label) in
                                         Button(action: {
                                             iconPath = key
-                                            SaveNotesStore.shared.setNote(for: save.folderName,
-                                                tag: noteTag, note: noteText, customIconPath: key)
-                                            vm.objectWillChange.send()
+                                            savesStore.setAvatar(forSave: save.folderName, iconPath: key)
                                         }) {
                                             ZStack {
                                                 Circle()
@@ -629,8 +634,8 @@ struct SaveEditorView: View {
                         }
                         
                         HStack(spacing: 8) {
-                            Button(vm.L(L10n.Saves.avatarPickFile)) {
-                                vm.selectCustomAvatar(forSave: save.folderName) { path in
+                            Button(localizationStore.L(L10n.Saves.avatarPickFile)) {
+                                savesStore.selectCustomAvatar(forSave: save.folderName) { path in
                                     iconPath = path
                                 }
                             }
@@ -638,11 +643,9 @@ struct SaveEditorView: View {
                             .controlSize(.small)
                             
                             if !iconPath.isEmpty {
-                                Button(vm.L(L10n.Saves.avatarReset)) {
+                                Button(localizationStore.L(L10n.Saves.avatarReset)) {
                                     iconPath = ""
-                                    SaveNotesStore.shared.setNote(for: save.folderName,
-                                        tag: noteTag, note: noteText, customIconPath: nil)
-                                    vm.objectWillChange.send()
+                                    savesStore.setAvatar(forSave: save.folderName, iconPath: "")
                                 }
                                 .buttonStyle(.plain)
                                 .foregroundColor(.secondary)
@@ -652,27 +655,27 @@ struct SaveEditorView: View {
                     }
                 }
                 
-                Section(vm.L(L10n.Saves.notes)) {
-                    Picker(vm.L(L10n.Saves.tag), selection: $noteTag) {
+                Section(localizationStore.L(L10n.Saves.notes)) {
+                    Picker(localizationStore.L(L10n.Saves.tag), selection: $noteTag) {
                         ForEach(availableTags, id: \.self) { tag in
                             Text(tag.isEmpty ? "None" : tag).tag(tag)
                         }
                     }
                     .pickerStyle(.menu)
                     
-                    TextField(vm.L(L10n.Saves.saveNote), text: $noteText)
+                    TextField(localizationStore.L(L10n.Saves.saveNote), text: $noteText)
                 }
                 
-                Section(vm.L(L10n.Saves.characterInfo)) {
-                    TextField(vm.L(L10n.Saves.characterName), text: $name)
-                    TextField(vm.L(L10n.Saves.farmName), text: $farm)
-                    TextField(vm.L(L10n.Saves.favoriteThing), text: $fav)
+                Section(localizationStore.L(L10n.Saves.characterInfo)) {
+                    TextField(localizationStore.L(L10n.Saves.characterName), text: $name)
+                    TextField(localizationStore.L(L10n.Saves.farmName), text: $farm)
+                    TextField(localizationStore.L(L10n.Saves.favoriteThing), text: $fav)
                 }
                 
                 // MARK: Relationship Section
-                Section(vm.L(L10n.Saves.relationshipSection)) {
-                    Picker(vm.L(L10n.Saves.spouseLabel), selection: $spouse) {
-                        Text(vm.L(L10n.Saves.spouseNone)).tag("")
+                Section(localizationStore.L(L10n.Saves.relationshipSection)) {
+                    Picker(localizationStore.L(L10n.Saves.spouseLabel), selection: $spouse) {
+                        Text(localizationStore.L(L10n.Saves.spouseNone)).tag("")
                         ForEach(SaveEditorView.marriableNPCs, id: \.self) { npc in
                             Text(npc).tag(npc)
                         }
@@ -681,28 +684,28 @@ struct SaveEditorView: View {
                     
                     // Show warning only when changing away from existing spouse
                     if !save.spouse.isEmpty && spouse != save.spouse {
-                        Text(vm.L(L10n.Saves.spouseWarning))
+                        Text(localizationStore.L(L10n.Saves.spouseWarning))
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
                 }
                 
-                Section(vm.L(L10n.Saves.resources)) {
-                    TextField(vm.L(L10n.Saves.money), text: $moneyStr)
-                    TextField(vm.L(L10n.Saves.totalMoneyEarned), text: $totalMoneyEarnedStr)
-                    TextField(vm.L(L10n.Saves.casinoCoins), text: $clubCoinsStr)
-                    TextField(vm.L(L10n.Saves.goldenWalnuts), text: $goldenWalnutsStr)
-                    TextField(vm.L(L10n.Saves.qiGems), text: $qiGemsStr)
+                Section(localizationStore.L(L10n.Saves.resources)) {
+                    TextField(localizationStore.L(L10n.Saves.money), text: $moneyStr)
+                    TextField(localizationStore.L(L10n.Saves.totalMoneyEarned), text: $totalMoneyEarnedStr)
+                    TextField(localizationStore.L(L10n.Saves.casinoCoins), text: $clubCoinsStr)
+                    TextField(localizationStore.L(L10n.Saves.goldenWalnuts), text: $goldenWalnutsStr)
+                    TextField(localizationStore.L(L10n.Saves.qiGems), text: $qiGemsStr)
                 }
                 
-                Section(vm.L(L10n.Saves.characterStats)) {
-                    TextField(vm.L(L10n.Saves.maxHealth), text: $maxHealthStr)
-                    TextField(vm.L(L10n.Saves.maxStamina), text: $maxStaminaStr)
+                Section(localizationStore.L(L10n.Saves.characterStats)) {
+                    TextField(localizationStore.L(L10n.Saves.maxHealth), text: $maxHealthStr)
+                    TextField(localizationStore.L(L10n.Saves.maxStamina), text: $maxStaminaStr)
                 }
                 
-                Section(vm.L(L10n.Saves.inventoryEditor)) {
-                    ForEach(vm.inventoryToEdit.indices, id: \.self) { index in
-                        let item = vm.inventoryToEdit[index]
+                Section(localizationStore.L(L10n.Saves.inventoryEditor)) {
+                    ForEach(savesStore.inventoryToEdit.indices, id: \.self) { index in
+                        let item = savesStore.inventoryToEdit[index]
                         if item.isObject {
                             HStack {
                                 Text("\(item.name)")
@@ -710,13 +713,13 @@ struct SaveEditorView: View {
                                 Text("ID: \(item.itemId)")
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                Text(vm.L(L10n.Saves.itemQuantity))
-                                TextField("", value: $vm.inventoryToEdit[index].stack, formatter: NumberFormatter())
+                                Text(localizationStore.L(L10n.Saves.itemQuantity))
+                                TextField("", value: $savesStore.inventoryToEdit[index].stack, formatter: NumberFormatter())
                                     .frame(width: 60)
                                     .textFieldStyle(.roundedBorder)
                                 
                                 Button(action: {
-                                    vm.inventoryToEdit[index] = InventoryItem.empty(slot: index)
+                                    savesStore.inventoryToEdit[index] = InventoryItem.empty(slot: index)
                                 }) {
                                     Image(systemName: "trash")
                                         .foregroundColor(.red)
@@ -733,11 +736,11 @@ struct SaveEditorView: View {
                                         .foregroundColor(.secondary)
                                 }
                                 Spacer()
-                                Text(vm.L(L10n.Saves.nonObject))
+                                Text(localizationStore.L(L10n.Saves.nonObject))
                                     .foregroundColor(.secondary)
                                     
                                 Button(action: {
-                                    vm.inventoryToEdit[index] = InventoryItem.empty(slot: index)
+                                    savesStore.inventoryToEdit[index] = InventoryItem.empty(slot: index)
                                 }) {
                                     Image(systemName: "trash")
                                         .foregroundColor(.red)
@@ -748,19 +751,19 @@ struct SaveEditorView: View {
                         }
                     }
                     
-                    Button(vm.L(L10n.Saves.saveInventory)) {
-                        vm.saveInventory()
+                    Button(localizationStore.L(L10n.Saves.saveInventory)) {
+                        appCoordinator.saveInventory()
                     }
                     .buttonStyle(.borderedProminent)
                     .padding(.top, 8)
                 }
                 
-                Section(vm.L(L10n.Saves.saveManagement)) {
+                Section(localizationStore.L(L10n.Saves.saveManagement)) {
                     HStack {
-                        Button(vm.L(L10n.Saves.openFolder)) { vm.openSaveInFinder(info: save) }
-                        Button(vm.L(L10n.Saves.duplicate)) { vm.saveToDuplicate = save; vm.editingSave = nil }
+                        Button(localizationStore.L(L10n.Saves.openFolder)) { savesStore.openSaveInFinder(info: save) }
+                        Button(localizationStore.L(L10n.Saves.duplicate)) { savesStore.saveToDuplicate = save; savesStore.editingSave = nil }
                         Spacer()
-                        Button(vm.L(L10n.Saves.deleteSave)) { vm.deleteSave(info: save); vm.editingSave = nil }
+                        Button(localizationStore.L(L10n.Saves.deleteSave)) { appCoordinator.deleteSave(info: save); savesStore.editingSave = nil }
                             .foregroundColor(.red)
                     }
                 }
@@ -772,12 +775,12 @@ struct SaveEditorView: View {
             
             // Footer
             HStack {
-                Text(vm.L(L10n.Saves.backupNote))
+                Text(localizationStore.L(L10n.Saves.backupNote))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 Spacer()
                 
-                Button(vm.L(L10n.Saves.saveChanges)) {
+                Button(localizationStore.L(L10n.Saves.saveChanges)) {
                     let newMoney = Int(moneyStr) ?? save.money
                     let newTotalMoneyEarned = Int(totalMoneyEarnedStr) ?? save.totalMoneyEarned
                     let newHealth = Int(maxHealthStr) ?? save.maxHealth
@@ -786,9 +789,9 @@ struct SaveEditorView: View {
                     let newQi = Int(qiGemsStr) ?? save.qiGems
                     let newClub = Int(clubCoinsStr) ?? save.clubCoins
                     
-                    vm.setNote(for: save.folderName, tag: noteTag, note: noteText)
-                    vm.editSave(info: save, newName: name, newFarm: farm, newFav: fav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newHealth, newMaxStamina: newStam, newGoldenWalnuts: newWalnuts, newQiGems: newQi, newClubCoins: newClub, newSpouse: spouse)
-                    vm.editingSave = nil
+                    savesStore.setNote(for: save.folderName, tag: noteTag, note: noteText)
+                    appCoordinator.editSave(info: save, newName: name, newFarm: farm, newFav: fav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newHealth, newMaxStamina: newStam, newGoldenWalnuts: newWalnuts, newQiGems: newQi, newClubCoins: newClub, newSpouse: spouse)
+                    savesStore.editingSave = nil
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(BorderedProminentButtonStyle())
@@ -796,5 +799,11 @@ struct SaveEditorView: View {
             .padding(20)
         }
         .background(Color(nsColor: .controlBackgroundColor))
+        .onAppear {
+            let note = savesStore.getNote(for: save.folderName)
+            noteTag = note.tag
+            noteText = note.note
+            iconPath = note.customIconPath ?? ""
+        }
     }
 }

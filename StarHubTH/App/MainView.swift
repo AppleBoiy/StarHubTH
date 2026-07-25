@@ -32,6 +32,55 @@ struct MainView: View {
         return text.contains { $0.lowercased().contains(lowerSearch) }
     }
     
+    /// Extracted so the compiler doesn't have to re-infer this `first(where:)` lookup
+    /// inside the account-badge view's already-large expression tree — needed to keep
+    /// type-checking that section within a reasonable time budget.
+    private var activeProfile: ModProfile? {
+        guard let activeProfileId = vm.activeProfileId else { return nil }
+        return vm.modProfiles.first(where: { $0.id == activeProfileId })
+    }
+
+    /// Extracted out of `body` — as one inline `Group { if ... }` chain this pushed the
+    /// type-checker past its time budget once enough branches dropped their `vm:`
+    /// argument (Phase 4.9 migration). A standalone `@ViewBuilder` property is its own
+    /// smaller type-checking unit.
+    @ViewBuilder
+    private var detailContent: some View {
+        if currentTab == "ModPacks" {
+            ModPacksView()
+        } else if currentTab == "Mods" {
+            if let mod = vm.editingModConfig {
+                ModConfigEditorView(vm: vm, mod: mod)
+            } else if let mod = vm.viewingModDetails {
+                ModDetailView(vm: vm, mod: mod)
+            } else {
+                ModListView(vm: vm)
+            }
+        } else if currentTab == "Saves" {
+            if let save = vm.viewingSaveTimeline {
+                SaveTimelineView(save: save)
+            } else if let save = vm.editingSave {
+                SaveEditorView(save: save)
+            } else {
+                SavesView()
+            }
+        } else if currentTab == "Profiles" {
+            ModProfilesView()
+        } else if currentTab == "Updates" {
+            UpdatesView(vm: vm, currentTab: $currentTab)
+        } else if currentTab == "ThaiHub" {
+            ThaiTranslationHubView()
+        } else if currentTab == "Settings" {
+            SettingsView()
+        } else if currentTab == "AppChangelog" {
+            AppChangelogView()
+        } else if currentTab == "Logs" {
+            LogsView()
+        } else {
+            HomeView()
+        }
+    }
+
     private var navigationTitleText: String {
         if currentTab == "Saves" && vm.viewingSaveTimeline != nil { return vm.L(L10n.Saves.timeline) }
         if currentTab == "Saves", let save = vm.editingSave { return save.playerName }
@@ -88,7 +137,7 @@ struct MainView: View {
                                         .foregroundColor(.gray)
                                 }
                                 
-                                if let activeProfileId = vm.activeProfileId, let activeProfile = vm.modProfiles.first(where: { $0.id == activeProfileId }) {
+                                if let activeProfile {
                                     ZStack {
                                         Circle()
                                             .fill(Color.accentColor)
@@ -113,7 +162,7 @@ struct MainView: View {
                                     .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                                 
-                                if let activeProfileId = vm.activeProfileId, let activeProfile = vm.modProfiles.first(where: { $0.id == activeProfileId }) {
+                                if let activeProfile {
                                     Text("\(vm.L(L10n.Profiles.titleFull)): \(activeProfile.name)")
                                         .font(.system(size: 10, weight: .medium))
                                         .foregroundColor(.accentColor)
@@ -270,41 +319,7 @@ struct MainView: View {
 
         } detail: {
             // ── CONTENT AREA ─────────────────────────────────────────
-            Group {
-                if currentTab == "ModPacks" {
-                    ModPacksView()
-                } else if currentTab == "Mods" {
-                    if let mod = vm.editingModConfig {
-                        ModConfigEditorView(vm: vm, mod: mod)
-                    } else if let mod = vm.viewingModDetails {
-                        ModDetailView(vm: vm, mod: mod)
-                    } else {
-                        ModListView(vm: vm)
-                    }
-                } else if currentTab == "Saves" {
-                    if let save = vm.viewingSaveTimeline {
-                        SaveTimelineView(vm: vm, save: save)
-                    } else if let save = vm.editingSave {
-                        SaveEditorView(vm: vm, save: save)
-                    } else {
-                        SavesView(vm: vm)
-                    }
-                } else if currentTab == "Profiles" {
-                    ModProfilesView()
-                } else if currentTab == "Updates" {
-                    UpdatesView(vm: vm, currentTab: $currentTab)
-                } else if currentTab == "ThaiHub" {
-                    ThaiTranslationHubView()
-                } else if currentTab == "Settings" {
-                    SettingsView()
-                } else if currentTab == "AppChangelog" {
-                    AppChangelogView()
-                } else if currentTab == "Logs" {
-                    LogsView()
-                } else {
-                    HomeView()
-                }
-            }
+            detailContent
             .onChange(of: currentTab, perform: { _ in
                 vm.editingSave = nil
                 vm.editingModConfig = nil
