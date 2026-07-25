@@ -1,14 +1,13 @@
 import SwiftUI
 
 struct HomeView: View {
-    @ObservedObject var vm: StarHubTHViewModel
-    @ObservedObject var smapiInstaller: SmapiInstaller
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
+    @EnvironmentObject var smapiInstaller: SmapiInstaller
 
-    init(vm: StarHubTHViewModel) {
-        self.vm = vm
-        self.smapiInstaller = vm.smapiInstaller
-    }
-    
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .center, spacing: 24) {
@@ -20,7 +19,7 @@ struct HomeView: View {
                             .fill(Color.primary.opacity(0.1))
                             .frame(width: 100, height: 100)
                         
-                        if let avatarPath = vm.steamAvatarPath, let nsImage = NSImage(contentsOfFile: avatarPath) {
+                        if let avatarPath = appEnvironment.steamAvatarPath, let nsImage = NSImage(contentsOfFile: avatarPath) {
                             Image(nsImage: nsImage)
                                 .resizable()
                                 .scaledToFill()
@@ -42,29 +41,29 @@ struct HomeView: View {
                     .padding(.top, 32)
                     
                     VStack(spacing: 4) {
-                        Text(vm.steamUsername)
+                        Text(appEnvironment.steamUsername)
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.primary)
                         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
-                        Text(String(format: vm.L(L10n.Home.versionString), appVersion))
+                        Text(String(format: localizationStore.L(L10n.Home.versionString), appVersion))
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
                     }
                 }
                 
                 // ── GAME INFO BLOCK ──
-                StandardSection(title: vm.L(L10n.Home.appInfo)) {
-                    StandardRow(title: LocalizedStringKey(vm.L(L10n.Home.developer)), detail: "AppleBoiy", showDivider: true)
+                StandardSection(title: localizationStore.L(L10n.Home.appInfo)) {
+                    StandardRow(title: LocalizedStringKey(localizationStore.L(L10n.Home.developer)), detail: "AppleBoiy", showDivider: true)
                     StandardRow(
-                        title: LocalizedStringKey(vm.L(L10n.Home.modManager)),
-                        detail: LocalizedStringKey(vm.smapiInstalledVersion == nil
-                            ? vm.L(L10n.Home.notInstalled)
-                            : "SMAPI \(vm.smapiInstalledVersion ?? "")"),
+                        title: LocalizedStringKey(localizationStore.L(L10n.Home.modManager)),
+                        detail: LocalizedStringKey(appEnvironment.smapiInstalledVersion == nil
+                            ? localizationStore.L(L10n.Home.notInstalled)
+                            : "SMAPI \(appEnvironment.smapiInstalledVersion ?? "")"),
                         showDivider: true
                     )
                     StandardRow(
-                        title: LocalizedStringKey(vm.L(L10n.Home.installedMods)),
-                        detail: LocalizedStringKey(String(format: vm.L(L10n.Home.itemCount), Int64(vm.mods.count))),
+                        title: LocalizedStringKey(localizationStore.L(L10n.Home.installedMods)),
+                        detail: LocalizedStringKey(String(format: localizationStore.L(L10n.Home.itemCount), Int64(modsStore.mods.count))),
                         showDivider: false
                     )
                 }
@@ -74,17 +73,17 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     
                     // Folder Settings
-                    StandardSection(title: vm.L(L10n.Home.gameFolder)) {
+                    StandardSection(title: localizationStore.L(L10n.Home.gameFolder)) {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(vm.L(L10n.Home.gamePath))
+                                Text(localizationStore.L(L10n.Home.gamePath))
                                     .font(.system(size: 13))
-                                if vm.gameDir.isEmpty {
-                                    Text(vm.L(L10n.Home.notSet))
+                                if appEnvironment.gameDir.isEmpty {
+                                    Text(localizationStore.L(L10n.Home.notSet))
                                         .font(.system(size: 12))
                                         .foregroundColor(.secondary)
                                 } else {
-                                    Text(vm.gameDir)
+                                    Text(appEnvironment.gameDir)
                                         .font(.system(size: 12))
                                         .foregroundColor(.secondary)
                                         .lineLimit(1)
@@ -92,23 +91,23 @@ struct HomeView: View {
                                 }
                             }
                             Spacer()
-                            Button(vm.L(L10n.Home.selectFolder)) { vm.selectGameDir() }
+                            Button(localizationStore.L(L10n.Home.selectFolder)) { appCoordinator.selectGameDir() }
                         }
                     }
                     
                     // SMAPI Settings
-                    StandardSection(title: vm.L(L10n.Home.smapiManager)) {
+                    StandardSection(title: localizationStore.L(L10n.Home.smapiManager)) {
                         VStack(spacing: 0) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(vm.L(L10n.Home.smapiStatus))
+                                    Text(localizationStore.L(L10n.Home.smapiStatus))
                                         .font(.system(size: 13))
-                                    if let version = vm.smapiInstalledVersion {
-                                        Text(String(format: vm.L(L10n.Home.smapiInstalled), version))
+                                    if let version = appEnvironment.smapiInstalledVersion {
+                                        Text(String(format: localizationStore.L(L10n.Home.smapiInstalled), version))
                                             .font(.system(size: 12))
                                             .foregroundColor(.secondary)
                                     } else {
-                                        Text(vm.L(L10n.Home.smapiNotInstalled))
+                                        Text(localizationStore.L(L10n.Home.smapiNotInstalled))
                                             .font(.system(size: 12))
                                             .foregroundColor(.secondary)
                                     }
@@ -118,10 +117,10 @@ struct HomeView: View {
                                     ProgressView()
                                         .controlSize(.small)
                                         .padding(.trailing, 4)
-                                } else if vm.smapiInstalledVersion == nil {
-                                    Button(vm.L(L10n.Home.installSmapi)) { vm.installSmapi() }
+                                } else if appEnvironment.smapiInstalledVersion == nil {
+                                    Button(localizationStore.L(L10n.Home.installSmapi)) { appCoordinator.installSmapi() }
                                 } else {
-                                    Button(vm.L(L10n.Home.uninstall)) { vm.uninstallSmapi() }
+                                    Button(localizationStore.L(L10n.Home.uninstall)) { appCoordinator.uninstallSmapi() }
                                 }
                             }
                             
@@ -131,7 +130,7 @@ struct HomeView: View {
                                         .progressViewStyle(.linear)
                                         .tint(.blue)
                                         .animation(.easeInOut, value: smapiInstaller.progress)
-                                    Text(vm.L(smapiInstaller.statusMessage))
+                                    Text(localizationStore.L(smapiInstaller.statusMessage))
                                         .font(.system(size: 11))
                                         .foregroundColor(.secondary)
                                 }
@@ -143,22 +142,22 @@ struct HomeView: View {
                 .padding(.horizontal, 40)
                 
                 // ── CORE EXTENSIONS SECTION ──
-                StandardSection(title: vm.L(L10n.Home.coreExtensions)) {
+                StandardSection(title: localizationStore.L(L10n.Home.coreExtensions)) {
                     VStack(spacing: 0) {
                         let (cpStatus, cpMod) = coreModStatus(matching: "content patcher")
-                        CoreModRow(vm: vm, title: "Content Patcher", status: cpStatus, mod: cpMod)
+                        CoreModRow(title: "Content Patcher", status: cpStatus, mod: cpMod)
                         Rectangle().fill(Color.primary.opacity(0.05)).frame(height: 1).padding(.leading, 12).padding(.vertical, 2)
 
                         let (scStatus, scMod) = coreModStatus(matching: "spacecore")
-                        CoreModRow(vm: vm, title: "SpaceCore", status: scStatus, mod: scMod)
+                        CoreModRow(title: "SpaceCore", status: scStatus, mod: scMod)
                         Rectangle().fill(Color.primary.opacity(0.05)).frame(height: 1).padding(.leading, 12).padding(.vertical, 2)
 
                         let (thStatus, thMod) = coreModStatusThai()
-                        CoreModRow(vm: vm, title: "Stardew Valley Thai", status: thStatus, mod: thMod)
+                        CoreModRow(title: "Stardew Valley Thai", status: thStatus, mod: thMod)
                         Rectangle().fill(Color.primary.opacity(0.05)).frame(height: 1).padding(.leading, 12).padding(.vertical, 2)
 
                         let (sveStatus, sveMod) = coreModStatus(matching: "stardew valley expanded")
-                        CoreModRow(vm: vm, title: "Stardew Valley Expanded", status: sveStatus, mod: sveMod)
+                        CoreModRow(title: "Stardew Valley Expanded", status: sveStatus, mod: sveMod)
                     }
                     .padding(.vertical, -8)
                 }
@@ -168,7 +167,7 @@ struct HomeView: View {
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
-        .onAppear { vm.refresh() }
+        .onAppear { appCoordinator.refresh() }
     }
 }
 
@@ -183,7 +182,7 @@ enum CoreModStatus {
 
 extension HomeView {
     func coreModStatus(matching keyword: String) -> (CoreModStatus, ModItem?) {
-        let allMods = vm.mods.flatMap { $0.allMods }
+        let allMods = modsStore.mods.flatMap { $0.allMods }
         let matches = allMods.filter { $0.name.lowercased().contains(keyword) }
         guard !matches.isEmpty else { return (.notInstalled, nil) }
 
@@ -197,7 +196,7 @@ extension HomeView {
     }
 
     func coreModStatusThai() -> (CoreModStatus, ModItem?) {
-        let allMods = vm.mods.flatMap { $0.allMods }
+        let allMods = modsStore.mods.flatMap { $0.allMods }
         // Match by folder name first (exact), then by name containing "thai"
         let mod = allMods.first { $0.folderName.rawValue.lowercased() == "stardew valley - thai" && $0.isEnabled }
             ?? allMods.first { $0.name.localizedCaseInsensitiveContains("thai") && $0.isEnabled }
@@ -210,7 +209,7 @@ extension HomeView {
 
 // Helper for core mod status rows
 struct CoreModRow: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var localizationStore: LocalizationStore
     let title: String
     let status: CoreModStatus
     let mod: ModItem?
@@ -243,10 +242,10 @@ struct CoreModRow: View {
                     Group {
                         switch status {
                         case .enabledAndInstalled:
-                            Text(vm.L(L10n.Home.installedAndEnabled))
+                            Text(localizationStore.L(L10n.Home.installedAndEnabled))
                                 .foregroundColor(.secondary)
                         case .installedButDisabled:
-                            Text(vm.L(L10n.Home.installedButDisabled))
+                            Text(localizationStore.L(L10n.Home.installedButDisabled))
                                 .foregroundColor(.orange)
                         case .notInstalled:
                             EmptyView()
@@ -254,7 +253,7 @@ struct CoreModRow: View {
                     }
                     .font(.system(size: 11))
                 } else {
-                    Text(vm.L(L10n.Home.notInstalledOrDisabled))
+                    Text(localizationStore.L(L10n.Home.notInstalledOrDisabled))
                         .font(.system(size: 12))
                         .foregroundColor(.red)
                 }

@@ -302,7 +302,7 @@ struct MainView: View {
                 } else if currentTab == "Logs" {
                     LogsView()
                 } else {
-                    HomeView(vm: vm)
+                    HomeView()
                 }
             }
             .onChange(of: currentTab, perform: { _ in
@@ -418,6 +418,7 @@ struct MainView: View {
         .environmentObject(vm.savesStore)
         .environmentObject(vm.modsStore)
         .environmentObject(vm.appEnvironment)
+        .environmentObject(vm.appEnvironment.smapiInstaller)
     }
     
     var colorScheme: ColorScheme? {
