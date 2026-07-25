@@ -2,7 +2,7 @@ import Foundation
 
 final class SmapiInstaller: ObservableObject {
     @Published var isInstalling = false
-    @Published var statusMessage = ""   // holds an L10n key, translated by caller via vm.L()
+    @Published var statusMessage = ""   // holds an L10n key, translated by the caller via LocalizationStore.L()
     @Published var progress: Double = 0.0
 
     /// File `install()` writes on success, holding the plain version string
@@ -65,8 +65,8 @@ final class SmapiInstaller: ObservableObject {
     // into the message key's "%@" placeholder (via String(format:)) — the
     // key alone is passed for messages that take no detail. Kept separate
     // (rather than pre-concatenated) because this class has no localization
-    // bundle of its own; only the caller (which has `vm.L`) can translate,
-    // and concatenating the raw key with detail text before translation
+    // bundle of its own; only the caller (which holds a LocalizationStore)
+    // can translate, and concatenating the raw key with detail text before translation
     // would corrupt the lookup key itself.
     func install(gameDir: String, completion: @escaping (Bool, String, String?) -> Void) {
         self.isInstalling = true
