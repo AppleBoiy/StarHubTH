@@ -17,6 +17,19 @@ final class AppEnvironment: ObservableObject {
 
     let smapiInstaller = SmapiInstaller()
 
+    /// When true, toggling a mod also cascades to its dependencies / dependents.
+    /// Persisted in UserDefaults so SettingsView's @AppStorage stays in sync.
+    var chainToggleDependencies: Bool {
+        get { preferenceStoring.bool(forKey: "chainToggleDependencies") ?? true }
+        set { preferenceStoring.set(newValue, forKey: "chainToggleDependencies") }
+    }
+
+    /// Read-only: SettingsView writes this key directly via its own `@AppStorage`,
+    /// which shares the same UserDefaults storage this reads from.
+    var nexusApiKey: String {
+        preferenceStoring.string(forKey: "nexusApiKey") ?? ""
+    }
+
     private let preferenceStoring: PreferenceStoring
     private let localization: LocalizationStore
 

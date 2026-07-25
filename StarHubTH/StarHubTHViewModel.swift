@@ -197,9 +197,6 @@ final class StarHubTHViewModel: ObservableObject {
     }
     var isReadingSMAPILog: Bool { logStore.isReadingSMAPILog }
 
-    @Published var alertMessage: String = ""
-    @Published var showAlert: Bool = false
-
     var saves: [SaveGameInfo] {
         get { savesStore.saves }
         set { savesStore.saves = newValue }
@@ -258,19 +255,29 @@ final class StarHubTHViewModel: ObservableObject {
         set { profilesStore.activeProfileId = newValue }
     }
 
-    /// When true, toggling a mod also cascades to its dependencies / dependents.
-    /// Persisted in UserDefaults so SettingsView @AppStorage stays in sync.
+    /// Phase 4.9: moved to AppEnvironment, which already owns adjacent preference-backed
+    /// app state.
     var chainToggleDependencies: Bool {
-        get { preferenceStoring.bool(forKey: "chainToggleDependencies") ?? true }
-        set { preferenceStoring.set(newValue, forKey: "chainToggleDependencies") }
+        get { appEnvironment.chainToggleDependencies }
+        set { appEnvironment.chainToggleDependencies = newValue }
     }
 
     var nexusApiKey: String {
-        get { preferenceStoring.string(forKey: "nexusApiKey") ?? "" }
+        appEnvironment.nexusApiKey
     }
 
     private let filePicking: FilePicking = FilePicker()
     private let preferenceStoring: PreferenceStoring = PreferenceStore()
+
+    /// Phase 4.9. Replaces `alertMessage`/`showAlert` — `MainView` observes this
+    /// directly via `@EnvironmentObject` rather than through the ViewModel.
+    let alertStore = AlertStore()
+
+    /// Phase 4.9. Every cross-store orchestration method below is now a one-line forward
+    /// to this — kept here, with the same method names/signatures, purely so views not
+    /// yet migrated to `@EnvironmentObject` (Phase 4.9's per-view migration) keep working
+    /// unchanged. `AppCoordinator` holds the real implementation.
+    let appCoordinator: AppCoordinator
 
     init() {
         // Every stored property without a default must be assigned before any closure
@@ -290,6 +297,20 @@ final class StarHubTHViewModel: ObservableObject {
             localization: localizationStore
         )
         appEnvironment = AppEnvironment(preferenceStoring: preferenceStoring, localization: localizationStore)
+
+        appCoordinator = AppCoordinator(
+            localizationStore: localizationStore,
+            logStore: logStore,
+            thaiHubStore: thaiHubStore,
+            profilesStore: profilesStore,
+            modPacksStore: modPacksStore,
+            savesStore: savesStore,
+            modsStore: modsStore,
+            appEnvironment: appEnvironment,
+            alertStore: alertStore,
+            filePicking: filePicking,
+            preferenceStoring: preferenceStoring
+        )
 
         // LogStore, ThaiHubStore, ProfilesStore, SavesStore, ModsStore, and AppEnvironment
         // all mutate their own @Published state from within their own methods (often via
@@ -337,7 +358,6 @@ final class StarHubTHViewModel: ObservableObject {
     func detectDefaultGameDir() -> String {
         AppEnvironment.detectDefaultGameDir()
     }
-    @Published var requestedTab: String? = nil
 
     /// Phase 4.5: mod-pack export/import/collection-fetch now lives in ModPacksStore
     /// (Features/ModPacks/ModPacksStore.swift). Assigned in init() since it depends on
@@ -353,63 +373,14 @@ final class StarHubTHViewModel: ObservableObject {
     }
 
     func handleOpenURL(_ url: URL) {
-        log("Opened with URL: \(url.absoluteString)", level: .info)
-        
-        guard url.scheme?.lowercased() == "nxm" else {
-            self.log("Rejected: Not an NXM scheme")
-            return
-        }
-        
-        // Check if we have API key
-        if self.nexusApiKey.isEmpty {
-            showModal(message: L(L10n.VM.nexusPremiumRequired))
-            return
-        }
-        
-        if let result = NXMParser.parse(url: url) {
-            switch result {
-            case .mod(let modId, let fileId, let key, let expires):
-                log("Downloading from NXM: Mod \(modId), File \(fileId)", level: .info)
-                self.downloadModFromNexus(nexusId: ModItem.NexusID(rawValue: modId), fileId: fileId, key: key, expires: expires) { success in
-                    if success {
-                        self.scanMods()
-                        self.showModal(message: self.L(L10n.VM.nxmDownloadSuccess))
-                    }
-                }
-            case .collection(let slug):
-                log("Importing collection from NXM: \(slug)", level: .info)
-                
-                // Switch to the Mod Packs tab
-                DispatchQueue.main.async {
-                    self.requestedTab = "ModPacks"
-                }
-                // Trigger the import and save it to the view model
-                self.importCollectionFromURL("https://next.nexusmods.com/stardewvalley/collections/\(slug)") { pack in
-                    DispatchQueue.main.async {
-                        if let p = pack {
-                            self.importedModPack = p
-                        } else {
-                            // If it failed, importCollectionFromURL already showed a failure modal
-                            self.log("Import collection returned nil.")
-                        }
-                    }
-                }
-            }
-        } else {
-            self.log("Unsupported or unrecognized NXM link format: \(url.absoluteString)")
-        }
+        appCoordinator.handleOpenURL(url)
     }
-    
-    
+
     func selectGameDir() {
-        if let url = filePicking.pickDirectory(title: nil) {
-            self.gameDir = url.path
-            preferenceStoring.set(self.gameDir, forKey: "gameDir")
-            scanMods()
-            checkSmapiVersion()
-        }
+        appCoordinator.selectGameDir()
     }
-    
+
+
     func localizedString(for key: String) -> String {
         localizationStore.localizedString(for: key)
     }
@@ -425,12 +396,10 @@ final class StarHubTHViewModel: ObservableObject {
     }
 
     func refresh() {
-        self.checkSmapiVersion()
-        self.scanMods()
-        self.reloadSaves()
-        self.fetchSteamUser()
+        appCoordinator.refresh()
     }
-    
+
+
     func fetchSteamUser() {
         appEnvironment.fetchSteamUser()
     }
@@ -549,8 +518,7 @@ final class StarHubTHViewModel: ObservableObject {
     func stopSmapiLogWatcher() { logStore.stopSmapiLogWatcher() }
 
     func showModal(message: String) {
-        self.alertMessage = message
-        self.showAlert = true
+        alertStore.show(message)
     }
     
     // MARK: - Saves

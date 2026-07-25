@@ -1,7 +1,11 @@
 import SwiftUI
 
 struct MainView: View {
-    @StateObject var vm = StarHubTHViewModel()
+    @StateObject var vm: StarHubTHViewModel
+    /// Phase 4.9: the same instance as `vm.alertStore` — seeded via `StateObject(wrappedValue:)`
+    /// in `init()` below so this view reacts to it directly (Support for `@EnvironmentObject`
+    /// injection into the not-yet-migrated views below comes from the same instance).
+    @StateObject private var alertStore: AlertStore
     @State private var currentTab: String = "Home"
     @State private var searchText: String = ""
     
@@ -15,7 +19,13 @@ struct MainView: View {
     @AppStorage("launchProfile") private var launchProfile: String = "SMAPI"
     
     @State private var isProfileHovered = false
-    
+
+    init() {
+        let vm = StarHubTHViewModel()
+        _vm = StateObject(wrappedValue: vm)
+        _alertStore = StateObject(wrappedValue: vm.alertStore)
+    }
+
     private func matchesSearch(_ text: String...) -> Bool {
         if searchText.isEmpty { return true }
         let lowerSearch = searchText.lowercased()
@@ -377,10 +387,10 @@ struct MainView: View {
                 currentTab = "Mods"
             }
         }
-        .alert(isPresented: $vm.showAlert) {
+        .alert(isPresented: $alertStore.isPresented) {
             Alert(
                 title: Text(vm.L(L10n.Main.alert)),
-                message: Text(vm.alertMessage),
+                message: Text(alertStore.message),
                 dismissButton: .default(Text(vm.L(L10n.Main.ok)))
             )
         }
@@ -390,12 +400,24 @@ struct MainView: View {
                 URLDispatcher.shared.openedURL = nil
             }
         }
-        .onChange(of: vm.requestedTab) { newTab in
-            if let tab = newTab {
+        .onReceive(NotificationCenter.default.publisher(for: .switchToTab)) { notification in
+            if let tab = notification.object as? String {
                 currentTab = tab
-                vm.requestedTab = nil
             }
         }
+        // Phase 4.9: available to every descendant view via @EnvironmentObject as each
+        // is migrated off `vm`. `vm` still constructs and owns all of these — this just
+        // exposes the same instances through the environment alongside it.
+        .environmentObject(alertStore)
+        .environmentObject(vm.appCoordinator)
+        .environmentObject(vm.localizationStore)
+        .environmentObject(vm.logStore)
+        .environmentObject(vm.thaiHubStore)
+        .environmentObject(vm.profilesStore)
+        .environmentObject(vm.modPacksStore)
+        .environmentObject(vm.savesStore)
+        .environmentObject(vm.modsStore)
+        .environmentObject(vm.appEnvironment)
     }
     
     var colorScheme: ColorScheme? {
