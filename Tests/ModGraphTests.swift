@@ -69,6 +69,8 @@ struct ModGraphTests {
         testEnableChain()
         testDisableChain()
         testChainingDisabled()
+        testEnableChainThroughGroup()
+        testDisableChainCascadesIntoGroup()
     }
 
     // MARK: - flattened
@@ -232,6 +234,54 @@ struct ModGraphTests {
         SimpleTestFramework.assertFalse(result.contains("dependent.mod"), "disabling cascades to mods that REQUIRE it")
         SimpleTestFramework.assertTrue(result.contains("optional.dependent"), "an OPTIONAL dependent is left enabled")
         SimpleTestFramework.assertTrue(result.contains("unrelated.mod"), "disabling leaves unrelated mods alone")
+    }
+
+    // MARK: - chain resolution through a group
+    //
+    // The tests above (testEnableChain/testDisableChain) only ever toggle standalone mods.
+    // enabledIDs' group-handling branches (topLevelMod's `.group` case, dependencies(of:)/
+    // providedIDs(of:) flattening a group's children) were previously exercised by nothing —
+    // Phase 0.3's own tracked gap ("profile chain resolution... uncovered"), closed here.
+
+    private static func testEnableChainThroughGroup() {
+        // Toggling the group enables every child; one child's dependency chain still pulls
+        // in an unrelated top-level mod.
+        let mods = [
+            group("Bundle", children: [
+                mod("a.mod", dependencies: [required("core.framework")]),
+                mod("b.mod")
+            ], enabled: false),
+            mod("core.framework", enabled: false)
+        ]
+
+        let result = ModGraph.enabledIDs(
+            after: mods[0], enabling: true, from: [], in: mods, chainingDependencies: true
+        )
+
+        SimpleTestFramework.assertTrue(result.contains("a.mod"), "enabling a group enables its first child")
+        SimpleTestFramework.assertTrue(result.contains("b.mod"), "enabling a group enables its second child")
+        SimpleTestFramework.assertTrue(result.contains("core.framework"), "a group child's dependency is still chained in")
+    }
+
+    private static func testDisableChainCascadesIntoGroup() {
+        // Disabling a mod that a group's child depends on must disable the WHOLE group
+        // (every child), not just the one child that declared the dependency.
+        let mods = [
+            mod("core.framework"),
+            group("Bundle", children: [
+                mod("a.mod", dependencies: [required("core.framework")]),
+                mod("b.mod")
+            ])
+        ]
+        let current: Set<Mod.UniqueID> = ["core.framework", "a.mod", "b.mod"]
+
+        let result = ModGraph.enabledIDs(
+            after: mods[0], enabling: false, from: current, in: mods, chainingDependencies: true
+        )
+
+        SimpleTestFramework.assertFalse(result.contains("core.framework"), "disabling the required mod disables it")
+        SimpleTestFramework.assertFalse(result.contains("a.mod"), "the group child that declared the dependency is disabled")
+        SimpleTestFramework.assertFalse(result.contains("b.mod"), "the group's OTHER child is disabled too — a group toggles as one unit")
     }
 
     // MARK: - chaining off
