@@ -140,6 +140,27 @@ final class ProfilesStore: ObservableObject {
         )
     }
 
+    // MARK: - Local collection import/export
+
+    /// Phase 4.9: routes what `ModProfilesView` used to call directly on
+    /// `ProfileManager.shared`/`CollectionInstaller.shared` through this store instead.
+    func importProfile(from url: URL) throws -> (ModCollection, ModProfile) {
+        try profileStoring.importProfile(from: url)
+    }
+
+    func exportProfile(_ profile: ModProfile, mods: [ModItem], to url: URL) throws {
+        try profileStoring.exportProfile(profile, mods: mods, to: url)
+    }
+
+    /// Nexus IDs from `collection` that aren't already installed among `currentMods`.
+    /// This local collection format has no `nxm://` key/expires pair to authorize a
+    /// direct API download for a non-premium account (see `NXMParser`'s doc comment),
+    /// so the caller opens each missing mod's Nexus page for a manual download rather
+    /// than downloading automatically.
+    func missingNexusIds(in collection: ModCollection, currentMods: [ModItem], nexusApiKey: String, completion: @escaping ([String]) -> Void) {
+        CollectionInstaller.shared.install(collection: collection, currentMods: currentMods, nexusApiKey: nexusApiKey, onMissingQueue: completion)
+    }
+
     /// Call this after any toggleMod so the profile stays up to date.
     func syncActiveProfileIds(mods: [ModItem]) {
         guard let id = activeProfileId,

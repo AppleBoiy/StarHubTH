@@ -290,7 +290,7 @@ struct MainView: View {
                         SavesView(vm: vm)
                     }
                 } else if currentTab == "Profiles" {
-                    ModProfilesView(vm: vm)
+                    ModProfilesView()
                 } else if currentTab == "Updates" {
                     UpdatesView(vm: vm, currentTab: $currentTab)
                 } else if currentTab == "ThaiHub" {

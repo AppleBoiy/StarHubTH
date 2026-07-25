@@ -1,7 +1,12 @@
 import SwiftUI
 
 struct ModProfilesView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var profilesStore: ProfilesStore
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var alertStore: AlertStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     @State private var isShowingNewProfileAlert = false
     @State private var newProfileName = ""
     @State private var selectedProfileForDetail: ModProfile?
@@ -11,22 +16,22 @@ struct ModProfilesView: View {
             
             // List Container
             VStack(spacing: 0) {
-                if vm.modProfiles.isEmpty {
+                if profilesStore.modProfiles.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "person.2.slash")
                             .font(.system(size: 40))
                             .foregroundColor(.secondary.opacity(0.5))
-                        Text(vm.L(L10n.Profiles.noProfiles))
+                        Text(localizationStore.L(L10n.Profiles.noProfiles))
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 60)
                 } else {
-                    ForEach(Array(vm.modProfiles.enumerated()), id: \.element.id) { index, profile in
-                        ProfileRow(profile: profile, isActive: vm.activeProfileId == profile.id, vm: vm, selectedProfileForDetail: $selectedProfileForDetail)
+                    ForEach(Array(profilesStore.modProfiles.enumerated()), id: \.element.id) { index, profile in
+                        ProfileRow(profile: profile, isActive: profilesStore.activeProfileId == profile.id, selectedProfileForDetail: $selectedProfileForDetail)
                         
-                        if index < vm.modProfiles.count - 1 {
+                        if index < profilesStore.modProfiles.count - 1 {
                             Divider()
                                 .padding(.leading, 64) // Align with text
                         }
@@ -50,38 +55,38 @@ struct ModProfilesView: View {
                     panel.allowedContentTypes = [.json]
                     if panel.runModal() == .OK, let url = panel.url {
                         do {
-                            let (collection, newProfile) = try ProfileManager.shared.importProfile(from: url)
-                            vm.modProfiles.append(newProfile)
-                            ProfileManager.shared.saveProfiles(vm.modProfiles, activeProfileId: vm.activeProfileId)
+                            let (collection, newProfile) = try profilesStore.importProfile(from: url)
+                            profilesStore.modProfiles.append(newProfile)
+                            profilesStore.saveProfiles()
                             // Queue installer. This local collection format has no
                             // nxm:// key/expires pair to authorize a direct API download
                             // for a non-premium account (see NXMParser's doc comment), so
                             // opening each missing mod's Nexus page for a manual download
                             // is the correct behavior here, not a stand-in for a real
                             // download that got cut — the message says so explicitly.
-                            CollectionInstaller.shared.install(collection: collection, currentMods: vm.mods, nexusApiKey: vm.nexusApiKey) { missingIds in
+                            profilesStore.missingNexusIds(in: collection, currentMods: modsStore.mods, nexusApiKey: appEnvironment.nexusApiKey) { missingIds in
                                 DispatchQueue.main.async {
                                     if !missingIds.isEmpty {
-                                        vm.showModal(message: String(format: vm.L(L10n.VM.collectionImportedMissing), missingIds.count))
+                                        alertStore.show(String(format: localizationStore.L(L10n.VM.collectionImportedMissing), missingIds.count))
                                         openMissingModPages(missingIds)
                                     } else {
-                                        vm.showModal(message: vm.L(L10n.VM.collectionImported))
+                                        alertStore.show(localizationStore.L(L10n.VM.collectionImported))
                                     }
                                 }
                             }
                         } catch {
-                            vm.showModal(message: String(format: vm.L(L10n.VM.collectionImportFailed), error.localizedDescription))
+                            alertStore.show(String(format: localizationStore.L(L10n.VM.collectionImportFailed), error.localizedDescription))
                         }
                     }
                 }) {
-                    Text(vm.L(L10n.Profiles.importCollection))
+                    Text(localizationStore.L(L10n.Profiles.importCollection))
                 }
                 
                 Spacer()
                 Button(action: {
                     isShowingNewProfileAlert = true
                 }) {
-                    Text(vm.L(L10n.Profiles.addProfile))
+                    Text(localizationStore.L(L10n.Profiles.addProfile))
                 }
             }
             
@@ -90,24 +95,24 @@ struct ModProfilesView: View {
         .padding(30)
         .background(Color(nsColor: .windowBackgroundColor))
         .sheet(item: $selectedProfileForDetail) { profile in
-            ProfileDetailSheet(profile: profile, vm: vm, isPresented: Binding(
+            ProfileDetailSheet(profile: profile, isPresented: Binding(
                 get: { selectedProfileForDetail != nil },
                 set: { if !$0 { selectedProfileForDetail = nil } }
             ))
         }
-        .alert(vm.L(L10n.Profiles.createNewProfile), isPresented: $isShowingNewProfileAlert) {
-            TextField(vm.L(L10n.Profiles.profileNamePlaceholder), text: $newProfileName)
-            Button(vm.L(L10n.Profiles.save)) {
+        .alert(localizationStore.L(L10n.Profiles.createNewProfile), isPresented: $isShowingNewProfileAlert) {
+            TextField(localizationStore.L(L10n.Profiles.profileNamePlaceholder), text: $newProfileName)
+            Button(localizationStore.L(L10n.Profiles.save)) {
                 if !newProfileName.isEmpty {
-                    vm.createProfile(name: newProfileName)
+                    appCoordinator.createProfile(name: newProfileName)
                     newProfileName = ""
                 }
             }
-            Button(vm.L(L10n.Profiles.cancel), role: .cancel) {
+            Button(localizationStore.L(L10n.Profiles.cancel), role: .cancel) {
                 newProfileName = ""
             }
         } message: {
-            Text(vm.L(L10n.Profiles.newProfileNote))
+            Text(localizationStore.L(L10n.Profiles.newProfileNote))
         }
     }
 
@@ -128,7 +133,8 @@ struct ModProfilesView: View {
 struct ProfileRow: View {
     let profile: ModProfile
     let isActive: Bool
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     @Binding var selectedProfileForDetail: ModProfile?
     @State private var isHovered = false
     
@@ -150,7 +156,7 @@ struct ProfileRow: View {
                 Text(profile.name)
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.primary)
-                Text(vm.L(isActive ? L10n.Profiles.inUse : L10n.Profiles.inactive))
+                Text(localizationStore.L(isActive ? L10n.Profiles.inUse : L10n.Profiles.inactive))
                     .font(.system(size: 12))
                     .foregroundColor(isActive ? .secondary : .secondary)
             }
@@ -166,14 +172,14 @@ struct ProfileRow: View {
                     .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
-            .help(vm.L(L10n.Profiles.viewDetails))
+            .help(localizationStore.L(L10n.Profiles.viewDetails))
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .contentShape(Rectangle())
         .background(isHovered ? Color.primary.opacity(0.05) : Color.clear)
         .onTapGesture {
-            vm.applyProfile(id: profile.id)
+            appCoordinator.applyProfile(id: profile.id)
         }
         .onHover { hovering in
             isHovered = hovering
@@ -183,7 +189,12 @@ struct ProfileRow: View {
 
 struct ProfileDetailSheet: View {
     let profile: ModProfile
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var profilesStore: ProfilesStore
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var alertStore: AlertStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     @Binding var isPresented: Bool
     
     @State private var editName: String = ""
@@ -193,7 +204,7 @@ struct ProfileDetailSheet: View {
     /// Mods for the checklist — top-level groups and standalone mods only.
     /// Groups show as a single row; toggling a group toggles all its children.
     private var flatMods: [ModItem] {
-        vm.mods
+        modsStore.mods
             .filter { !$0.uniqueId.rawValue.isEmpty || $0.isGroup }
             .sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
@@ -215,7 +226,7 @@ struct ProfileDetailSheet: View {
     /// Apply chain-toggle logic on the in-memory editedEnabledMods set
     /// by delegating to the ViewModel's shared logic.
     private func applyChain(mod: ModItem, enable: Bool) {
-        editedEnabledMods = vm.applyChainToSet(mod: mod, enable: enable, currentEnabled: editedEnabledMods)
+        editedEnabledMods = appCoordinator.applyChainToSet(mod: mod, enable: enable, currentEnabled: editedEnabledMods)
     }
     
     var body: some View {
@@ -237,7 +248,7 @@ struct ProfileDetailSheet: View {
             VStack(spacing: 0) {
                 // Name Row
                 HStack {
-                    Text(vm.L(L10n.Profiles.profileName))
+                    Text(localizationStore.L(L10n.Profiles.profileName))
                         .font(.system(size: 13))
                     Spacer()
                     TextField("", text: $editName)
@@ -254,23 +265,23 @@ struct ProfileDetailSheet: View {
                 // Manage Mods Row
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(String(format: vm.L(L10n.Profiles.modsInProfile), editedEnabledMods.count))
+                        Text(String(format: localizationStore.L(L10n.Profiles.modsInProfile), editedEnabledMods.count))
                             .font(.system(size: 13))
-                        Text(vm.L(L10n.Profiles.selectMods))
+                        Text(localizationStore.L(L10n.Profiles.selectMods))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(vm.L(L10n.Profiles.manage)) {
+                    Button(localizationStore.L(L10n.Profiles.manage)) {
                         isShowingModsPopover = true
                     }
                     .popover(isPresented: $isShowingModsPopover, arrowEdge: .trailing) {
                         VStack(spacing: 0) {
                             HStack {
-                                Text(vm.L(L10n.Profiles.manageMods))
+                                Text(localizationStore.L(L10n.Profiles.manageMods))
                                     .font(.headline)
                                 Spacer()
-                                Button(vm.L(L10n.Profiles.selectAll)) {
+                                Button(localizationStore.L(L10n.Profiles.selectAll)) {
                                     editedEnabledMods = Set(flatMods.flatMap { idsFor($0) })
                                 }
                                 .buttonStyle(.plain)
@@ -278,7 +289,7 @@ struct ProfileDetailSheet: View {
                                 .font(.system(size: 11))
                                 .pointingHandCursor()
                                 
-                                Button(vm.L(L10n.Profiles.deselectAll)) {
+                                Button(localizationStore.L(L10n.Profiles.deselectAll)) {
                                     editedEnabledMods.removeAll()
                                 }
                                 .buttonStyle(.plain)
@@ -295,7 +306,7 @@ struct ProfileDetailSheet: View {
                                         Toggle(mod.name, isOn: Binding(
                                             get: { isChecked(mod) },
                                             set: { isOn in
-                                                if vm.chainToggleDependencies {
+                                                if appEnvironment.chainToggleDependencies {
                                                     // For groups, chain-apply each child
                                                     if case .group(let children) = mod.kind {
                                                         for child in children where !child.uniqueId.rawValue.isEmpty {
@@ -328,23 +339,23 @@ struct ProfileDetailSheet: View {
                 // Export Row
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(vm.L(L10n.Profiles.exportCollection))
+                        Text(localizationStore.L(L10n.Profiles.exportCollection))
                             .font(.system(size: 13))
-                        Text(vm.L(L10n.Profiles.exportCollectionHint))
+                        Text(localizationStore.L(L10n.Profiles.exportCollectionHint))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(vm.L(L10n.Settings.configSave)) {
+                    Button(localizationStore.L(L10n.Settings.configSave)) {
                         let panel = NSSavePanel()
                         panel.allowedContentTypes = [.json]
                         panel.nameFieldStringValue = "\(profile.name.replacingOccurrences(of: " ", with: "_")).json"
                         if panel.runModal() == .OK, let url = panel.url {
                             do {
-                                try ProfileManager.shared.exportProfile(profile, mods: vm.mods, to: url)
-                                vm.showModal(message: vm.L(L10n.VM.collectionExported))
+                                try profilesStore.exportProfile(profile, mods: modsStore.mods, to: url)
+                                alertStore.show( localizationStore.L(L10n.VM.collectionExported))
                             } catch {
-                                vm.showModal(message: String(format: vm.L(L10n.VM.collectionExportFailed), error.localizedDescription))
+                                alertStore.show( String(format: localizationStore.L(L10n.VM.collectionExportFailed), error.localizedDescription))
                             }
                         }
                     }
@@ -357,15 +368,15 @@ struct ProfileDetailSheet: View {
                 // Delete Row
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(vm.L(L10n.Profiles.deleteProfile))
+                        Text(localizationStore.L(L10n.Profiles.deleteProfile))
                             .font(.system(size: 13))
-                        Text(vm.L(L10n.Profiles.deleteNote))
+                        Text(localizationStore.L(L10n.Profiles.deleteNote))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(vm.L(L10n.Profiles.delete)) {
-                        vm.deleteProfile(id: profile.id)
+                    Button(localizationStore.L(L10n.Profiles.delete)) {
+                        profilesStore.deleteProfile(id: profile.id)
                         isPresented = false
                     }
                 }
@@ -392,18 +403,18 @@ struct ProfileDetailSheet: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.secondary)
-                .help(vm.L(L10n.Profiles.help))
+                .help(localizationStore.L(L10n.Profiles.help))
                 
                 Spacer()
                 
-                Button(vm.L(L10n.Profiles.cancel)) {
+                Button(localizationStore.L(L10n.Profiles.cancel)) {
                     isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
                 
-                Button(vm.L(L10n.Profiles.ok)) {
+                Button(localizationStore.L(L10n.Profiles.ok)) {
                     let finalMods = Array(editedEnabledMods)
-                    vm.updateProfile(id: profile.id, newName: editName, enabledModIds: finalMods)
+                    appCoordinator.updateProfile(id: profile.id, newName: editName, enabledModIds: finalMods)
                     isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)
@@ -417,9 +428,9 @@ struct ProfileDetailSheet: View {
         .onAppear {
             editName = profile.name
             // If this is the active profile, reflect actual filesystem state
-            if vm.activeProfileId == profile.id {
+            if profilesStore.activeProfileId == profile.id {
                 editedEnabledMods = Set(
-                    vm.mods.flatMap { mod -> [ModItem.UniqueID] in
+                    modsStore.mods.flatMap { mod -> [ModItem.UniqueID] in
                         if case .group(let children) = mod.kind {
                             return children.filter { $0.isEnabled }.map { $0.uniqueId }
                         }
