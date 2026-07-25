@@ -300,7 +300,7 @@ struct MainView: View {
                 } else if currentTab == "AppChangelog" {
                     AppChangelogView()
                 } else if currentTab == "Logs" {
-                    LogsView(vm: vm)
+                    LogsView()
                 } else {
                     HomeView(vm: vm)
                 }

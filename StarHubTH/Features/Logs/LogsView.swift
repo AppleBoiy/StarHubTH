@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct LogsView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var logStore: LogStore
+    @EnvironmentObject var localizationStore: LocalizationStore
 
     // Source tabs: nil = All, .app = StarHubTH, .smapi = SMAPI
     @State private var selectedSource: LogSource? = nil
@@ -11,7 +12,7 @@ struct LogsView: View {
     @State private var autoScroll: Bool = true
 
     var filteredEntries: [LogEntry] {
-        vm.logEntries.filter { entry in
+        logStore.logEntries.filter { entry in
             let sourceMatch = selectedSource == nil || entry.source == selectedSource
             let levelMatch  = selectedLevel == nil  || entry.level  == selectedLevel
             let searchMatch = searchText.isEmpty
@@ -26,7 +27,7 @@ struct LogsView: View {
 
             // ── Source Tab Bar ───────────────────────────────────────
             HStack(spacing: 0) {
-                sourceTab(nil,       label: vm.L(L10n.Logs.filterAll),  icon: "list.bullet")
+                sourceTab(nil,       label: localizationStore.L(L10n.Logs.filterAll),  icon: "list.bullet")
                 sourceTab(.app,      label: "StarHubTH",                icon: "app.badge")
                 sourceTab(.smapi,    label: "SMAPI",                     icon: "terminal")
                 Spacer()
@@ -39,7 +40,7 @@ struct LogsView: View {
 
             // ── Level Filter (always visible) ────────────────────────
             HStack(spacing: 6) {
-                levelPill(nil,       label: vm.L(L10n.Logs.filterAll))
+                levelPill(nil,       label: localizationStore.L(L10n.Logs.filterAll))
                 levelPill(.info,     label: "INFO")
                 levelPill(.warning,  label: "WARN")
                 levelPill(.error,    label: "ERROR")
@@ -59,7 +60,7 @@ struct LogsView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
                         .font(.system(size: 12))
-                    TextField(vm.L(L10n.Logs.searchPlaceholder), text: $searchText)
+                    TextField(localizationStore.L(L10n.Logs.searchPlaceholder), text: $searchText)
                         .textFieldStyle(.plain)
                         .font(.system(size: 12))
                     if !searchText.isEmpty {
@@ -81,7 +82,7 @@ struct LogsView: View {
                         .foregroundColor(autoScroll ? .accentColor : .secondary)
                 }
                 .buttonStyle(.plain)
-                .help(vm.L(L10n.Logs.autoScrollHint))
+                .help(localizationStore.L(L10n.Logs.autoScrollHint))
 
                 // Copy
                 Button {
@@ -94,23 +95,23 @@ struct LogsView: View {
                     Image(systemName: "doc.on.clipboard").foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help(vm.L(L10n.Logs.copyAll))
+                .help(localizationStore.L(L10n.Logs.copyAll))
 
                 // Reload SMAPI log
                 Button {
                     // Keep app entries, reload SMAPI entries fresh
-                    vm.logEntries.removeAll { $0.source == .smapi }
-                    vm.loadSmapiLog()
+                    logStore.logEntries.removeAll { $0.source == .smapi }
+                    logStore.loadSmapiLog()
                 } label: {
                     Image(systemName: "arrow.clockwise").foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help(vm.L(L10n.Logs.refreshHint))
+                .help(localizationStore.L(L10n.Logs.refreshHint))
 
                 // Clear all logs
-                Button(vm.L(L10n.Logs.clearLogs)) {
-                    vm.logEntries.removeAll()
-                    vm.logOutput = ""
+                Button(localizationStore.L(L10n.Logs.clearLogs)) {
+                    logStore.logEntries.removeAll()
+                    logStore.logOutput = ""
                 }
                 .font(.system(size: 12))
             }
@@ -121,11 +122,11 @@ struct LogsView: View {
             Divider()
 
             // ── Entries ──────────────────────────────────────────────
-            if vm.isReadingSMAPILog {
+            if logStore.isReadingSMAPILog {
                 VStack(spacing: 12) {
                     ProgressView()
                         .scaleEffect(1.2)
-                    Text(vm.L(L10n.Logs.readingSmapiLog))
+                    Text(localizationStore.L(L10n.Logs.readingSmapiLog))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -135,7 +136,7 @@ struct LogsView: View {
                     Image(systemName: "text.badge.checkmark")
                         .font(.system(size: 32))
                         .foregroundColor(.secondary.opacity(0.4))
-                    Text(vm.L(L10n.Logs.noLogs))
+                    Text(localizationStore.L(L10n.Logs.noLogs))
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
@@ -143,7 +144,7 @@ struct LogsView: View {
             } else {
                 ScrollViewReader { proxy in
                     List(filteredEntries) { entry in
-                        LogEntryRow(entry: entry, vm: vm)
+                        LogEntryRow(entry: entry)
                             .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
@@ -151,7 +152,7 @@ struct LogsView: View {
                     }
                     .listStyle(.plain)
                     .id(selectedSource.map { "\($0)" } ?? "all")
-                    .onChange(of: vm.logEntries.count, perform: { _ in
+                    .onChange(of: logStore.logEntries.count, perform: { _ in
                         if autoScroll, let last = filteredEntries.last {
                             withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                         }
@@ -163,7 +164,7 @@ struct LogsView: View {
 
             // ── Status bar ───────────────────────────────────────────
             HStack {
-                Text(String(format: vm.L(L10n.Logs.entryCount), filteredEntries.count, vm.logEntries.count))
+                Text(String(format: localizationStore.L(L10n.Logs.entryCount), filteredEntries.count, logStore.logEntries.count))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -174,12 +175,12 @@ struct LogsView: View {
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .onAppear {
-            if vm.logEntries.filter({ $0.source == .smapi }).isEmpty {
-                vm.loadSmapiLog()
+            if logStore.logEntries.filter({ $0.source == .smapi }).isEmpty {
+                logStore.loadSmapiLog()
             }
         }
         .onDisappear {
-            vm.stopSmapiLogWatcher()
+            logStore.stopSmapiLogWatcher()
         }
     }
 
@@ -233,7 +234,7 @@ struct LogsView: View {
 // MARK: - Log Entry Row
 struct LogEntryRow: View {
     let entry: LogEntry
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var localizationStore: LocalizationStore
     @State private var isHovered = false
 
     var body: some View {
@@ -296,7 +297,7 @@ struct LogEntryRow: View {
         )
         .onHover { isHovered = $0 }
         .contextMenu {
-            Button(vm.L(L10n.Logs.copyLine)) {
+            Button(localizationStore.L(L10n.Logs.copyLine)) {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(
                     "[\(entry.timestamp)] [\(entry.level.rawValue)] \(entry.message)",
