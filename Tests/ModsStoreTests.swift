@@ -18,6 +18,8 @@ struct ModsStoreTests {
         await testInstallModRequiresGameDir()
         await testInstallModFromZipUsesModInstalling()
         await testOpenInstallModPanelInstallsEachPickedURL()
+        await testSyncTagFromNexusShowsModalOnApiFailure()
+        await testSyncTagFromNexusIsSilentWithoutNexusUrl()
     }
 
     /// scanMods still wraps its state update in DispatchQueue.main.async (unconverted —
@@ -31,7 +33,7 @@ struct ModsStoreTests {
         _ = sem.wait(timeout: .now() + 2)
     }
 
-    private static func mod(_ uniqueId: String, enabled: Bool = true) -> Mod {
+    private static func mod(_ uniqueId: String, enabled: Bool = true, nexusUrl: String = "") -> Mod {
         Mod(
             uniqueId: Mod.UniqueID(rawValue: uniqueId),
             name: uniqueId,
@@ -39,31 +41,32 @@ struct ModsStoreTests {
             version: "1.0.0",
             author: "Author",
             description: "",
-            nexusUrl: "",
+            nexusUrl: nexusUrl,
             isEnabled: enabled,
             dependencies: [],
             kind: .single
         )
     }
 
-    private static func makeStore() -> (store: ModsStore, scanning: StubModScanning, installing: StubModInstalling, filePicking: StubFilePicking, preferenceStoring: StubPreferenceStoring) {
+    private static func makeStore() -> (store: ModsStore, scanning: StubModScanning, installing: StubModInstalling, filePicking: StubFilePicking, preferenceStoring: StubPreferenceStoring, nexusAPIClient: StubNexusAPIClient) {
         let scanning = StubModScanning()
         let installing = StubModInstalling()
         let filePicking = StubFilePicking()
         let preferenceStoring = StubPreferenceStoring()
+        let nexusAPIClient = StubNexusAPIClient()
         let store = ModsStore(
             modScanning: scanning,
             modInstalling: installing,
-            nexusAPIClient: StubNexusAPIClient(),
+            nexusAPIClient: nexusAPIClient,
             filePicking: filePicking,
             preferenceStoring: preferenceStoring,
             localization: LocalizationStore(preferenceStoring: StubPreferenceStoring())
         )
-        return (store, scanning, installing, filePicking, preferenceStoring)
+        return (store, scanning, installing, filePicking, preferenceStoring, nexusAPIClient)
     }
 
     private static func testDependencyDelegationToModGraph() {
-        let (store, _, _, _, _) = makeStore()
+        let (store, _, _, _, _, _) = makeStore()
         store.mods = [mod("a.mod", enabled: true)]
         SimpleTestFramework.assertEqual(
             store.resolveDependencyStatus(for: Mod.UniqueID(rawValue: "a.mod")), .active,
@@ -76,13 +79,13 @@ struct ModsStoreTests {
     }
 
     private static func testCustomModTagsRoundTrip() {
-        let (store, _, _, _, _) = makeStore()
+        let (store, _, _, _, _, _) = makeStore()
         store.customModTags = ["a.mod": "Framework"]
         SimpleTestFramework.assertEqual(store.customModTags["a.mod"], "Framework", "customModTags persists through the injected PreferenceStoring")
     }
 
     private static func testSetCustomTagRefreshesConditionally() {
-        let (store, _, _, _, _) = makeStore()
+        let (store, _, _, _, _, _) = makeStore()
         var refreshCount = 0
 
         store.setCustomTag(for: Mod.UniqueID(rawValue: "a.mod"), tag: "UI", shouldRefresh: true, refresh: { refreshCount += 1 })
@@ -94,7 +97,7 @@ struct ModsStoreTests {
     }
 
     private static func testResetCustomTagAlwaysRefreshes() {
-        let (store, _, _, _, _) = makeStore()
+        let (store, _, _, _, _, _) = makeStore()
         store.customModTags = ["a.mod": "UI"]
         var refreshCount = 0
 
@@ -104,7 +107,7 @@ struct ModsStoreTests {
     }
 
     private static func testScanModsPopulatesStateFromStub() {
-        let (store, scanning, _, _, _) = makeStore()
+        let (store, scanning, _, _, _, _) = makeStore()
         scanning.mods = [mod("a.mod"), mod("stardew valley - thai", enabled: true)]
 
         store.scanMods(gameDir: "/fake/gamedir")
@@ -117,14 +120,14 @@ struct ModsStoreTests {
     }
 
     private static func testInstallModRequiresGameDir() async {
-        let (store, _, _, _, _) = makeStore()
+        let (store, _, _, _, _, _) = makeStore()
         var modalMessage: String?
         try? await store.installMod(url: URL(fileURLWithPath: "/tmp/mod.zip"), gameDir: "", showModal: { modalMessage = $0 }, log: { _ in })
         SimpleTestFramework.assertTrue(modalMessage != nil, "installMod shows a modal when gameDir is empty")
     }
 
     private static func testInstallModFromZipUsesModInstalling() async {
-        let (store, _, installing, _, _) = makeStore()
+        let (store, _, installing, _, _, _) = makeStore()
         installing.installFromZipResult = .success(["MyMod"])
 
         var successMessage: String?
@@ -141,12 +144,39 @@ struct ModsStoreTests {
     }
 
     private static func testOpenInstallModPanelInstallsEachPickedURL() async {
-        let (store, _, installing, filePicking, _) = makeStore()
+        let (store, _, installing, filePicking, _, _) = makeStore()
         installing.installFromZipResult = .success(["MyMod"])
         filePicking.filesToReturn = [URL(fileURLWithPath: "/tmp/one.zip"), URL(fileURLWithPath: "/tmp/two.zip")]
 
         var modalCount = 0
         await store.openInstallModPanel(gameDir: "/fake/gamedir", showModal: { _ in modalCount += 1 }, log: { _ in })
         SimpleTestFramework.assertEqual(modalCount, 2, "openInstallModPanel installs every URL FilePicking returns")
+    }
+
+    private static func testSyncTagFromNexusShowsModalOnApiFailure() async {
+        let (store, _, _, _, _, nexusAPIClient) = makeStore()
+        nexusAPIClient.modInfoResult = .failure(StubError.unconfigured)
+
+        var modalMessage: String?
+        await store.syncTagFromNexus(
+            for: mod("a.mod", nexusUrl: "https://www.nexusmods.com/stardewvalley/mods/12345"),
+            nexusApiKey: "test-key",
+            showModal: { modalMessage = $0 },
+            refresh: {}
+        )
+        SimpleTestFramework.assertTrue(modalMessage != nil, "syncTagFromNexus shows a modal when the Nexus API call fails")
+    }
+
+    private static func testSyncTagFromNexusIsSilentWithoutNexusUrl() async {
+        let (store, _, _, _, _, _) = makeStore()
+
+        var modalMessage: String?
+        await store.syncTagFromNexus(
+            for: mod("a.mod", nexusUrl: ""),
+            nexusApiKey: "test-key",
+            showModal: { modalMessage = $0 },
+            refresh: {}
+        )
+        SimpleTestFramework.assertTrue(modalMessage == nil, "syncTagFromNexus stays silent when the mod has no valid Nexus URL")
     }
 }
