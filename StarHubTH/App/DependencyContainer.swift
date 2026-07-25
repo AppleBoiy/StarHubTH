@@ -6,7 +6,9 @@ import Foundation
 ///
 /// Every parameter defaults to the real `Live` implementation, so production code just
 /// does `DependencyContainer()`; tests override individual dependencies with a `Stub*`
-/// via the initializer.
+/// via the initializer. `@MainActor` because its only caller is `MainView`'s own `init()`,
+/// and its default values now include main-actor-isolated types (`SmapiInstaller()`).
+@MainActor
 final class DependencyContainer {
     let nexusAPIClient: NexusAPIClient
     let modScanning: ModScanning
@@ -23,20 +25,25 @@ final class DependencyContainer {
         modScanning: ModScanning = ModScanner(),
         modInstalling: ModInstalling = ModInstaller(),
         saveStoring: SaveStoring = SaveManager.shared,
-        saveNoteStoring: SaveNoteStoring = SaveNotesStore.shared,
+        saveNoteStoring: SaveNoteStoring? = nil,
         profileStoring: ProfileStoring = ProfileManager.shared,
-        smapiInstalling: SmapiInstalling = SmapiInstaller(),
-        filePicking: FilePicking = FilePicker(),
+        smapiInstalling: SmapiInstalling? = nil,
+        filePicking: FilePicking? = nil,
         preferenceStoring: PreferenceStoring = PreferenceStore()
     ) {
         self.nexusAPIClient = nexusAPIClient
         self.modScanning = modScanning
         self.modInstalling = modInstalling
         self.saveStoring = saveStoring
-        self.saveNoteStoring = saveNoteStoring
+        // `SaveNotesStore.shared`, `SmapiInstaller()`, and `FilePicker()` are all main-actor
+        // isolated, so none of them can be a default argument value (that expression
+        // evaluates in a nonisolated context regardless of this init's own isolation) —
+        // constructed here in the init body instead, which is main-actor-isolated since the
+        // whole type is.
+        self.saveNoteStoring = saveNoteStoring ?? SaveNotesStore.shared
         self.profileStoring = profileStoring
-        self.smapiInstalling = smapiInstalling
-        self.filePicking = filePicking
+        self.smapiInstalling = smapiInstalling ?? SmapiInstaller()
+        self.filePicking = filePicking ?? FilePicker()
         self.preferenceStoring = preferenceStoring
     }
 }

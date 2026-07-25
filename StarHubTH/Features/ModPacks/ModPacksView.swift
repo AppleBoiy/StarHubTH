@@ -77,10 +77,10 @@ struct ModPacksView: View {
                 .onDrop(of: [.json], isTargeted: $isHoveringDrop) { providers in
                     guard let provider = providers.first else { return false }
                     provider.loadItem(forTypeIdentifier: UTType.json.identifier, options: nil) { item, error in
-                        guard let url = item as? URL,
-                              let pack = modPacksStore.importModPack(from: url) else { return }
-                        DispatchQueue.main.async {
-                            withAnimation { self.modPacksStore.importedModPack = pack }
+                        guard let url = item as? URL else { return }
+                        Task { @MainActor in
+                            guard let pack = modPacksStore.importModPack(from: url) else { return }
+                            withAnimation { modPacksStore.importedModPack = pack }
                         }
                     }
                     return true

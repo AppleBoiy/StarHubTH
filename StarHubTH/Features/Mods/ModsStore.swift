@@ -10,8 +10,7 @@ import UniformTypeIdentifiers
 /// don't have their own store; refresh is cross-store orchestration) — so the affected
 /// methods take them as parameters/closures, same approach as every store since 4.3.
 /// `syncActiveProfileIds` (ProfilesStore's) is threaded through `toggleMod` the same way.
-///
-/// Not yet `@MainActor`, same reason as every store so far.
+@MainActor
 final class ModsStore: ObservableObject {
     @Published var mods: [ModItem] = []
 
@@ -184,15 +183,13 @@ final class ModsStore: ObservableObject {
 
         parseSMAPILog(gameDir: gameDir)
 
-        DispatchQueue.main.async {
-            self.mods = scannedMods
-            if self.selectedMod == nil, let first = self.mods.first {
-                self.selectedMod = first
-            }
-            self.isThaiTranslationInstalled = scannedMods.contains {
-                ($0.folderName.rawValue.lowercased() == "stardew valley - thai" ||
-                $0.name.localizedCaseInsensitiveContains("thai")) && $0.isEnabled
-            }
+        mods = scannedMods
+        if selectedMod == nil, let first = mods.first {
+            selectedMod = first
+        }
+        isThaiTranslationInstalled = scannedMods.contains {
+            ($0.folderName.rawValue.lowercased() == "stardew valley - thai" ||
+            $0.name.localizedCaseInsensitiveContains("thai")) && $0.isEnabled
         }
     }
 
@@ -204,19 +201,14 @@ final class ModsStore: ObservableObject {
         let logPath = (homeDir as NSString).appendingPathComponent(".config/StardewValley/ErrorLogs/SMAPI-latest.txt")
         guard FileManager.default.fileExists(atPath: logPath),
               let logContent = try? String(contentsOfFile: logPath, encoding: .utf8) else {
-            DispatchQueue.main.async {
-                self.outOfDateMods = []
-                self.smapiErrors = []
-            }
+            outOfDateMods = []
+            smapiErrors = []
             return
         }
 
         let result = SmapiLogParser.parse(logContent: logContent)
-
-        DispatchQueue.main.async {
-            self.outOfDateMods = result.outOfDateMods
-            self.smapiErrors = result.errors
-        }
+        outOfDateMods = result.outOfDateMods
+        smapiErrors = result.errors
     }
 
     // MARK: - Toggle Mod Status (Enabled / Disabled)

@@ -7,8 +7,7 @@ import Foundation
 /// the current value as a parameter instead of storing a reference back to the
 /// not-yet-extracted parts of StarHubTHViewModel. Once those stores exist, the
 /// ViewModel's forwarding methods are the only thing that needs to change.
-///
-/// Not yet `@MainActor`, same reason as LocalizationStore/LogStore (4.1/4.2).
+@MainActor
 final class ThaiHubStore: ObservableObject {
     @Published var thaiTranslations: [ThaiTranslationMod] = []
     @Published var viewingThaiMod: ThaiTranslationMod?

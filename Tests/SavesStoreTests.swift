@@ -3,6 +3,7 @@ import Foundation
 /// Characterization tests for SavesStore, extracted from StarHubTHViewModel in refactor
 /// Phase 4.6. This is the first store test using three stubs at once (SaveStoring,
 /// SaveNoteStoring, FilePicking) — every one of its dependencies is a real protocol.
+@MainActor
 struct SavesStoreTests {
     static func run() {
         print("Running SavesStoreTests...")

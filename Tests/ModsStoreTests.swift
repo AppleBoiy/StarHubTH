@@ -6,6 +6,7 @@ import Foundation
 /// protocol seam), and the Mods-directory backup/restore trio all shell out to real
 /// Process/FileManager work with no injection seam — same reasoning as LogStore's
 /// loadSmapiLog() and ModPacksStore's exportModPack.
+@MainActor
 struct ModsStoreTests {
     static func run() async {
         print("Running ModsStoreTests...")

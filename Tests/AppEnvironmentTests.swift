@@ -4,6 +4,7 @@ import Foundation
 /// refactor Phase 4.8. fetchSteamUser() reads a hardcoded real VDF file path with no
 /// injection seam, same reasoning as every other untested I/O path so far — not
 /// covered here.
+@MainActor
 struct AppEnvironmentTests {
     static func run() {
         print("Running AppEnvironmentTests...")

@@ -4,6 +4,7 @@ import Foundation
 /// `.showAlert` — nearly every store surfaces a user-facing failure or confirmation
 /// through this, so it lives in `App/` alongside the other cross-cutting state rather
 /// than under any one feature.
+@MainActor
 final class AlertStore: ObservableObject {
     @Published private(set) var message: String = ""
     @Published var isPresented: Bool = false

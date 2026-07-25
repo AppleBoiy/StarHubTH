@@ -5,6 +5,7 @@ import Foundation
 /// path with no injection seam, same as the original; log() needs no stubbing since its
 /// only side effect besides the two @Published properties is a fire-and-forget debug
 /// log write.
+@MainActor
 struct LogStoreTests {
     static func run() {
         print("Running LogStoreTests...")

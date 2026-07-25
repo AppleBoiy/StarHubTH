@@ -1,8 +1,10 @@
 import Foundation
 
 /// Test double for `NexusAPIClient`. Every method hands back a configurable canned
-/// result instead of making a network call.
-final class StubNexusAPIClient: NexusAPIClient {
+/// result instead of making a network call. `@unchecked Sendable` because it's mutated
+/// only by the single test that configures it, before any concurrent use — never actually
+/// shared across threads despite the `var` canned results.
+final class StubNexusAPIClient: NexusAPIClient, @unchecked Sendable {
     var modInfoResult: Result<LiveNexusAPIClient.ModInfo, Error> = .failure(StubError.unconfigured)
     var modFilesResult: Result<LiveNexusAPIClient.ModFileListResponse, Error> = .failure(StubError.unconfigured)
     var downloadLinkResult: Result<[LiveNexusAPIClient.ModDownloadLink], Error> = .failure(StubError.unconfigured)

@@ -2,11 +2,7 @@ import Foundation
 
 /// Phase 4.1. Nearly every view touches this, which is why it's the first store
 /// extracted from `StarHubTHViewModel` — see docs/REFACTOR_PLAN.md Phase 4.
-///
-/// Not yet `@MainActor`: `StarHubTHViewModel` still forwards to this store from a
-/// nonisolated context (see the forwarding methods there), and annotating stores
-/// `@MainActor` is Phase 5.3 — done as its own coordinated pass once every store
-/// exists, not ad hoc as each one is extracted.
+@MainActor
 final class LocalizationStore: ObservableObject {
     private static let supportedLanguages = Set(["en", "th"])
 

@@ -6,6 +6,7 @@ import Foundation
 /// file download + unzip) aren't covered here, same reasoning as LogStore's
 /// loadSmapiLog() — no injection seam for those without a bigger change than this
 /// extraction warrants.
+@MainActor
 struct ModPacksStoreTests {
     static func run() async {
         print("Running ModPacksStoreTests...")

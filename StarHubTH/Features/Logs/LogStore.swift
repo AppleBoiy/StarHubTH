@@ -1,10 +1,7 @@
 import Foundation
 
 /// Phase 4.2. Owns the in-app log feed (LogsView) and SMAPI-latest.txt tailing.
-///
-/// Not yet `@MainActor` — same reason as LocalizationStore (Phase 4.1): the caller
-/// (StarHubTHViewModel) is still nonisolated, and that annotation is Phase 5.3's own
-/// coordinated pass once every store exists.
+@MainActor
 final class LogStore: ObservableObject {
     @Published var logOutput: String = ""
     @Published var logEntries: [LogEntry] = []
@@ -40,15 +37,8 @@ final class LogStore: ObservableObject {
             }
         }
 
-        if Thread.isMainThread {
-            logEntries.append(entry)
-            logOutput += logString
-        } else {
-            DispatchQueue.main.async {
-                self.logEntries.append(entry)
-                self.logOutput += logString
-            }
-        }
+        logEntries.append(entry)
+        logOutput += logString
     }
 
     /// Loads SMAPI-latest.txt's current content, then keeps tailing the file for new writes

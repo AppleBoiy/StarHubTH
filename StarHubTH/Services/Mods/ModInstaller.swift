@@ -16,7 +16,10 @@ enum ModInstallerError: Error, LocalizedError {
     }
 }
 
-struct ModInstaller {
+/// No stored properties — a plain, explicit `Sendable` conformance declared here (not just
+/// inferred via the `ModInstalling` conformance in a different file, which Swift requires
+/// for retroactive conformance to be explicit and same-file).
+struct ModInstaller: Sendable {
     static func installFromZip(url: URL, gameDir: String) async throws(ModInstallerError) -> [String] {
         let fm = FileManager.default
         let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)

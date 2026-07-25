@@ -20,6 +20,7 @@ struct SmapiReleaseLookupError: Error {
     let detail: String?
 }
 
+@MainActor
 final class SmapiInstaller: ObservableObject {
     @Published var isInstalling = false
     @Published var statusMessage = ""   // holds an L10n key, translated by the caller via LocalizationStore.L()
@@ -28,10 +29,10 @@ final class SmapiInstaller: ObservableObject {
     /// File `install()` writes on success, holding the plain version string
     /// (e.g. "4.5.2") of the release it just installed — see
     /// `runOfficialInstaller`'s doc comment for why this exists.
-    static let installedVersionMarkerRelativePath = "smapi-internal/.starhubth-installed-version"
+    nonisolated static let installedVersionMarkerRelativePath = "smapi-internal/.starhubth-installed-version"
 
     // Check if SMAPI is installed in the Stardew Valley MacOS directory
-    static func getInstalledVersion(gameDir: String) -> String? {
+    nonisolated static func getInstalledVersion(gameDir: String) -> String? {
         let fm = FileManager.default
         let originalPath = (gameDir as NSString).appendingPathComponent("StardewValley-original")
 
@@ -143,7 +144,7 @@ final class SmapiInstaller: ObservableObject {
     /// pick the plain installer specifically — matching on the filename
     /// pattern rather than assuming a fixed name, since the version number
     /// is embedded in it (e.g. `SMAPI-4.5.2-installer.zip`).
-    static func resolveLatestSmapiInstallerURL() async throws(SmapiReleaseLookupError) -> (url: URL, version: String) {
+    nonisolated static func resolveLatestSmapiInstallerURL() async throws(SmapiReleaseLookupError) -> (url: URL, version: String) {
         let releaseApiUrl = URL(string: "https://api.github.com/repos/Pathoschild/SMAPI/releases/latest")!
         var request = URLRequest(url: releaseApiUrl)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
@@ -384,7 +385,7 @@ final class SmapiInstaller: ObservableObject {
     /// stack trace, which isn't useful verbatim — the actual error message
     /// is the line announcing the exception, so surface that instead of the
     /// trace beneath it.
-    static func lastMeaningfulLine(of output: String) -> String {
+    nonisolated static func lastMeaningfulLine(of output: String) -> String {
         let lines = output.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }
         if let idx = lines.firstIndex(where: { $0.contains("unexpected exception") || $0.contains("failed") }) {
             return lines[idx]

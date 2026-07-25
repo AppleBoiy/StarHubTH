@@ -9,11 +9,12 @@ import AppKit
 /// extracted yet — so the affected methods take them as parameters/closures, same
 /// approach as ThaiHubStore (4.3) and ProfilesStore (4.4).
 ///
-/// Not yet `@MainActor`, same reason as every store so far. `importedModPack` only ever
-/// mutates through the exposed setter (never from inside this store's own methods —
-/// they hand results back via a completion closure instead), so unlike LogStore/
-/// ThaiHubStore/ProfilesStore this store doesn't need the objectWillChange-forwarding
-/// Combine subscription; a manual send() in the ViewModel's forwarding setter is enough.
+/// `importedModPack` only ever mutates through the exposed setter (never from inside this
+/// store's own methods — they hand results back via a completion closure instead), so
+/// unlike LogStore/ThaiHubStore/ProfilesStore this store doesn't need the
+/// objectWillChange-forwarding Combine subscription; a manual send() in the ViewModel's
+/// forwarding setter is enough.
+@MainActor
 final class ModPacksStore: ObservableObject {
     @Published var importedModPack: StarHubPack?
 

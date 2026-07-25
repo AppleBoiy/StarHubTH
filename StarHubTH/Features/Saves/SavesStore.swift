@@ -14,8 +14,7 @@ import UniformTypeIdentifiers
 /// `setAvatar`/`setNote` call `objectWillChange.send()` manually, same as the original —
 /// they mutate through `saveNoteStoring`, a separate object whose own changes aren't
 /// otherwise observed by this store's @Published properties.
-///
-/// Not yet `@MainActor`, same reason as every store so far.
+@MainActor
 final class SavesStore: ObservableObject {
     @Published var saveViewMode: SaveViewMode = .list
     @Published var saveSortOption: SaveSortOption = .lastPlayed

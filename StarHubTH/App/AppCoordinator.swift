@@ -6,6 +6,7 @@ import Foundation
 /// the 8 stores it holds a reference to, so it can never itself drift out of sync with
 /// them. `ObservableObject` only so it's `@EnvironmentObject`-injectable — nothing here
 /// publishes.
+@MainActor
 final class AppCoordinator: ObservableObject {
     let localizationStore: LocalizationStore
     let logStore: LogStore

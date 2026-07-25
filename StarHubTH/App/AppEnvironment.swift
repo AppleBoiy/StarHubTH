@@ -2,8 +2,7 @@ import Foundation
 
 /// Phase 4.8. Whatever is genuinely global: the selected game install, the detected
 /// Steam identity, and SMAPI's installed-version status.
-///
-/// Not yet `@MainActor`, same reason as every store so far.
+@MainActor
 final class AppEnvironment: ObservableObject {
     @Published var gameDir: String {
         didSet {

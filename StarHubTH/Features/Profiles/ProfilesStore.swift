@@ -8,8 +8,7 @@ import Foundation
 /// current value as a parameter, same approach as ThaiHubStore (4.3). Two methods
 /// (`applyProfile`, `updateProfile`) need `mods` to be re-read *after* triggering a
 /// filesystem scan, so those take a `modsProvider` closure instead of a snapshot value.
-///
-/// Not yet `@MainActor`, same reason as every store so far.
+@MainActor
 final class ProfilesStore: ObservableObject {
     @Published var modProfiles: [ModProfile] = []
     @Published var activeProfileId: UUID?

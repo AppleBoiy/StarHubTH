@@ -2,6 +2,7 @@ import Foundation
 
 /// Characterization tests for LocalizationStore, extracted from StarHubTHViewModel in
 /// refactor Phase 4.1. Uses StubPreferenceStoring (Phase 3.2) instead of real UserDefaults.
+@MainActor
 struct LocalizationStoreTests {
     static func run() {
         print("Running LocalizationStoreTests...")

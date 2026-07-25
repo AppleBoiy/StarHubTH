@@ -3,6 +3,7 @@ import Foundation
 /// Characterization tests for ProfilesStore, extracted from StarHubTHViewModel in
 /// refactor Phase 4.4. Uses StubProfileStoring (Phase 3.2) instead of real UserDefaults
 /// and filesystem access.
+@MainActor
 struct ProfilesStoreTests {
     static func run() {
         print("Running ProfilesStoreTests...")

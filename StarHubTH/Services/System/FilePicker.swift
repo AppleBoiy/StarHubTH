@@ -2,6 +2,9 @@ import AppKit
 import UniformTypeIdentifiers
 
 /// The only non-view file allowed to import `Cocoa` for panel presentation (§3.4).
+/// `@MainActor` because `NSOpenPanel`/`NSSavePanel` are themselves main-actor-isolated in
+/// modern AppKit, and every caller (a store) is main-actor-isolated already.
+@MainActor
 struct FilePicker: FilePicking {
     func pickDirectory(title: String?) -> URL? {
         let panel = NSOpenPanel()
