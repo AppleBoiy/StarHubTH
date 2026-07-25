@@ -24,15 +24,37 @@ final class StarHubTHViewModel: ObservableObject {
         set { savesStore.saveFilterTag = newValue }
     }
 
-    @Published var gameDir: String = "" {
-        didSet {
-            preferenceStoring.set(gameDir, forKey: "gameDir")
+    /// Phase 4.8: game dir, Steam identity, and SMAPI version state all live in
+    /// AppEnvironment (App/AppEnvironment.swift). Assigned in init() since it depends on
+    /// preferenceStoring/localizationStore.
+    let appEnvironment: AppEnvironment
+
+    var gameDir: String {
+        get { appEnvironment.gameDir }
+        set {
+            appEnvironment.gameDir = newValue
+            // AppEnvironment only persists gameDir itself — triggering a full refresh is
+            // cross-store orchestration, which is why this couldn't stay in its didSet.
             self.refresh()
         }
     }
-    
-    @Published var showSmapiAlerts: Bool = false
-    @Published var smapiInstalledVersion: String? = nil   // nil = not installed
+    var showSmapiAlerts: Bool {
+        get { appEnvironment.showSmapiAlerts }
+        set { appEnvironment.showSmapiAlerts = newValue }
+    }
+    var smapiInstalledVersion: String? {
+        get { appEnvironment.smapiInstalledVersion }
+        set { appEnvironment.smapiInstalledVersion = newValue }
+    }
+    var steamUsername: String {
+        get { appEnvironment.steamUsername }
+        set { appEnvironment.steamUsername = newValue }
+    }
+    var steamAvatarPath: String? {
+        get { appEnvironment.steamAvatarPath }
+        set { appEnvironment.steamAvatarPath = newValue }
+    }
+    var smapiInstaller: SmapiInstaller { appEnvironment.smapiInstaller }
 
     /// Phase 4.7: mod list, filters, custom tags, scanning, toggling, install, and
     /// Mods-directory backup/restore all live in ModsStore
@@ -204,9 +226,6 @@ final class StarHubTHViewModel: ObservableObject {
     }
 
 
-    @Published var steamUsername: String = ""
-    @Published var steamAvatarPath: String? = nil
-    
     /// Phase 4.1: the actual localization logic and state now live in LocalizationStore
     /// (Localization/LocalizationStore.swift). This is a thin forwarding layer so the
     /// ~400 existing `vm.L(...)` / `vm.currentLanguage` call sites across every view
@@ -250,7 +269,6 @@ final class StarHubTHViewModel: ObservableObject {
         get { preferenceStoring.string(forKey: "nexusApiKey") ?? "" }
     }
 
-    let smapiInstaller = SmapiInstaller()
     private let filePicking: FilePicking = FilePicker()
     private let preferenceStoring: PreferenceStoring = PreferenceStore()
 
@@ -271,10 +289,11 @@ final class StarHubTHViewModel: ObservableObject {
             preferenceStoring: preferenceStoring,
             localization: localizationStore
         )
+        appEnvironment = AppEnvironment(preferenceStoring: preferenceStoring, localization: localizationStore)
 
-        // LogStore, ThaiHubStore, ProfilesStore, SavesStore, and ModsStore all mutate
-        // their own @Published state from within their own methods (often via an async
-        // dispatch), not just through a setter this ViewModel exposes — unlike
+        // LogStore, ThaiHubStore, ProfilesStore, SavesStore, ModsStore, and AppEnvironment
+        // all mutate their own @Published state from within their own methods (often via
+        // an async dispatch), not just through a setter this ViewModel exposes — unlike
         // currentLanguage (Phase 4.1), a single objectWillChange.send() in a forwarding
         // setter isn't enough. Forward each store's own publisher instead. ModPacksStore
         // doesn't need this — its one @Published property only ever changes through the
@@ -295,14 +314,17 @@ final class StarHubTHViewModel: ObservableObject {
         modsStore.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
+        appEnvironment.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
 
-        // Automatically retrieve saved game path, or attempt to find the default Steam path on Mac
-        let savedPath = preferenceStoring.string(forKey: "gameDir") ?? ""
-        if !savedPath.isEmpty && FileManager.default.fileExists(atPath: savedPath) {
-            self.gameDir = savedPath
-        } else {
-            self.gameDir = self.detectDefaultGameDir()
-        }
+        // AppEnvironment's own init already resolved gameDir (saved path, or detected
+        // Steam/GOG default) — the old code duplicated that resolution here, then let
+        // gameDir's didSet trigger a first refresh() before explicitly calling refresh()
+        // again. AppEnvironment can't trigger cross-store refresh() from its own didSet
+        // (it doesn't know about the other stores), so that first, redundant refresh()
+        // is simply gone now; the explicit call below is the only one that ran real work
+        // in the original startup sequence anyway.
         self.refresh()
         self.loadProfiles()
         if self.steamUsername.isEmpty {
@@ -313,18 +335,7 @@ final class StarHubTHViewModel: ObservableObject {
     }
     
     func detectDefaultGameDir() -> String {
-        let home = NSHomeDirectory()
-        let steamPath = "\(home)/Library/Application Support/Steam/steamapps/common/Stardew Valley/Contents/MacOS"
-        if FileManager.default.fileExists(atPath: steamPath) {
-            return steamPath
-        }
-        
-        let gogPath = "/Applications/Stardew Valley.app/Contents/MacOS"
-        if FileManager.default.fileExists(atPath: gogPath) {
-            return gogPath
-        }
-        
-        return ""
+        AppEnvironment.detectDefaultGameDir()
     }
     @Published var requestedTab: String? = nil
 
@@ -421,55 +432,14 @@ final class StarHubTHViewModel: ObservableObject {
     }
     
     func fetchSteamUser() {
-        let home = NSHomeDirectory()
-        let vdfPath = "\(home)/Library/Application Support/Steam/config/loginusers.vdf"
-        guard let content = try? String(contentsOfFile: vdfPath, encoding: .utf8) else { return }
-        
-        // Very basic VDF parsing
-        var currentSteamID = ""
-        var personaName = ""
-        
-        let lines = content.components(separatedBy: .newlines)
-        for line in lines {
-            let tLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            if tLine.hasPrefix("\"7656") {
-                currentSteamID = tLine.replacingOccurrences(of: "\"", with: "")
-            }
-            if tLine.hasPrefix("\"PersonaName\"") {
-                let parts = tLine.components(separatedBy: "\"")
-                if parts.count >= 4 { personaName = parts[3] }
-            }
-            if tLine.hasPrefix("\"MostRecent\"") && tLine.contains("\"1\"") {
-                break
-            }
-        }
-        
-        if !personaName.isEmpty {
-            self.steamUsername = personaName
-        } else {
-            let defaultName = NSFullUserName().components(separatedBy: " ").first ?? ""
-            self.steamUsername = defaultName.isEmpty ? L(L10n.VM.defaultFarmerName) : defaultName
-        }
-        
-        if !currentSteamID.isEmpty {
-            let avatarPathPng = "\(home)/Library/Application Support/Steam/config/avatarcache/\(currentSteamID).png"
-            let avatarPathJpg = "\(home)/Library/Application Support/Steam/config/avatarcache/\(currentSteamID).jpg"
-            if FileManager.default.fileExists(atPath: avatarPathPng) {
-                self.steamAvatarPath = avatarPathPng
-            } else if FileManager.default.fileExists(atPath: avatarPathJpg) {
-                self.steamAvatarPath = avatarPathJpg
-            }
-        }
+        appEnvironment.fetchSteamUser()
     }
-    
+
     func checkSmapiVersion() {
-        guard !gameDir.isEmpty else {
-            self.smapiInstalledVersion = nil
-            return
-        }
-        self.smapiInstalledVersion = SmapiInstaller.getInstalledVersion(gameDir: gameDir)
+        appEnvironment.checkSmapiVersion()
     }
-    
+
+
     func scanMods() {
         modsStore.scanMods(gameDir: gameDir)
     }
@@ -552,22 +522,18 @@ final class StarHubTHViewModel: ObservableObject {
 
     // Install SMAPI via Installer Helper
     func installSmapi() {
-        smapiInstaller.install(gameDir: gameDir) { success, msgKey, detail in
-            self.checkSmapiVersion()
-            let message = detail != nil ? "\(self.L(msgKey))\n\(detail!)" : self.L(msgKey)
-            self.showModal(message: message)
-            self.log(message)
-        }
+        appEnvironment.installSmapi(
+            showModal: { [weak self] message in self?.showModal(message: message) },
+            log: { [weak self] message in self?.log(message) }
+        )
     }
-    
+
     // Uninstall SMAPI
     func uninstallSmapi() {
-        smapiInstaller.uninstall(gameDir: gameDir) { success, msgKey, detail in
-            self.checkSmapiVersion()
-            let message = detail != nil ? "\(self.L(msgKey))\n\(detail!)" : self.L(msgKey)
-            self.showModal(message: message)
-            self.log(message)
-        }
+        appEnvironment.uninstallSmapi(
+            showModal: { [weak self] message in self?.showModal(message: message) },
+            log: { [weak self] message in self?.log(message) }
+        )
     }
     
     func log(_ message: String, level: LogLevel = .info) {
