@@ -34,15 +34,21 @@ StarHubTH is a shipped desktop app, not a library — there's no public API to b
 
 ## Release procedure
 
-Until this is automated, cutting a release is one commit + one tag:
+`scripts/bump_version.py` does steps 1–2 (it refuses to run if `[Unreleased]` in `CHANGELOG.md` is empty, so a changelog entry is required, not optional):
 
-1. Decide the new `MAJOR.MINOR.PATCH` per the rules above.
-2. In `Info.plist`: set `CFBundleShortVersionString` to the new version, increment `CFBundleVersion` by 1 (regardless of whether this is a MAJOR/MINOR/PATCH bump — it counts builds, not releases).
-3. In `CHANGELOG.md`: rename `## [Unreleased]` to `## [MAJOR.MINOR.PATCH] - YYYY-MM-DD`, add a fresh empty `## [Unreleased]` above it.
-4. Commit both together as `release: vMAJOR.MINOR.PATCH` — one concern, not mixed with feature work.
-5. Tag the commit `vMAJOR.MINOR.PATCH[-preview.N]`.
-6. Run `python3 release.py` to build, zip, and optionally publish to GitHub.
+```bash
+python3 scripts/bump_version.py patch   # or minor / major / preview / release
+```
 
-## Out of scope for this doc
+It edits `Info.plist` (bumps `CFBundleShortVersionString` and increments `CFBundleVersion`) and rolls `CHANGELOG.md`'s `[Unreleased]` section into a dated `## [MAJOR.MINOR.PATCH] - YYYY-MM-DD` heading, then prints the remaining steps. It does **not** commit, tag, or push — review the diff, then:
 
-Wiring `release.py` or CI to bump these automatically, generate changelog entries, or push tags on merge — that's the next step, and it should build on top of this numbering standard rather than deciding it ad hoc.
+```bash
+git add Info.plist CHANGELOG.md
+git commit -m "release: vMAJOR.MINOR.PATCH"   # one concern, not mixed with feature work
+git tag vMAJOR.MINOR.PATCH                    # or vMAJOR.MINOR.PATCH-preview.N
+git push && git push --tags
+```
+
+Pushing the tag is the deliberate, explicit trigger — that's where a human decides "yes, release this," same as any other push. From there, [`.github/workflows/release.yml`](../.github/workflows/release.yml) takes over: it checks the pushed tag matches `Info.plist` (fails loudly if you tagged without bumping), runs `run_tests.py`, then `python3 release.py --publish` to build, codesign, zip, and publish the GitHub Release with that version's changelog section as the release notes.
+
+`release.py` still works standalone for a local build — run it without `--publish` and it either prompts (interactive terminal) or just skips the upload (non-interactive, no `--publish`), so it never hangs waiting on input that isn't there.

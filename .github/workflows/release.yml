@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Verify tag matches Info.plist
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          plist_version=$(python3 -c "import plistlib; print(plistlib.load(open('Info.plist','rb'))['CFBundleShortVersionString'])")
+          if [ "$tag_version" != "$plist_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match Info.plist CFBundleShortVersionString ($plist_version). Use scripts/bump_version.py before tagging."
+            exit 1
+          fi
+
+      - name: Test
+        run: python3 run_tests.py
+
+      - name: Build, package, and publish release
+        run: python3 release.py --publish
+        env:
+          GH_TOKEN: ${{ github.token }}
