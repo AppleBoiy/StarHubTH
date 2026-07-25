@@ -1,7 +1,7 @@
 import Foundation
 
 /// Install status of a mod referenced by a mod pack.
-enum PackModStatus: Equatable {
+enum PackModStatus: Equatable, Sendable {
     case installed
     case disabled
     case missing
@@ -16,7 +16,7 @@ enum PackModStatus: Equatable {
 /// - Note: Extracted in refactor Phase 0 as characterization-tested seams. Behaviour is
 ///   deliberately identical to the original view-model implementations, including the
 ///   edge cases called out below — those are resolved in Phase 2, not here.
-enum ModGraph {
+enum ModGraph: Sendable {
 
     /// Flattens group rows into their children, leaving standalone mods as-is.
     ///

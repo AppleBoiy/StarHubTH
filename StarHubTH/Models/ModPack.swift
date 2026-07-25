@@ -1,6 +1,6 @@
 import Foundation
 
-struct StarHubPackMod: Codable, Identifiable {
+struct StarHubPackMod: Codable, Identifiable, Sendable {
     let id: ModItem.UniqueID // same as uniqueId
     let name: String
     let uniqueId: ModItem.UniqueID
@@ -27,7 +27,7 @@ struct StarHubPackMod: Codable, Identifiable {
     }
 }
 
-struct StarHubPack: Codable {
+struct StarHubPack: Codable, Sendable {
     let packName: String
     let author: String?
     let description: String?

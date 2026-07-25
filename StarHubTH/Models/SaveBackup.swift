@@ -1,6 +1,6 @@
 import Foundation
 
-struct SaveBackup: Identifiable, Equatable {
+struct SaveBackup: Identifiable, Equatable, Sendable {
     var id: String { folderPath.path }
     let folderPath: URL
     let timestamp: Date

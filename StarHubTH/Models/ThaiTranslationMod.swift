@@ -1,6 +1,6 @@
 import Foundation
 
-enum TranslationAvailability: Equatable {
+enum TranslationAvailability: Equatable, Sendable {
     case installed
     case downloadable
     case baseModMissing
@@ -14,7 +14,7 @@ enum TranslationAvailability: Equatable {
     }
 }
 
-struct ThaiTranslationMod: Identifiable, Equatable {
+struct ThaiTranslationMod: Identifiable, Equatable, Sendable {
     var id: String { name }
     let name: String
     let author: String

@@ -1,6 +1,6 @@
 import Foundation
 
-struct SaveGameInfo: Identifiable, Equatable, Hashable {
+struct SaveGameInfo: Identifiable, Equatable, Hashable, Sendable {
     var id: String { folderName }
     let folderName: String
     let fileURL: URL

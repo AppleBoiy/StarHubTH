@@ -17,14 +17,14 @@ extension ModItem {
     /// (`ModProfile.enabledModIds`, `StarHubPackMod.uniqueId`) that are already persisted
     /// in UserDefaults and exported pack/collection files. Synthesized Codable would encode
     /// `{"rawValue": "..."}` instead and silently fail to decode a user's existing data.
-    struct UniqueID: Hashable, RawRepresentable, ExpressibleByStringLiteral {
+    struct UniqueID: Hashable, RawRepresentable, ExpressibleByStringLiteral, Sendable {
         let rawValue: String
         init(rawValue: String) { self.rawValue = rawValue }
         init(stringLiteral value: String) { self.rawValue = value }
     }
 
     /// Nexus Mods' numeric mod ID. Same single-value-container reasoning as `UniqueID`.
-    struct NexusID: Hashable, RawRepresentable, ExpressibleByIntegerLiteral {
+    struct NexusID: Hashable, RawRepresentable, ExpressibleByIntegerLiteral, Sendable {
         let rawValue: Int
         init(rawValue: Int) { self.rawValue = rawValue }
         init(integerLiteral value: Int) { self.rawValue = value }
@@ -33,7 +33,7 @@ extension ModItem {
     /// The mod's folder name under `Mods/` — stable across enable/disable, since
     /// toggling moves the folder between `Mods/` and `Mods_disabled/` without renaming it.
     /// Same single-value-container reasoning as `UniqueID`.
-    struct FolderName: Hashable, RawRepresentable, ExpressibleByStringLiteral {
+    struct FolderName: Hashable, RawRepresentable, ExpressibleByStringLiteral, Sendable {
         let rawValue: String
         init(rawValue: String) { self.rawValue = rawValue }
         init(stringLiteral value: String) { self.rawValue = value }
@@ -64,19 +64,19 @@ extension ModItem.FolderName: Codable {
     }
 }
 
-struct ModDependency: Equatable {
+struct ModDependency: Equatable, Sendable {
     let uniqueId: ModItem.UniqueID
     let isRequired: Bool
 }
 
-enum DependencyStatus: Equatable {
+enum DependencyStatus: Equatable, Sendable {
     case active
     case disabled(ModItem)
     case missing
 }
 
-struct ModItem: Identifiable, Equatable {
-    enum Kind: Equatable {
+struct ModItem: Identifiable, Equatable, Sendable {
+    enum Kind: Equatable, Sendable {
         case single
         case group(children: [ModItem])   // a group always has its children
     }

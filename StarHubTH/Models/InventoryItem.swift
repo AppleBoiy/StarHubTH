@@ -1,6 +1,6 @@
 import Foundation
 
-struct InventoryItem: Identifiable, Equatable {
+struct InventoryItem: Identifiable, Equatable, Sendable {
     let id = UUID()
     var slotIndex: Int
     var itemId: String
