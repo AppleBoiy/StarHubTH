@@ -12,6 +12,7 @@ SavesStoreTests.run()
 AppEnvironmentTests.run()
 ModManifestParserTests.run()
 SaveFileParserTests.run()
+SaveManagerTests.run()
 SmapiLogParserTests.run()
 SmapiInstallerTests.run()
 
