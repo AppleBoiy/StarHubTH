@@ -1,0 +1,160 @@
+import Foundation
+
+/// Phase 4.4. Owns mod profiles: persistence, activation, and the in-memory chain-toggle
+/// preview used while editing a profile.
+///
+/// `mods` and `gameDir` aren't owned here — they belong to ModsStore (4.7) and
+/// AppEnvironment (4.8), neither extracted yet — so methods that need them take the
+/// current value as a parameter, same approach as ThaiHubStore (4.3). Two methods
+/// (`applyProfile`, `updateProfile`) need `mods` to be re-read *after* triggering a
+/// filesystem scan, so those take a `modsProvider` closure instead of a snapshot value.
+///
+/// Not yet `@MainActor`, same reason as every store so far.
+final class ProfilesStore: ObservableObject {
+    @Published var modProfiles: [ModProfile] = []
+    @Published var activeProfileId: UUID?
+
+    private let profileStoring: ProfileStoring
+    private let localization: LocalizationStore
+
+    init(profileStoring: ProfileStoring, localization: LocalizationStore) {
+        self.profileStoring = profileStoring
+        self.localization = localization
+    }
+
+    func loadProfiles() {
+        let loaded = profileStoring.loadProfiles()
+        self.modProfiles = loaded.profiles
+        self.activeProfileId = loaded.activeId
+    }
+
+    func saveProfiles() {
+        profileStoring.saveProfiles(modProfiles, activeProfileId: activeProfileId)
+    }
+
+    func createProfile(name: String, mods: [ModItem]) {
+        // Snapshot the currently enabled mods into the new profile
+        let currentEnabledIds = mods
+            .flatMap { mod -> [ModItem.UniqueID] in
+                if case .group(let children) = mod.kind {
+                    return children.filter { $0.isEnabled }.map { $0.uniqueId }
+                }
+                return mod.isEnabled ? [mod.uniqueId] : []
+            }
+            .filter { !$0.rawValue.isEmpty }
+
+        let newProfile = ModProfile(name: name, enabledModIds: currentEnabledIds)
+        modProfiles.append(newProfile)
+        saveProfiles()
+        // Do NOT applyProfile here — just save so the user can edit it first
+        activeProfileId = newProfile.id
+        saveProfiles()
+    }
+
+    func deleteProfile(id: UUID) {
+        modProfiles.removeAll { $0.id == id }
+        if activeProfileId == id {
+            activeProfileId = nil
+        }
+        saveProfiles()
+    }
+
+    func updateProfile(
+        id: UUID,
+        newName: String,
+        enabledModIds: [ModItem.UniqueID],
+        gameDir: String,
+        modsProvider: () -> [ModItem],
+        scanMods: () -> Void
+    ) {
+        if let index = modProfiles.firstIndex(where: { $0.id == id }) {
+            modProfiles[index].name = newName
+            modProfiles[index].enabledModIds = enabledModIds
+            saveProfiles()
+
+            // If this is the active profile, apply the new mod selection to the filesystem
+            if activeProfileId == id {
+                applyProfileToFilesystem(profile: modProfiles[index], gameDir: gameDir, modsProvider: modsProvider, scanMods: scanMods)
+            }
+        }
+    }
+
+    func applyProfile(
+        id: UUID?,
+        gameDir: String,
+        modsProvider: () -> [ModItem],
+        scanMods: () -> Void,
+        log: (String) -> Void,
+        showModal: (String) -> Void
+    ) {
+        guard let id = id, let profile = modProfiles.first(where: { $0.id == id }) else {
+            activeProfileId = nil
+            saveProfiles()
+            return
+        }
+
+        // If already active, just sync stored list from current filesystem (no file moves)
+        if activeProfileId == id {
+            syncActiveProfileIds(mods: modsProvider())
+            return
+        }
+
+        let success = applyProfileToFilesystem(profile: profile, gameDir: gameDir, modsProvider: modsProvider, scanMods: scanMods)
+        if success {
+            activeProfileId = id
+            saveProfiles()
+            log(String(format: localization.L(L10n.VM.switchProfile), profile.name))
+        } else {
+            showModal(localization.L(L10n.VM.profileApplyError))
+        }
+    }
+
+    /// Actually move mod files to match the given profile's enabledModIds.
+    @discardableResult
+    private func applyProfileToFilesystem(
+        profile: ModProfile,
+        gameDir: String,
+        modsProvider: () -> [ModItem],
+        scanMods: () -> Void
+    ) -> Bool {
+        let success = profileStoring.applyProfileToFilesystem(profile: profile, mods: modsProvider(), gameDir: gameDir)
+        scanMods()
+        syncActiveProfileIds(mods: modsProvider())
+        return success
+    }
+
+    /// Compute which uniqueIds should be added/removed when toggling a mod in a profile,
+    /// using the same chain logic as toggleMod. Works on an in-memory set (no file I/O).
+    /// - Parameters:
+    ///   - mod: The mod being toggled (can be a group or single mod)
+    ///   - enable: true = enabling, false = disabling
+    ///   - currentEnabled: the current set of enabled uniqueIds in the profile
+    /// - Returns: A new set with the chain applied
+    func applyChainToSet(mod: ModItem, enable: Bool, currentEnabled: Set<ModItem.UniqueID>, mods: [ModItem], chainToggleDependencies: Bool) -> Set<ModItem.UniqueID> {
+        ModGraph.enabledIDs(
+            after: mod,
+            enabling: enable,
+            from: currentEnabled,
+            in: mods,
+            chainingDependencies: chainToggleDependencies
+        )
+    }
+
+    /// Call this after any toggleMod so the profile stays up to date.
+    func syncActiveProfileIds(mods: [ModItem]) {
+        guard let id = activeProfileId,
+              let index = modProfiles.firstIndex(where: { $0.id == id }) else { return }
+
+        let actualEnabledIds = mods
+            .flatMap { mod -> [ModItem.UniqueID] in
+                if case .group(let children) = mod.kind {
+                    return children.filter { $0.isEnabled }.map { $0.uniqueId }
+                }
+                return mod.isEnabled ? [mod.uniqueId] : []
+            }
+            .filter { !$0.rawValue.isEmpty }
+
+        modProfiles[index].enabledModIds = actualEnabledIds
+        saveProfiles()
+    }
+}

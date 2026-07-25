@@ -195,8 +195,19 @@ final class StarHubTHViewModel: ObservableObject {
         localizationStore.makeDateFormatter(dateStyle: dateStyle)
     }
 
-    @Published var modProfiles: [ModProfile] = []
-    @Published var activeProfileId: UUID? = nil
+    /// Phase 4.4: mod profile state now lives in ProfilesStore
+    /// (Features/Profiles/ProfilesStore.swift). Assigned in init() since it depends on
+    /// localizationStore.
+    let profilesStore: ProfilesStore
+
+    var modProfiles: [ModProfile] {
+        get { profilesStore.modProfiles }
+        set { profilesStore.modProfiles = newValue }
+    }
+    var activeProfileId: UUID? {
+        get { profilesStore.activeProfileId }
+        set { profilesStore.activeProfileId = newValue }
+    }
 
     /// When true, toggling a mod also cascades to its dependencies / dependents.
     /// Persisted in UserDefaults so SettingsView @AppStorage stays in sync.
@@ -221,16 +232,20 @@ final class StarHubTHViewModel: ObservableObject {
         // self-capturing escaping closure as a potential read of ANY property, not just
         // the ones the closure actually touches.
         thaiHubStore = ThaiHubStore(localization: localizationStore)
+        profilesStore = ProfilesStore(profileStoring: ProfileManager.shared, localization: localizationStore)
 
-        // LogStore and ThaiHubStore both mutate their own @Published state from within
-        // their own methods (often via an async dispatch), not just through a setter
-        // this ViewModel exposes — unlike currentLanguage (Phase 4.1), a single
-        // objectWillChange.send() in a forwarding setter isn't enough. Forward each
-        // store's own publisher instead.
+        // LogStore, ThaiHubStore, and ProfilesStore all mutate their own @Published
+        // state from within their own methods (often via an async dispatch), not just
+        // through a setter this ViewModel exposes — unlike currentLanguage (Phase 4.1),
+        // a single objectWillChange.send() in a forwarding setter isn't enough. Forward
+        // each store's own publisher instead.
         logStore.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
         thaiHubStore.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        profilesStore.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
 
@@ -1105,85 +1120,41 @@ final class StarHubTHViewModel: ObservableObject {
     
     // MARK: - Mod Profiles
     func loadProfiles() {
-        let loaded = ProfileManager.shared.loadProfiles()
-        self.modProfiles = loaded.profiles
-        self.activeProfileId = loaded.activeId
+        profilesStore.loadProfiles()
     }
-    
+
     func saveProfiles() {
-        ProfileManager.shared.saveProfiles(modProfiles, activeProfileId: activeProfileId)
+        profilesStore.saveProfiles()
     }
-    
+
     func createProfile(name: String) {
-        // Snapshot the currently enabled mods into the new profile
-        let currentEnabledIds = mods
-            .flatMap { mod -> [ModItem.UniqueID] in
-                if case .group(let children) = mod.kind {
-                    return children.filter { $0.isEnabled }.map { $0.uniqueId }
-                }
-                return mod.isEnabled ? [mod.uniqueId] : []
-            }
-            .filter { !$0.rawValue.isEmpty }
-
-        let newProfile = ModProfile(name: name, enabledModIds: currentEnabledIds)
-        modProfiles.append(newProfile)
-        saveProfiles()
-        // Do NOT applyProfile here — just save so the user can edit it first
-        activeProfileId = newProfile.id
-        saveProfiles()
+        profilesStore.createProfile(name: name, mods: mods)
     }
-    
+
     func deleteProfile(id: UUID) {
-        modProfiles.removeAll { $0.id == id }
-        if activeProfileId == id {
-            activeProfileId = nil
-        }
-        saveProfiles()
+        profilesStore.deleteProfile(id: id)
     }
-    
-    func updateProfile(id: UUID, newName: String, enabledModIds: [ModItem.UniqueID]) {
-        if let index = modProfiles.firstIndex(where: { $0.id == id }) {
-            modProfiles[index].name = newName
-            modProfiles[index].enabledModIds = enabledModIds
-            saveProfiles()
 
-            // If this is the active profile, apply the new mod selection to the filesystem
-            if activeProfileId == id {
-                applyProfileToFilesystem(profile: modProfiles[index])
-            }
-        }
+    func updateProfile(id: UUID, newName: String, enabledModIds: [ModItem.UniqueID]) {
+        profilesStore.updateProfile(
+            id: id,
+            newName: newName,
+            enabledModIds: enabledModIds,
+            gameDir: gameDir,
+            modsProvider: { [weak self] in self?.mods ?? [] },
+            scanMods: { [weak self] in self?.scanMods() }
+        )
     }
 
     func applyProfile(id: UUID?) {
-        guard let id = id, let profile = modProfiles.first(where: { $0.id == id }) else {
-            activeProfileId = nil
-            saveProfiles()
-            return
-        }
-
-        // If already active, just sync stored list from current filesystem (no file moves)
-        if activeProfileId == id {
-            syncActiveProfileIds()
-            return
-        }
-
-        let success = applyProfileToFilesystem(profile: profile)
-        if success {
-            activeProfileId = id
-            saveProfiles()
-            self.log(String(format: L(L10n.VM.switchProfile), profile.name))
-        } else {
-            showModal(message: L(L10n.VM.profileApplyError))
-        }
-    }
-
-    /// Actually move mod files to match the given profile's enabledModIds.
-    @discardableResult
-    private func applyProfileToFilesystem(profile: ModProfile) -> Bool {
-        let success = ProfileManager.shared.applyProfileToFilesystem(profile: profile, mods: mods, gameDir: gameDir)
-        self.scanMods()
-        self.syncActiveProfileIds()
-        return success
+        profilesStore.applyProfile(
+            id: id,
+            gameDir: gameDir,
+            modsProvider: { [weak self] in self?.mods ?? [] },
+            scanMods: { [weak self] in self?.scanMods() },
+            log: { [weak self] message in self?.log(message) },
+            showModal: { [weak self] message in self?.showModal(message: message) }
+        )
     }
 
     /// Compute which uniqueIds should be added/removed when toggling a mod in a profile,
@@ -1194,31 +1165,12 @@ final class StarHubTHViewModel: ObservableObject {
     ///   - currentEnabled: the current set of enabled uniqueIds in the profile
     /// - Returns: A new set with the chain applied
     func applyChainToSet(mod: ModItem, enable: Bool, currentEnabled: Set<ModItem.UniqueID>) -> Set<ModItem.UniqueID> {
-        ModGraph.enabledIDs(
-            after: mod,
-            enabling: enable,
-            from: currentEnabled,
-            in: mods,
-            chainingDependencies: chainToggleDependencies
-        )
+        profilesStore.applyChainToSet(mod: mod, enable: enable, currentEnabled: currentEnabled, mods: mods, chainToggleDependencies: chainToggleDependencies)
     }
 
     /// Call this after any toggleMod so the profile stays up to date.
     func syncActiveProfileIds() {
-        guard let id = activeProfileId,
-              let index = modProfiles.firstIndex(where: { $0.id == id }) else { return }
-
-        let actualEnabledIds = mods
-            .flatMap { mod -> [ModItem.UniqueID] in
-                if case .group(let children) = mod.kind {
-                    return children.filter { $0.isEnabled }.map { $0.uniqueId }
-                }
-                return mod.isEnabled ? [mod.uniqueId] : []
-            }
-            .filter { !$0.rawValue.isEmpty }
-
-        modProfiles[index].enabledModIds = actualEnabledIds
-        saveProfiles()
+        profilesStore.syncActiveProfileIds(mods: mods)
     }
 
 
