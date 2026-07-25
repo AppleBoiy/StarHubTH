@@ -74,7 +74,7 @@ struct BranchBackupSheet: View {
                 .keyboardShortcut(.cancelAction)
                 
                 Button(localizationStore.L(L10n.Saves.branch)) {
-                    _ = appCoordinator.branchFromBackup(backup: backup, newName: newName, newFarm: newFarm)
+                    appCoordinator.branchFromBackup(backup: backup, newName: newName, newFarm: newFarm)
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)

@@ -245,12 +245,20 @@ final class AppCoordinator: ObservableObject {
         savesStore.duplicateSave(info: info, newName: newName, newFarm: newFarm, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
-    func branchFromBackup(backup: SaveBackup, newName: String, newFarm: String) -> Bool {
+    func branchFromBackup(backup: SaveBackup, newName: String, newFarm: String) {
         savesStore.branchFromBackup(backup: backup, newName: newName, newFarm: newFarm, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
     func restoreBackup(backup: SaveBackup, info: SaveGameInfo) {
         savesStore.restoreBackup(backup: backup, info: info, showModal: { [weak self] message in self?.alertStore.show(message) })
+    }
+
+    func createBackup(info: SaveGameInfo) {
+        savesStore.createBackup(info: info, showModal: { [weak self] message in self?.alertStore.show(message) })
+    }
+
+    func deleteBackup(_ backup: SaveBackup) {
+        savesStore.deleteBackup(backup, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
     func backupAllSaves() {

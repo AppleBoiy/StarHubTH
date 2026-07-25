@@ -39,9 +39,8 @@ struct SaveTimelineView: View {
                 Spacer()
                 // Backup Button
                 Button(action: {
-                    if savesStore.createBackup(info: save) {
-                        loadBackups()
-                    }
+                    appCoordinator.createBackup(info: save)
+                    loadBackups()
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "plus.circle.fill")
@@ -87,9 +86,8 @@ struct SaveTimelineView: View {
                                     showRestoreConfirm = true
                                 },
                                 onDelete: {
-                                    if savesStore.deleteBackup(backup) {
-                                        loadBackups()
-                                    }
+                                    appCoordinator.deleteBackup(backup)
+                                    loadBackups()
                                 }
                             )
                         }

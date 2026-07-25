@@ -23,15 +23,13 @@ final class SavesStore: ObservableObject {
     @Published var saves: [SaveGameInfo] = []
     @Published var editingSave: SaveGameInfo? {
         didSet {
-            if let save = editingSave {
-                if let items = saveStoring.fetchInventory(for: save) {
-                    inventoryToEdit = items
-                } else {
-                    inventoryToEdit = []
-                }
-            } else {
+            guard let save = editingSave else {
                 inventoryToEdit = []
+                return
             }
+            // A save with unreadable/corrupt inventory XML still opens for editing the
+            // other fields — an empty item list here, not a blocking alert.
+            inventoryToEdit = (try? saveStoring.fetchInventory(for: save)) ?? []
         }
     }
     @Published var inventoryToEdit: [InventoryItem] = []
@@ -51,38 +49,50 @@ final class SavesStore: ObservableObject {
         self.localization = localization
     }
 
+    /// A saves-directory read failure degrades to an empty list rather than surfacing a
+    /// blocking alert on every reload — `SaveGameInfo` isn't optional-friendly UI-wise, and
+    /// this is called after nearly every mutation below, not just on first appearance.
     func reloadSaves() {
-        self.saves = saveStoring.fetchSaves()
+        do {
+            self.saves = try saveStoring.fetchSaves()
+        } catch {
+            self.saves = []
+        }
+    }
+
+    private func message(for error: SaveStorageError, headlineKey: String) -> String {
+        guard let detail = error.detail else { return localization.L(headlineKey) }
+        return "\(localization.L(headlineKey))\n\(detail)"
     }
 
     func editSave(info: SaveGameInfo, newName: String, newFarm: String, newFav: String, newMoney: Int, newTotalMoneyEarned: Int, newMaxHealth: Int, newMaxStamina: Int, newGoldenWalnuts: Int, newQiGems: Int, newClubCoins: Int, newSpouse: String, showModal: (String) -> Void) {
-        let success = saveStoring.updateSave(info: info, newName: newName, newFarm: newFarm, newFav: newFav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newMaxHealth, newMaxStamina: newMaxStamina, newGoldenWalnuts: newGoldenWalnuts, newQiGems: newQiGems, newClubCoins: newClubCoins, newSpouse: newSpouse)
-        if success {
+        do {
+            try saveStoring.updateSave(info: info, newName: newName, newFarm: newFarm, newFav: newFav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newMaxHealth, newMaxStamina: newMaxStamina, newGoldenWalnuts: newGoldenWalnuts, newQiGems: newQiGems, newClubCoins: newClubCoins, newSpouse: newSpouse)
             reloadSaves()
             showModal(localization.L(L10n.VM.saveSuccess))
-        } else {
-            showModal(localization.L(L10n.VM.saveError))
+        } catch {
+            showModal(message(for: error, headlineKey: L10n.VM.saveError))
         }
     }
 
     func saveInventory(showModal: (String) -> Void) {
         guard let save = editingSave else { return }
-        if saveStoring.updateInventory(info: save, items: inventoryToEdit) {
+        do {
+            try saveStoring.updateInventory(info: save, items: inventoryToEdit)
             showModal(localization.L(L10n.Saves.inventorySuccess))
-            if let items = saveStoring.fetchInventory(for: save) {
-                inventoryToEdit = items
-            }
-        } else {
-            showModal(localization.L(L10n.Saves.inventoryError))
+            inventoryToEdit = (try? saveStoring.fetchInventory(for: save)) ?? inventoryToEdit
+        } catch {
+            showModal(message(for: error, headlineKey: L10n.Saves.inventoryError))
         }
     }
 
     func deleteSave(info: SaveGameInfo, showModal: (String) -> Void) {
-        if saveStoring.deleteSave(info: info) {
+        do {
+            try saveStoring.deleteSave(info: info)
             reloadSaves()
             showModal(localization.L(L10n.VM.deleteSaveSuccess))
-        } else {
-            showModal(localization.L(L10n.VM.deleteSaveError))
+        } catch {
+            showModal(message(for: error, headlineKey: L10n.VM.deleteSaveError))
         }
     }
 
@@ -170,24 +180,33 @@ final class SavesStore: ObservableObject {
             allowsMultipleSelection: false,
             canChooseDirectories: false
         )
-        if let url = urls.first {
-            // Copy to app support dir to prevent broken paths
-            let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-                .appendingPathComponent("StarHubTH/Avatars", isDirectory: true)
-            try? FileManager.default.createDirectory(at: supportDir, withIntermediateDirectories: true)
-            let destURL = supportDir.appendingPathComponent("\(folderName)_\(url.lastPathComponent)")
-            try? FileManager.default.copyItem(at: url, to: destURL)
-            setAvatar(forSave: folderName, iconPath: destURL.path)
-            completion?(destURL.path)
+        guard let url = urls.first else { return }
+
+        // Copy to app support dir to prevent broken paths
+        let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("StarHubTH/Avatars", isDirectory: true)
+        // Idempotent — "directory already exists" is the expected outcome on every call
+        // after the first, not a failure worth reporting.
+        try? FileManager.default.createDirectory(at: supportDir, withIntermediateDirectories: true)
+        let destURL = supportDir.appendingPathComponent("\(folderName)_\(url.lastPathComponent)")
+        do {
+            try FileManager.default.copyItem(at: url, to: destURL)
+        } catch {
+            // The picked file couldn't be copied — leave the existing avatar untouched
+            // rather than pointing setAvatar at a path with nothing behind it.
+            return
         }
+        setAvatar(forSave: folderName, iconPath: destURL.path)
+        completion?(destURL.path)
     }
 
     func duplicateSave(info: SaveGameInfo, newName: String, newFarm: String, showModal: (String) -> Void) {
-        if saveStoring.duplicateSave(info: info, newName: newName, newFarm: newFarm) {
+        do {
+            try saveStoring.duplicateSave(info: info, newName: newName, newFarm: newFarm)
             reloadSaves()
             showModal(localization.L(L10n.VM.duplicateSaveSuccess))
-        } else {
-            showModal(localization.L(L10n.VM.duplicateSaveError))
+        } catch {
+            showModal(message(for: error, headlineKey: L10n.VM.duplicateSaveError))
         }
     }
 
@@ -197,38 +216,47 @@ final class SavesStore: ObservableObject {
 
     // MARK: - Backup Timeline
 
+    /// Same swallow-to-empty tradeoff as `reloadSaves()` — see its comment.
     func listBackups(for info: SaveGameInfo) -> [SaveBackup] {
-        saveStoring.listBackups(for: info)
+        (try? saveStoring.listBackups(for: info)) ?? []
     }
 
-    func createBackup(info: SaveGameInfo) -> Bool {
-        saveStoring.backupSave(info: info)
+    func createBackup(info: SaveGameInfo, showModal: (String) -> Void) {
+        do {
+            try saveStoring.backupSave(info: info)
+        } catch {
+            showModal(message(for: error, headlineKey: L10n.VM.saveError))
+        }
     }
 
-    func branchFromBackup(backup: SaveBackup, newName: String, newFarm: String, showModal: (String) -> Void) -> Bool {
-        if saveStoring.branchFromBackup(backup: backup, newName: newName, newFarm: newFarm) {
+    func branchFromBackup(backup: SaveBackup, newName: String, newFarm: String, showModal: (String) -> Void) {
+        do {
+            try saveStoring.branchFromBackup(backup: backup, newName: newName, newFarm: newFarm)
             reloadSaves()
             showModal(localization.L(L10n.VM.branchSuccess))
-            return true
-        } else {
-            showModal(localization.L(L10n.VM.branchError))
-            return false
+        } catch {
+            showModal(message(for: error, headlineKey: L10n.VM.branchError))
         }
     }
 
     func restoreBackup(backup: SaveBackup, info: SaveGameInfo, showModal: (String) -> Void) {
-        if saveStoring.restoreBackup(backup: backup, info: info) {
+        do {
+            try saveStoring.restoreBackup(backup: backup, info: info)
             reloadSaves()
             viewingSaveTimeline = nil
             editingSave = nil
             showModal(localization.L(L10n.VM.restoreSuccess))
-        } else {
-            showModal(localization.L(L10n.VM.restoreError))
+        } catch {
+            showModal(message(for: error, headlineKey: L10n.VM.restoreError))
         }
     }
 
-    func deleteBackup(_ backup: SaveBackup) -> Bool {
-        saveStoring.deleteBackup(backup)
+    func deleteBackup(_ backup: SaveBackup, showModal: (String) -> Void) {
+        do {
+            try saveStoring.deleteBackup(backup)
+        } catch {
+            showModal(message(for: error, headlineKey: L10n.VM.deleteSaveError))
+        }
     }
 
     // MARK: - Save Notes

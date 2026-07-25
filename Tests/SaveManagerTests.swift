@@ -54,13 +54,15 @@ struct SaveManagerTests {
 
         let info = makeSaveGameInfo(fileURL: folder.appendingPathComponent(saveName))
 
-        let first = SaveManager.shared.backupSave(info: info)
-        let second = SaveManager.shared.backupSave(info: info)
+        var firstSucceeded = true
+        var secondSucceeded = true
+        do { try SaveManager.shared.backupSave(info: info) } catch { firstSucceeded = false }
+        do { try SaveManager.shared.backupSave(info: info) } catch { secondSucceeded = false }
 
-        SimpleTestFramework.assertTrue(first, "First backup should succeed")
-        SimpleTestFramework.assertTrue(second, "A second backup within the same second should not collide and silently fail")
+        SimpleTestFramework.assertTrue(firstSucceeded, "First backup should succeed")
+        SimpleTestFramework.assertTrue(secondSucceeded, "A second backup within the same second should not collide and silently fail")
 
-        let backups = SaveManager.shared.listBackups(for: info)
+        let backups = (try? SaveManager.shared.listBackups(for: info)) ?? []
         SimpleTestFramework.assertTrue(backups.count == 2, "Both backups should exist on disk, not one silently dropped")
     }
 
@@ -89,14 +91,15 @@ struct SaveManagerTests {
         let fileURL = folder.appendingPathComponent(saveName)
         let info = makeSaveGameInfo(fileURL: fileURL)
 
-        guard var inventory = SaveManager.shared.fetchInventory(for: info) else {
+        guard var inventory = try? SaveManager.shared.fetchInventory(for: info) else {
             SimpleTestFramework.assertTrue(false, "fetchInventory should parse the synthetic save")
             return
         }
         SimpleTestFramework.assertTrue(inventory.count == 1, "Should find the one item slot")
 
         inventory[0].stack = 10
-        let updated = SaveManager.shared.updateInventory(info: info, items: inventory)
+        var updated = true
+        do { try SaveManager.shared.updateInventory(info: info, items: inventory) } catch { updated = false }
         SimpleTestFramework.assertTrue(updated, "updateInventory should succeed")
 
         let rewritten = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
@@ -118,8 +121,13 @@ struct SaveManagerTests {
         defer { try? FileManager.default.removeItem(at: folder.deletingLastPathComponent()) }
 
         let info = makeSaveGameInfo(fileURL: folder.appendingPathComponent(saveName))
-        let result = SaveManager.shared.duplicateSave(info: info, newName: "NewName", newFarm: "NewFarm")
+        var succeeded = true
+        do {
+            try SaveManager.shared.duplicateSave(info: info, newName: "NewName", newFarm: "NewFarm")
+        } catch {
+            succeeded = false
+        }
 
-        SimpleTestFramework.assertFalse(result, "duplicateSave should report failure when the internal rename can't read a file, not silently claim success")
+        SimpleTestFramework.assertFalse(succeeded, "duplicateSave should report failure when the internal rename can't read a file, not silently claim success")
     }
 }
