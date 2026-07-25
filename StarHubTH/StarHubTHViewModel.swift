@@ -5,9 +5,24 @@ import Combine
 
 final class StarHubTHViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
-    @Published var saveViewMode: SaveViewMode = .list
-    @Published var saveSortOption: SaveSortOption = .lastPlayed
-    @Published var saveFilterTag: String = ""
+
+    /// Phase 4.6: save-file state now lives in SavesStore
+    /// (Features/Saves/SavesStore.swift). Assigned in init() since it depends on
+    /// filePicking/localizationStore.
+    let savesStore: SavesStore
+
+    var saveViewMode: SaveViewMode {
+        get { savesStore.saveViewMode }
+        set { savesStore.saveViewMode = newValue }
+    }
+    var saveSortOption: SaveSortOption {
+        get { savesStore.saveSortOption }
+        set { savesStore.saveSortOption = newValue }
+    }
+    var saveFilterTag: String {
+        get { savesStore.saveFilterTag }
+        set { savesStore.saveFilterTag = newValue }
+    }
 
     @Published var gameDir: String = "" {
         didSet {
@@ -152,28 +167,35 @@ final class StarHubTHViewModel: ObservableObject {
     @Published var showAlert: Bool = false
     @Published var isThaiTranslationInstalled: Bool = false
     
-    @Published var saves: [SaveGameInfo] = []
     @Published var editingModConfig: ModItem? = nil
     @Published var viewingModDetails: ModItem? = nil
-    @Published var editingSave: SaveGameInfo? = nil {
-        didSet {
-            if let save = editingSave {
-                if let items = SaveManager.shared.fetchInventory(for: save) {
-                    inventoryToEdit = items
-                } else {
-                    inventoryToEdit = []
-                }
-            } else {
-                inventoryToEdit = []
-            }
-        }
+
+    var saves: [SaveGameInfo] {
+        get { savesStore.saves }
+        set { savesStore.saves = newValue }
     }
-    @Published var inventoryToEdit: [InventoryItem] = []
-    @Published var viewingSaveTimeline: SaveGameInfo? = nil
-    
-    @Published var saveToDuplicate: SaveGameInfo? = nil
-    @Published var backupToBranch: SaveBackup? = nil
-    
+    var editingSave: SaveGameInfo? {
+        get { savesStore.editingSave }
+        set { savesStore.editingSave = newValue }
+    }
+    var inventoryToEdit: [InventoryItem] {
+        get { savesStore.inventoryToEdit }
+        set { savesStore.inventoryToEdit = newValue }
+    }
+    var viewingSaveTimeline: SaveGameInfo? {
+        get { savesStore.viewingSaveTimeline }
+        set { savesStore.viewingSaveTimeline = newValue }
+    }
+    var saveToDuplicate: SaveGameInfo? {
+        get { savesStore.saveToDuplicate }
+        set { savesStore.saveToDuplicate = newValue }
+    }
+    var backupToBranch: SaveBackup? {
+        get { savesStore.backupToBranch }
+        set { savesStore.backupToBranch = newValue }
+    }
+
+
     @Published var steamUsername: String = ""
     @Published var steamAvatarPath: String? = nil
     
@@ -234,14 +256,15 @@ final class StarHubTHViewModel: ObservableObject {
         thaiHubStore = ThaiHubStore(localization: localizationStore)
         profilesStore = ProfilesStore(profileStoring: ProfileManager.shared, localization: localizationStore)
         modPacksStore = ModPacksStore(nexusAPIClient: LiveNexusAPIClient.shared, localization: localizationStore, logStore: logStore)
+        savesStore = SavesStore(saveStoring: SaveManager.shared, saveNoteStoring: SaveNotesStore.shared, filePicking: filePicking, localization: localizationStore)
 
-        // LogStore, ThaiHubStore, and ProfilesStore all mutate their own @Published
-        // state from within their own methods (often via an async dispatch), not just
-        // through a setter this ViewModel exposes — unlike currentLanguage (Phase 4.1),
-        // a single objectWillChange.send() in a forwarding setter isn't enough. Forward
-        // each store's own publisher instead. ModPacksStore doesn't need this — its one
-        // @Published property only ever changes through the ViewModel's own forwarding
-        // setter, which already calls objectWillChange.send() manually.
+        // LogStore, ThaiHubStore, ProfilesStore, and SavesStore all mutate their own
+        // @Published state from within their own methods (often via an async dispatch),
+        // not just through a setter this ViewModel exposes — unlike currentLanguage
+        // (Phase 4.1), a single objectWillChange.send() in a forwarding setter isn't
+        // enough. Forward each store's own publisher instead. ModPacksStore doesn't need
+        // this — its one @Published property only ever changes through the ViewModel's
+        // own forwarding setter, which already calls objectWillChange.send() manually.
         logStore.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
@@ -249,6 +272,9 @@ final class StarHubTHViewModel: ObservableObject {
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
         profilesStore.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        savesStore.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
 
@@ -761,221 +787,85 @@ final class StarHubTHViewModel: ObservableObject {
     
     // MARK: - Saves
     func reloadSaves() {
-        self.saves = SaveManager.shared.fetchSaves()
+        savesStore.reloadSaves()
     }
-    
+
     func editSave(info: SaveGameInfo, newName: String, newFarm: String, newFav: String, newMoney: Int, newTotalMoneyEarned: Int, newMaxHealth: Int, newMaxStamina: Int, newGoldenWalnuts: Int, newQiGems: Int, newClubCoins: Int, newSpouse: String) {
-        let success = SaveManager.shared.updateSave(info: info, newName: newName, newFarm: newFarm, newFav: newFav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newMaxHealth, newMaxStamina: newMaxStamina, newGoldenWalnuts: newGoldenWalnuts, newQiGems: newQiGems, newClubCoins: newClubCoins, newSpouse: newSpouse)
-        if success {
-            reloadSaves()
-            showModal(message: L(L10n.VM.saveSuccess))
-        } else {
-            showModal(message: L(L10n.VM.saveError))
-        }
-    }
-    
-    func saveInventory() {
-        guard let save = editingSave else { return }
-        if SaveManager.shared.updateInventory(info: save, items: inventoryToEdit) {
-            showModal(message: L(L10n.Saves.inventorySuccess))
-            if let items = SaveManager.shared.fetchInventory(for: save) {
-                inventoryToEdit = items
-            }
-        } else {
-            showModal(message: L(L10n.Saves.inventoryError))
-        }
-    }
-    func deleteSave(info: SaveGameInfo) {
-        if SaveManager.shared.deleteSave(info: info) {
-            reloadSaves()
-            showModal(message: L(L10n.VM.deleteSaveSuccess))
-        } else {
-            showModal(message: L(L10n.VM.deleteSaveError))
-        }
-    }
-    
-    var savesHierarchy: [SaveNode] {
-        let saveNames = Set(saves.map(\.folderName))
-        
-        func getParentFolderName(for folderName: String) -> String? {
-            var candidate = folderName
-            while let range = candidate.range(of: "_", options: .backwards) {
-                candidate = String(candidate[..<range.lowerBound])
-                if saveNames.contains(candidate) {
-                    return candidate
-                }
-            }
-            return nil
-        }
-        
-        func sortedNodes(_ nodes: [SaveNode]) -> [SaveNode] {
-            nodes
-                .map { SaveNode(info: $0.info, children: sortedNodes($0.children)) }
-                .sorted { a, b in
-                    switch saveSortOption {
-                    case .name:
-                        return a.info.playerName.localizedCaseInsensitiveCompare(b.info.playerName) == .orderedAscending
-                    case .lastPlayed:
-                        return a.info.lastModified > b.info.lastModified
-                    case .money:
-                        return a.info.money > b.info.money
-                    }
-                }
-        }
-        
-        var childrenByParent: [String: [SaveGameInfo]] = [:]
-        var rootSaves: [SaveGameInfo] = []
-        
-        for save in saves {
-            if let parentFolderName = getParentFolderName(for: save.folderName) {
-                childrenByParent[parentFolderName, default: []].append(save)
-            } else {
-                rootSaves.append(save)
-            }
-        }
-        
-        func buildNode(for save: SaveGameInfo) -> SaveNode {
-            let children = childrenByParent[save.folderName, default: []].map { buildNode(for: $0) }
-            return SaveNode(info: save, children: children)
-        }
-        
-        var roots = rootSaves.map { buildNode(for: $0) }
-        
-        // Apply tag filter recursively
-        if !saveFilterTag.isEmpty {
-            func filterNode(_ node: SaveNode) -> SaveNode? {
-                let tag = SaveNotesStore.shared.note(for: node.info.folderName).tag
-                let selfMatches = tag == saveFilterTag
-                let filteredChildren = node.children.compactMap { filterNode($0) }
-                if selfMatches || !filteredChildren.isEmpty {
-                    return SaveNode(info: node.info, children: filteredChildren)
-                }
-                return nil
-            }
-            roots = roots.compactMap { filterNode($0) }
-        }
-        
-        roots = sortedNodes(roots)
-        
-        return roots
-    }
-    
-    var availableFilterTags: [String] {
-        let allTags = saves.compactMap { SaveNotesStore.shared.note(for: $0.folderName).tag }.filter { !$0.isEmpty }
-        return Array(Set(allTags)).sorted()
-    }
-    
-    func setAvatar(forSave folderName: String, iconPath: String) {
-        let note = SaveNotesStore.shared.note(for: folderName)
-        SaveNotesStore.shared.setNote(for: folderName, tag: note.tag, note: note.note, customIconPath: iconPath)
-        objectWillChange.send()
-    }
-    
-    func selectCustomAvatar(forSave folderName: String, completion: ((String) -> Void)? = nil) {
-        let urls = filePicking.pickFiles(
-            title: L(L10n.Saves.avatarPanelTitle),
-            allowedContentTypes: [.png, .jpeg, .gif],
-            allowsMultipleSelection: false,
-            canChooseDirectories: false
+        savesStore.editSave(
+            info: info, newName: newName, newFarm: newFarm, newFav: newFav, newMoney: newMoney,
+            newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newMaxHealth, newMaxStamina: newMaxStamina,
+            newGoldenWalnuts: newGoldenWalnuts, newQiGems: newQiGems, newClubCoins: newClubCoins, newSpouse: newSpouse,
+            showModal: { [weak self] message in self?.showModal(message: message) }
         )
-        if let url = urls.first {
-            // Copy to app support dir to prevent broken paths
-            let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-                .appendingPathComponent("StarHubTH/Avatars", isDirectory: true)
-            try? FileManager.default.createDirectory(at: supportDir, withIntermediateDirectories: true)
-            let destURL = supportDir.appendingPathComponent("\(folderName)_\(url.lastPathComponent)")
-            try? FileManager.default.copyItem(at: url, to: destURL)
-            setAvatar(forSave: folderName, iconPath: destURL.path)
-            completion?(destURL.path)
-        }
     }
-    
+
+    func saveInventory() {
+        savesStore.saveInventory(showModal: { [weak self] message in self?.showModal(message: message) })
+    }
+
+    func deleteSave(info: SaveGameInfo) {
+        savesStore.deleteSave(info: info, showModal: { [weak self] message in self?.showModal(message: message) })
+    }
+
+    var savesHierarchy: [SaveNode] {
+        savesStore.savesHierarchy
+    }
+
+    var availableFilterTags: [String] {
+        savesStore.availableFilterTags
+    }
+
+    func setAvatar(forSave folderName: String, iconPath: String) {
+        savesStore.setAvatar(forSave: folderName, iconPath: iconPath)
+    }
+
+    func selectCustomAvatar(forSave folderName: String, completion: ((String) -> Void)? = nil) {
+        savesStore.selectCustomAvatar(forSave: folderName, completion: completion)
+    }
+
     func duplicateSave(info: SaveGameInfo, newName: String, newFarm: String) {
-        if SaveManager.shared.duplicateSave(info: info, newName: newName, newFarm: newFarm) {
-            reloadSaves()
-            showModal(message: L(L10n.VM.duplicateSaveSuccess))
-        } else {
-            showModal(message: L(L10n.VM.duplicateSaveError))
-        }
+        savesStore.duplicateSave(info: info, newName: newName, newFarm: newFarm, showModal: { [weak self] message in self?.showModal(message: message) })
     }
-    
+
     func openSaveInFinder(info: SaveGameInfo) {
-        SaveManager.shared.openSaveInFinder(info: info)
+        savesStore.openSaveInFinder(info: info)
     }
 
     // MARK: - Backup Timeline
 
     func listBackups(for info: SaveGameInfo) -> [SaveBackup] {
-        SaveManager.shared.listBackups(for: info)
+        savesStore.listBackups(for: info)
     }
 
     func createBackup(info: SaveGameInfo) -> Bool {
-        SaveManager.shared.backupSave(info: info)
+        savesStore.createBackup(info: info)
     }
-    
+
     func branchFromBackup(backup: SaveBackup, newName: String, newFarm: String) -> Bool {
-        if SaveManager.shared.branchFromBackup(backup: backup, newName: newName, newFarm: newFarm) {
-            reloadSaves()
-            showModal(message: L(L10n.VM.branchSuccess))
-            return true
-        } else {
-            showModal(message: L(L10n.VM.branchError))
-            return false
-        }
+        savesStore.branchFromBackup(backup: backup, newName: newName, newFarm: newFarm, showModal: { [weak self] message in self?.showModal(message: message) })
     }
 
     func restoreBackup(backup: SaveBackup, info: SaveGameInfo) {
-        if SaveManager.shared.restoreBackup(backup: backup, info: info) {
-            reloadSaves()
-            viewingSaveTimeline = nil
-            editingSave = nil
-            showModal(message: L(L10n.VM.restoreSuccess))
-        } else {
-            showModal(message: L(L10n.VM.restoreError))
-        }
+        savesStore.restoreBackup(backup: backup, info: info, showModal: { [weak self] message in self?.showModal(message: message) })
     }
 
     func deleteBackup(_ backup: SaveBackup) -> Bool {
-        SaveManager.shared.deleteBackup(backup)
+        savesStore.deleteBackup(backup)
     }
 
     // MARK: - Save Notes
 
     func getNote(for folderName: String) -> SaveNote {
-        SaveNotesStore.shared.note(for: folderName)
+        savesStore.getNote(for: folderName)
     }
 
     func setNote(for folderName: String, tag: String, note: String) {
-        // Preserve existing customIconPath
-        let existing = SaveNotesStore.shared.note(for: folderName)
-        SaveNotesStore.shared.setNote(for: folderName, tag: tag, note: note, customIconPath: existing.customIconPath)
-        objectWillChange.send()
+        savesStore.setNote(for: folderName, tag: tag, note: note)
     }
 
     // MARK: - Backup & Management
     func backupAllSaves() {
-        let home = NSHomeDirectory()
-        let savesDir = "\(home)/.config/StardewValley/Saves"
-        let desktopDir = "\(home)/Desktop"
-        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium).replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "")
-        let zipPath = "\(desktopDir)/StardewSaves_Backup_\(timestamp).zip"
-        
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
-        process.arguments = ["-r", zipPath, "."]
-        process.currentDirectoryURL = URL(fileURLWithPath: savesDir)
-        
-        do {
-            try process.run()
-            process.waitUntilExit()
-            if process.terminationStatus == 0 {
-                showModal(message: String(format: L(L10n.VM.backupSavesSuccess), zipPath))
-            } else {
-                showModal(message: L(L10n.VM.zipSavesError))
-            }
-        } catch {
-            showModal(message: L(L10n.VM.cannotRunZip))
-        }
+        savesStore.backupAllSaves(showModal: { [weak self] message in self?.showModal(message: message) })
     }
     
     func backupAllMods() {
@@ -1128,9 +1018,7 @@ final class StarHubTHViewModel: ObservableObject {
     }
     
     func openSavesFolder() {
-        let home = NSHomeDirectory()
-        let savesDir = URL(fileURLWithPath: "\(home)/.config/StardewValley/Saves")
-        NSWorkspace.shared.open(savesDir)
+        savesStore.openSavesFolder()
     }
     
     // MARK: - Mod Profiles
