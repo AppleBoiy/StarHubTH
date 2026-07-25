@@ -1,8 +1,10 @@
 import Foundation
 import Cocoa
 import SwiftUI
+import Combine
 
 final class StarHubTHViewModel: ObservableObject {
+    private var cancellables = Set<AnyCancellable>()
     @Published var saveViewMode: SaveViewMode = .list
     @Published var saveSortOption: SaveSortOption = .lastPlayed
     @Published var saveFilterTag: String = ""
@@ -120,11 +122,21 @@ final class StarHubTHViewModel: ObservableObject {
     @Published var thaiTranslations: [ThaiTranslationMod] = []
     @Published var viewingThaiMod: ThaiTranslationMod? = nil
     
-    @Published var logOutput: String = ""
-    @Published var logEntries: [LogEntry] = []
-    @Published var isReadingSMAPILog: Bool = false
-    private var smapiLogFileHandle: FileHandle? = nil
-    @Published var smapiLogTimer: Timer? = nil
+    /// Phase 4.2: log state and SMAPI log tailing now live in LogStore
+    /// (Features/Logs/LogStore.swift). Forwarded here so the 3 existing views that touch
+    /// this state didn't need to change in this commit.
+    let logStore = LogStore()
+
+    var logOutput: String {
+        get { logStore.logOutput }
+        set { logStore.logOutput = newValue }
+    }
+    var logEntries: [LogEntry] {
+        get { logStore.logEntries }
+        set { logStore.logEntries = newValue }
+    }
+    var isReadingSMAPILog: Bool { logStore.isReadingSMAPILog }
+
     @Published var alertMessage: String = ""
     @Published var showAlert: Bool = false
     @Published var isThaiTranslationInstalled: Bool = false
@@ -193,6 +205,14 @@ final class StarHubTHViewModel: ObservableObject {
     private let preferenceStoring: PreferenceStoring = PreferenceStore()
 
     init() {
+        // LogStore mutates its own @Published state from within its own methods (log,
+        // loadSmapiLog), not just through a setter this ViewModel exposes — unlike
+        // currentLanguage (Phase 4.1), a single objectWillChange.send() in a forwarding
+        // setter isn't enough. Forward the store's own publisher instead.
+        logStore.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
         // Automatically retrieve saved game path, or attempt to find the default Steam path on Mac
         let savedPath = preferenceStoring.string(forKey: "gameDir") ?? ""
         if !savedPath.isEmpty && FileManager.default.fileExists(atPath: savedPath) {
@@ -672,135 +692,16 @@ final class StarHubTHViewModel: ObservableObject {
     }
 
     func log(_ message: String, level: LogLevel = .info) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
-        let timestamp = formatter.string(from: Date())
-        let entry = LogEntry(timestamp: timestamp, message: message, level: level, source: .app)
-
-        let logString = "[\(timestamp)] \(message)\n"
-
-        // Append to file logger
-        DispatchQueue.global(qos: .background).async {
-            if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-                let logDir = appSupport.appendingPathComponent("StarHubTH")
-                try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
-                let logFile = logDir.appendingPathComponent("StarHubTH_debug.log")
-                if let data = logString.data(using: .utf8) {
-                    if FileManager.default.fileExists(atPath: logFile.path) {
-                        if let fileHandle = try? FileHandle(forWritingTo: logFile) {
-                            fileHandle.seekToEndOfFile()
-                            fileHandle.write(data)
-                            fileHandle.closeFile()
-                        }
-                    } else {
-                        try? data.write(to: logFile)
-                    }
-                }
-            }
-        }
-
-        if Thread.isMainThread {
-            logEntries.append(entry)
-            logOutput += logString
-        } else {
-            DispatchQueue.main.async {
-                self.logEntries.append(entry)
-                self.logOutput += logString
-            }
-        }
+        logStore.log(message, level: level)
     }
-
-    // MARK: - SMAPI Real-time Log Reader
-
-    // MARK: - SMAPI Log Reader
 
     /// Load SMAPI-latest.txt asynchronously when Logs tab is opened.
     func loadSmapiLog() {
-        let path = smapiLogPath
-        guard FileManager.default.fileExists(atPath: path) else { return }
-
-        isReadingSMAPILog = true
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            guard let data = FileManager.default.contents(atPath: path),
-                  let text = String(data: data, encoding: .utf8) else {
-                DispatchQueue.main.async {
-                    self.isReadingSMAPILog = false
-                }
-                return
-            }
-
-            let lines = text.components(separatedBy: .newlines)
-            var entries: [LogEntry] = []
-
-            for line in lines {
-                if line.hasPrefix("[") {
-                    guard let bracketEnd = line.firstIndex(of: "]") else {
-                        continue
-                    }
-
-                    let header = String(line[line.index(after: line.startIndex)..<bracketEnd])
-                    let headerParts = header.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-
-                    let ts = headerParts.count >= 1 ? headerParts[0] : "—"
-                    let levelStr = headerParts.count >= 2 ? headerParts[1] : ""
-                    let contextName: String? = {
-                        guard headerParts.count >= 3 else { return nil }
-                        let name = headerParts[2...].joined(separator: " ")
-                        return (name == "SMAPI" || name == "game") ? nil : name
-                    }()
-
-                    let level: LogLevel
-                    switch levelStr.uppercased() {
-                    case "ERROR":  level = .error
-                    case "WARN":   level = .warning
-                    case "ALERT":  level = .warning
-                    case "INFO":   level = .info
-                    default:       level = .smapi  // TRACE, DEBUG, etc.
-                    }
-
-                    let msgStart = line.index(after: bracketEnd)
-                    let message = msgStart < line.endIndex
-                        ? String(line[msgStart...]).trimmingCharacters(in: .whitespaces)
-                        : ""
-
-                    if !message.isEmpty || contextName != nil {
-                        var entry = LogEntry(timestamp: ts, message: message, level: level, source: .smapi)
-                        entry.modName = contextName
-                        entries.append(entry)
-                    }
-                } else {
-                    let trimmed = line.trimmingCharacters(in: .whitespaces)
-                    guard !trimmed.isEmpty, !entries.isEmpty else { continue }
-                    let last = entries.removeLast()
-                    let combined = last.message.isEmpty ? trimmed : last.message + "\n" + trimmed
-                    var updated = LogEntry(timestamp: last.timestamp, message: combined, level: last.level, source: .smapi)
-                    updated.modName = last.modName
-                    entries.append(updated)
-                }
-            }
-
-            DispatchQueue.main.async {
-                self.logEntries.append(contentsOf: entries)
-                self.isReadingSMAPILog = false
-            }
-        }
+        logStore.loadSmapiLog()
     }
 
-    private var smapiLogPath: String {
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
-        return (homeDir as NSString).appendingPathComponent(
-            ".config/StardewValley/ErrorLogs/SMAPI-latest.txt"
-        )
-    }
-
-    func startSmapiLogWatcher() { loadSmapiLog() }
-    func stopSmapiLogWatcher() {
-        smapiLogTimer?.invalidate()
-        smapiLogTimer = nil
-        try? smapiLogFileHandle?.close()
-        smapiLogFileHandle = nil
-    }
+    func startSmapiLogWatcher() { logStore.startSmapiLogWatcher() }
+    func stopSmapiLogWatcher() { logStore.stopSmapiLogWatcher() }
 
     func showModal(message: String) {
         self.alertMessage = message
