@@ -57,20 +57,25 @@ def generate_localizable_strings():
 def concurrency_check_flags():
     """Return the strictest concurrency-diagnostic flags this swiftc accepts.
 
-    Refactor Phase 0.4 (docs/REFACTOR_PLAN.md): the codebase currently relies on ~65
-    hand-written DispatchQueue.main.async hops for main-thread correctness, with no
-    @MainActor annotations, so the compiler cannot see a missed hop. These flags make
-    those visible as warnings. Phase 5 burns the count to zero, then they become errors.
+    Refactor Phase 0.4 (docs/REFACTOR_PLAN.md) added `-strict-concurrency=complete` when
+    the codebase relied on ~65 hand-written DispatchQueue.main.async hops for main-thread
+    correctness with no @MainActor annotations, so the compiler couldn't see a missed hop.
+    Phase 5 (5.1-5.6: async/await conversion, Sendable conformance, 5.3: @MainActor on
+    every store) burned that warning count to zero, so as of 5.7 the codebase compiles
+    clean under full Swift 6 language mode (`-swift-version 6`, verified directly) — try
+    that first, since it makes every one of these diagnostics a hard error instead of a
+    warning, closing the gap the plain warning flag left open.
 
-    The spelling of these flags changed across Swift releases (-warn-concurrency was
-    superseded by -strict-concurrency=), and an unrecognised flag makes swiftc fail
-    outright. So probe rather than assume, and degrade to no flags rather than break
-    the build on an unexpected toolchain.
+    The spelling/strength of these flags changed across Swift releases (-warn-concurrency
+    was superseded by -strict-concurrency=, itself superseded by full -swift-version 6),
+    and an unrecognised flag makes swiftc fail outright. So probe rather than assume, and
+    degrade to no flags rather than break the build on an unexpected toolchain.
     """
     if os.environ.get("STARHUB_NO_CONCURRENCY_CHECKS"):
         return []
 
     candidates = [
+        ["-swift-version", "6"],
         ["-strict-concurrency=complete"],
         ["-Xfrontend", "-strict-concurrency=complete"],
         ["-Xfrontend", "-warn-concurrency"],
