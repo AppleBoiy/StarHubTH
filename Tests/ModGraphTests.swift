@@ -26,7 +26,7 @@ struct ModGraphTests {
             isEnabled: enabled,
             dependencies: dependencies,
             kind: .single,
-            modTag: "",
+            tag: "",
             installDate: nil,
             lastModifiedDate: nil
         )
@@ -44,7 +44,7 @@ struct ModGraphTests {
             isEnabled: enabled,
             dependencies: [],
             kind: .group(children: children),
-            modTag: "",
+            tag: "",
             installDate: nil,
             lastModifiedDate: nil
         )

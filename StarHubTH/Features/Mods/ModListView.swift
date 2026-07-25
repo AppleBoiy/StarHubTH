@@ -16,9 +16,9 @@ struct ModListView: View {
         var tags = Set<String>()
         for mod in modsStore.mods {
             if case .group(let children) = mod.kind {
-                for c in children where !c.modTag.isEmpty { tags.insert(c.modTag) }
-            } else if !mod.modTag.isEmpty {
-                tags.insert(mod.modTag)
+                for c in children where !c.tag.isEmpty { tags.insert(c.tag) }
+            } else if !mod.tag.isEmpty {
+                tags.insert(mod.tag)
             }
         }
         return tags.sorted()
@@ -687,8 +687,8 @@ struct ModListRow: View {
                     }
 
                     // Type tag badge
-                    if !mod.modTag.isEmpty && !isChild {
-                        Text(localizationStore.localizedTag(mod.modTag))
+                    if !mod.tag.isEmpty && !isChild {
+                        Text(localizationStore.localizedTag(mod.tag))
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 5)
@@ -1035,8 +1035,8 @@ struct ModCardView: View {
             }
             
             // Badges & Updates
-            if !mod.modTag.isEmpty && !isChild {
-                Text(localizationStore.localizedTag(mod.modTag))
+            if !mod.tag.isEmpty && !isChild {
+                Text(localizationStore.localizedTag(mod.tag))
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 5)

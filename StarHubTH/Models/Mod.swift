@@ -92,7 +92,7 @@ struct Mod: Identifiable, Equatable, Sendable {
     var isEnabled: Bool
     let dependencies: [ModDependency]
     var kind: Kind = .single
-    var modTag: String = ""      // inferred type tag (e.g. "Framework", "Cosmetic", "UI", …)
+    var tag: String = ""      // inferred type tag (e.g. "Framework", "Cosmetic", "UI", …)
     var installDate: Date? = nil
     var lastModifiedDate: Date? = nil
 

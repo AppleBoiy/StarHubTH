@@ -59,9 +59,9 @@ struct ModListFilter: Equatable {
     private func matchesTag(_ mod: Mod) -> Bool {
         guard !tag.isEmpty else { return true }
         if case .group(let children) = mod.kind {
-            return children.contains { $0.modTag == tag }
+            return children.contains { $0.tag == tag }
         }
-        return mod.modTag == tag
+        return mod.tag == tag
     }
 
     private func matchesDate(_ mod: Mod, now: Date) -> Bool {

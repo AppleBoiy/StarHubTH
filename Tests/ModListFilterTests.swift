@@ -34,7 +34,7 @@ struct ModListFilterTests {
             isEnabled: enabled,
             dependencies: [],
             kind: .single,
-            modTag: tag,
+            tag: tag,
             installDate: installed,
             lastModifiedDate: modified
         )
@@ -52,7 +52,7 @@ struct ModListFilterTests {
             isEnabled: true,
             dependencies: [],
             kind: .group(children: children),
-            modTag: "",
+            tag: "",
             installDate: nil,
             lastModifiedDate: nil
         )

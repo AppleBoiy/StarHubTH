@@ -63,7 +63,7 @@ struct ModScanner {
                         isEnabled: isEnabled,
                         dependencies: [],
                         kind: .group(children: modsInGroup),
-                        modTag: modsInGroup.first(where: { !$0.modTag.isEmpty })?.modTag ?? "",
+                        tag: modsInGroup.first(where: { !$0.tag.isEmpty })?.tag ?? "",
                         installDate: groupInstallDate,
                         lastModifiedDate: groupLastModifiedDate
                     )

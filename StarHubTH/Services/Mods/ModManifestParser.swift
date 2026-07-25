@@ -86,7 +86,7 @@ struct ModManifestParser {
             nexusUrl: nexusUrl,
             isEnabled: isEnabled,
             dependencies: dependencies,
-            modTag: finalTag,
+            tag: finalTag,
             installDate: installDate,
             lastModifiedDate: lastModifiedDate
         )
