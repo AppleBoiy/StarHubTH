@@ -101,7 +101,7 @@ struct LogsView: View {
                 Button {
                     // Keep app entries, reload SMAPI entries fresh
                     logStore.logEntries.removeAll { $0.source == .smapi }
-                    logStore.loadSmapiLog()
+                    logStore.startSmapiLogWatcher()
                 } label: {
                     Image(systemName: "arrow.clockwise").foregroundColor(.secondary)
                 }
@@ -176,7 +176,7 @@ struct LogsView: View {
         .background(Color(nsColor: .controlBackgroundColor))
         .onAppear {
             if logStore.logEntries.filter({ $0.source == .smapi }).isEmpty {
-                logStore.loadSmapiLog()
+                logStore.startSmapiLogWatcher()
             }
         }
         .onDisappear {

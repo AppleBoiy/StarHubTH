@@ -9,8 +9,8 @@ final class LogStore: ObservableObject {
     @Published var logOutput: String = ""
     @Published var logEntries: [LogEntry] = []
     @Published var isReadingSMAPILog: Bool = false
-    private var smapiLogFileHandle: FileHandle?
-    @Published var smapiLogTimer: Timer?
+
+    private var tailTask: Task<Void, Never>?
 
     func log(_ message: String, level: LogLevel = .info) {
         let formatter = DateFormatter()
@@ -51,75 +51,143 @@ final class LogStore: ObservableObject {
         }
     }
 
-    /// Load SMAPI-latest.txt asynchronously when Logs tab is opened.
-    func loadSmapiLog() {
+    /// Loads SMAPI-latest.txt's current content, then keeps tailing the file for new writes
+    /// (SMAPI appends to it as the game runs) until `stopSmapiLogWatcher()` is called.
+    func startSmapiLogWatcher() {
+        tailTask?.cancel()
+        tailTask = Task { [weak self] in
+            guard let self else { return }
+            let offsetAfterInitialLoad = await self.loadSmapiLog()
+            for await chunk in self.tailSmapiLog(from: offsetAfterInitialLoad) {
+                if Task.isCancelled { break }
+                self.appendParsedLines(chunk)
+            }
+        }
+    }
+
+    func stopSmapiLogWatcher() {
+        tailTask?.cancel()
+        tailTask = nil
+    }
+
+    /// One-shot read of the file's current content. Returns the byte offset read up to, so
+    /// `tailSmapiLog(from:)` can pick up new writes from exactly where this left off instead
+    /// of re-reading (and re-parsing) everything already loaded.
+    @discardableResult
+    private func loadSmapiLog() async -> UInt64 {
         let path = smapiLogPath
-        guard FileManager.default.fileExists(atPath: path) else { return }
+        guard FileManager.default.fileExists(atPath: path) else { return 0 }
 
         isReadingSMAPILog = true
+        defer { isReadingSMAPILog = false }
 
-        DispatchQueue.global(qos: .userInitiated).async {
-            guard let data = FileManager.default.contents(atPath: path),
-                  let text = String(data: data, encoding: .utf8) else {
-                DispatchQueue.main.async {
-                    self.isReadingSMAPILog = false
-                }
+        guard let data = FileManager.default.contents(atPath: path),
+              let text = String(data: data, encoding: .utf8) else {
+            return 0
+        }
+
+        appendParsedLines(text)
+        return UInt64(data.count)
+    }
+
+    /// Yields newly-appended text from the SMAPI log file as SMAPI writes to it, using a
+    /// `DispatchSourceFileSystemObject` to wake on writes rather than polling — the standard
+    /// "tail -f" pattern. `startOffset` is the byte offset already consumed (by the initial
+    /// load, or a previous call), so only genuinely new bytes are read and yielded.
+    private func tailSmapiLog(from startOffset: UInt64) -> AsyncStream<String> {
+        let path = smapiLogPath
+        return AsyncStream { continuation in
+            guard FileManager.default.fileExists(atPath: path) else {
+                continuation.finish()
                 return
             }
 
-            let lines = text.components(separatedBy: .newlines)
-            var entries: [LogEntry] = []
-
-            for line in lines {
-                if line.hasPrefix("[") {
-                    guard let bracketEnd = line.firstIndex(of: "]") else {
-                        continue
-                    }
-
-                    let header = String(line[line.index(after: line.startIndex)..<bracketEnd])
-                    let headerParts = header.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-
-                    let ts = headerParts.count >= 1 ? headerParts[0] : "—"
-                    let levelStr = headerParts.count >= 2 ? headerParts[1] : ""
-                    let contextName: String? = {
-                        guard headerParts.count >= 3 else { return nil }
-                        let name = headerParts[2...].joined(separator: " ")
-                        return (name == "SMAPI" || name == "game") ? nil : name
-                    }()
-
-                    let level: LogLevel
-                    switch levelStr.uppercased() {
-                    case "ERROR":  level = .error
-                    case "WARN":   level = .warning
-                    case "ALERT":  level = .warning
-                    case "INFO":   level = .info
-                    default:       level = .smapi  // TRACE, DEBUG, etc.
-                    }
-
-                    let msgStart = line.index(after: bracketEnd)
-                    let message = msgStart < line.endIndex
-                        ? String(line[msgStart...]).trimmingCharacters(in: .whitespaces)
-                        : ""
-
-                    if !message.isEmpty || contextName != nil {
-                        var entry = LogEntry(timestamp: ts, message: message, level: level, source: .smapi)
-                        entry.modName = contextName
-                        entries.append(entry)
-                    }
-                } else {
-                    let trimmed = line.trimmingCharacters(in: .whitespaces)
-                    guard !trimmed.isEmpty, !entries.isEmpty else { continue }
-                    let last = entries.removeLast()
-                    let combined = last.message.isEmpty ? trimmed : last.message + "\n" + trimmed
-                    var updated = LogEntry(timestamp: last.timestamp, message: combined, level: last.level, source: .smapi)
-                    updated.modName = last.modName
-                    entries.append(updated)
-                }
+            let fileDescriptor = open(path, O_EVTONLY)
+            guard fileDescriptor >= 0 else {
+                continuation.finish()
+                return
             }
 
-            DispatchQueue.main.async {
-                self.logEntries.append(contentsOf: entries)
-                self.isReadingSMAPILog = false
+            var offset = startOffset
+            let source = DispatchSource.makeFileSystemObjectSource(
+                fileDescriptor: fileDescriptor,
+                eventMask: .write,
+                queue: DispatchQueue.global(qos: .utility)
+            )
+
+            source.setEventHandler {
+                guard let handle = FileHandle(forReadingAtPath: path) else { return }
+                defer { try? handle.close() }
+                handle.seek(toFileOffset: offset)
+                let newData = handle.readDataToEndOfFile()
+                guard !newData.isEmpty else { return }
+                offset += UInt64(newData.count)
+                if let text = String(data: newData, encoding: .utf8) {
+                    continuation.yield(text)
+                }
+            }
+            source.setCancelHandler {
+                close(fileDescriptor)
+            }
+            continuation.onTermination = { _ in
+                source.cancel()
+            }
+
+            source.resume()
+        }
+    }
+
+    /// Parses SMAPI's `[HH:MM:SS LEVEL context] message` header lines (and their unindented
+    /// continuation lines) directly into `logEntries` — shared by both the initial load and
+    /// every live-tail chunk, so a continuation line arriving in a later chunk still merges
+    /// correctly into the last entry appended by an earlier one.
+    private func appendParsedLines(_ text: String) {
+        let lines = text.components(separatedBy: .newlines)
+
+        for line in lines {
+            if line.hasPrefix("[") {
+                guard let bracketEnd = line.firstIndex(of: "]") else {
+                    continue
+                }
+
+                let header = String(line[line.index(after: line.startIndex)..<bracketEnd])
+                let headerParts = header.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+
+                let ts = headerParts.count >= 1 ? headerParts[0] : "—"
+                let levelStr = headerParts.count >= 2 ? headerParts[1] : ""
+                let contextName: String? = {
+                    guard headerParts.count >= 3 else { return nil }
+                    let name = headerParts[2...].joined(separator: " ")
+                    return (name == "SMAPI" || name == "game") ? nil : name
+                }()
+
+                let level: LogLevel
+                switch levelStr.uppercased() {
+                case "ERROR":  level = .error
+                case "WARN":   level = .warning
+                case "ALERT":  level = .warning
+                case "INFO":   level = .info
+                default:       level = .smapi  // TRACE, DEBUG, etc.
+                }
+
+                let msgStart = line.index(after: bracketEnd)
+                let message = msgStart < line.endIndex
+                    ? String(line[msgStart...]).trimmingCharacters(in: .whitespaces)
+                    : ""
+
+                if !message.isEmpty || contextName != nil {
+                    var entry = LogEntry(timestamp: ts, message: message, level: level, source: .smapi)
+                    entry.modName = contextName
+                    logEntries.append(entry)
+                }
+            } else {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                guard !trimmed.isEmpty, !logEntries.isEmpty else { continue }
+                let last = logEntries.removeLast()
+                let combined = last.message.isEmpty ? trimmed : last.message + "\n" + trimmed
+                var updated = LogEntry(timestamp: last.timestamp, message: combined, level: last.level, source: .smapi)
+                updated.modName = last.modName
+                logEntries.append(updated)
             }
         }
     }
@@ -129,13 +197,5 @@ final class LogStore: ObservableObject {
         return (homeDir as NSString).appendingPathComponent(
             ".config/StardewValley/ErrorLogs/SMAPI-latest.txt"
         )
-    }
-
-    func startSmapiLogWatcher() { loadSmapiLog() }
-    func stopSmapiLogWatcher() {
-        smapiLogTimer?.invalidate()
-        smapiLogTimer = nil
-        try? smapiLogFileHandle?.close()
-        smapiLogFileHandle = nil
     }
 }
