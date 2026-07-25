@@ -19,13 +19,13 @@ final class ThaiHubStore: ObservableObject {
         self.localization = localization
     }
 
-    func fetchThaiTranslations(gameDir: String, mods: [ModItem]) {
+    func fetchThaiTranslations(gameDir: String, mods: [ModItem]) async {
         guard let url = URL(string: "https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/README.md") else { return }
 
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let data = data, let content = String(data: data, encoding: .utf8) else { return }
+        guard let (data, _) = try? await URLSession.shared.data(from: url),
+              let content = String(data: data, encoding: .utf8) else { return }
 
-            var newTranslations: [ThaiTranslationMod] = []
+        var newTranslations: [ThaiTranslationMod] = []
             let lines = content.components(separatedBy: .newlines)
             var inTable = false
 
@@ -80,11 +80,8 @@ final class ThaiHubStore: ObservableObject {
                 }
             }
 
-            DispatchQueue.main.async {
-                self?.thaiTranslations = newTranslations
-                self?.evaluateThaiTranslationStatus(gameDir: gameDir, mods: mods)
-            }
-        }.resume()
+        thaiTranslations = newTranslations
+        evaluateThaiTranslationStatus(gameDir: gameDir, mods: mods)
     }
 
     func evaluateThaiTranslationStatus(gameDir: String, mods: [ModItem]) {
@@ -136,7 +133,7 @@ final class ThaiHubStore: ObservableObject {
         gameDir: String,
         showModal: @escaping (String) -> Void,
         onInstalled: @escaping () -> Void
-    ) {
+    ) async {
         guard !gameDir.isEmpty else { return }
 
         let modsDir = (gameDir as NSString).appendingPathComponent("Mods")
@@ -148,81 +145,83 @@ final class ThaiHubStore: ObservableObject {
         var request = URLRequest(url: apiUrl)
         request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
 
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
+        let data: Data
+        do {
+            (data, _) = try await URLSession.shared.data(for: request)
+        } catch {
+            showModal(String(format: localization.L(L10n.VM.downloadFailed), error.localizedDescription))
+            return
+        }
 
-            if let error = error {
-                DispatchQueue.main.async { showModal(String(format: self.localization.L(L10n.VM.downloadFailed), error.localizedDescription)) }
-                return
-            }
+        guard let releases = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            showModal(localization.L(L10n.VM.downloadFailed) + " (Invalid API Response)")
+            return
+        }
 
-            guard let data = data,
-                  let releases = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-                DispatchQueue.main.async { showModal(self.localization.L(L10n.VM.downloadFailed) + " (Invalid API Response)") }
-                return
-            }
+        var targetDownloadUrl: URL? = nil
 
-            var targetDownloadUrl: URL? = nil
+        for release in releases {
+            if let assets = release["assets"] as? [[String: Any]] {
+                for asset in assets {
+                    if let name = asset["name"] as? String {
+                        let normalizedAssetName = name.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: " ", with: "")
+                        let normalizedZipName = zipName.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: " ", with: "")
 
-            for release in releases {
-                if let assets = release["assets"] as? [[String: Any]] {
-                    for asset in assets {
-                        if let name = asset["name"] as? String {
-                            let normalizedAssetName = name.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: " ", with: "")
-                            let normalizedZipName = zipName.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: " ", with: "")
-
-                            if normalizedAssetName == normalizedZipName,
-                               let browserDownloadUrl = asset["browser_download_url"] as? String,
-                               let url = URL(string: browserDownloadUrl) {
-                                targetDownloadUrl = url
-                                break
-                            }
+                        if normalizedAssetName == normalizedZipName,
+                           let browserDownloadUrl = asset["browser_download_url"] as? String,
+                           let url = URL(string: browserDownloadUrl) {
+                            targetDownloadUrl = url
+                            break
                         }
                     }
                 }
-                if targetDownloadUrl != nil { break }
             }
+            if targetDownloadUrl != nil { break }
+        }
 
-            guard let downloadUrl = targetDownloadUrl else {
-                DispatchQueue.main.async { showModal(self.localization.L(L10n.VM.downloadFailed) + " (Zip not found in releases)") }
-                return
-            }
+        guard let downloadUrl = targetDownloadUrl else {
+            showModal(localization.L(L10n.VM.downloadFailed) + " (Zip not found in releases)")
+            return
+        }
 
-            let task = URLSession.shared.downloadTask(with: downloadUrl) { localUrl, response, error in
-                if let error = error {
-                    DispatchQueue.main.async { showModal(String(format: self.localization.L(L10n.VM.downloadFailed), error.localizedDescription)) }
-                    return
-                }
+        let localUrl: URL
+        let response: URLResponse
+        do {
+            (localUrl, response) = try await URLSession.shared.download(for: URLRequest(url: downloadUrl))
+        } catch {
+            showModal(String(format: localization.L(L10n.VM.downloadFailed), error.localizedDescription))
+            return
+        }
 
-                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                    DispatchQueue.main.async { showModal(self.localization.L(L10n.VM.downloadFailed) + " (HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0))") }
-                    return
-                }
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            showModal(localization.L(L10n.VM.downloadFailed) + " (HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0))")
+            return
+        }
 
-                guard let localUrl = localUrl else { return }
-                let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-                process.arguments = ["-o", localUrl.path, "-d", modsDir]
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        process.arguments = ["-o", localUrl.path, "-d", modsDir]
 
-                do {
-                    try process.run()
-                    process.waitUntilExit()
-
-                    DispatchQueue.main.async {
-                        if process.terminationStatus == 0 {
-                            showModal(String(format: self.localization.L(L10n.VM.installThaiSuccess), mod.name))
-                            onInstalled()
-                        } else {
-                            showModal(self.localization.L(L10n.VM.unzipError))
-                        }
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        showModal(String(format: self.localization.L(L10n.VM.unzipFailed), error.localizedDescription))
+        do {
+            let status: Int32 = try await withCheckedThrowingContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    do {
+                        try process.run()
+                        process.waitUntilExit()
+                        continuation.resume(returning: process.terminationStatus)
+                    } catch {
+                        continuation.resume(throwing: error)
                     }
                 }
             }
-            task.resume()
-        }.resume()
+            if status == 0 {
+                showModal(String(format: localization.L(L10n.VM.installThaiSuccess), mod.name))
+                onInstalled()
+            } else {
+                showModal(localization.L(L10n.VM.unzipError))
+            }
+        } catch {
+            showModal(String(format: localization.L(L10n.VM.unzipFailed), error.localizedDescription))
+        }
     }
 }

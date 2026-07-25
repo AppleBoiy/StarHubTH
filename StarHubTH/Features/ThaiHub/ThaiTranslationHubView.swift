@@ -85,7 +85,7 @@ struct ThaiTranslationHubView: View {
         .searchable(text: $searchText, prompt: Text(localizationStore.L(L10n.Main.search)))
         .onAppear {
             if thaiHubStore.thaiTranslations.isEmpty {
-                appCoordinator.fetchThaiTranslations()
+                Task { await appCoordinator.fetchThaiTranslations() }
             } else {
                 appCoordinator.evaluateThaiTranslationStatus()
             }
@@ -196,7 +196,7 @@ struct ThaiModDetailView: View {
                                 }
                                 Spacer()
                                 
-                                Button(action: { appCoordinator.installThaiTranslation(mod: mod) }) {
+                                Button(action: { Task { await appCoordinator.installThaiTranslation(mod: mod) } }) {
                                     Text(localizationStore.L(mod.isInstalled ? L10n.ThaiHub.reinstall : L10n.ThaiHub.install))
                                         .font(.system(size: 12))
                                         .padding(.horizontal, 12)

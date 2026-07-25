@@ -258,16 +258,16 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Thai Translation Hub
 
-    func fetchThaiTranslations() {
-        thaiHubStore.fetchThaiTranslations(gameDir: appEnvironment.gameDir, mods: modsStore.mods)
+    func fetchThaiTranslations() async {
+        await thaiHubStore.fetchThaiTranslations(gameDir: appEnvironment.gameDir, mods: modsStore.mods)
     }
 
     func evaluateThaiTranslationStatus() {
         thaiHubStore.evaluateThaiTranslationStatus(gameDir: appEnvironment.gameDir, mods: modsStore.mods)
     }
 
-    func installThaiTranslation(mod: ThaiTranslationMod) {
-        thaiHubStore.installThaiTranslation(
+    func installThaiTranslation(mod: ThaiTranslationMod) async {
+        await thaiHubStore.installThaiTranslation(
             mod: mod,
             gameDir: appEnvironment.gameDir,
             showModal: { [weak self] message in self?.alertStore.show(message) },
