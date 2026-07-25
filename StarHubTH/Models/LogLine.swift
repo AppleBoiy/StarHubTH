@@ -12,7 +12,7 @@ enum LogSource: Sendable {
     case smapi  // loaded from SMAPI-latest.txt
 }
 
-struct LogEntry: Identifiable, Sendable {
+struct LogLine: Identifiable, Sendable {
     let id = UUID()
     let timestamp: String
     let message: String

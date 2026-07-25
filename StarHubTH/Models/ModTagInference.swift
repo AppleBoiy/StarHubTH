@@ -1,6 +1,6 @@
 import Foundation
 
-extension ModItem {
+extension Mod {
     /// Infer a display type tag from manifest metadata.
     static func inferTag(name: String, uniqueId: String, description: String) -> String {
         let haystack = "\(name) \(uniqueId) \(description)".lowercased()

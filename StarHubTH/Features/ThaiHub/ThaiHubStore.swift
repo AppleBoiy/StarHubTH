@@ -18,7 +18,7 @@ final class ThaiHubStore: ObservableObject {
         self.localization = localization
     }
 
-    func fetchThaiTranslations(gameDir: String, mods: [ModItem]) async {
+    func fetchThaiTranslations(gameDir: String, mods: [Mod]) async {
         guard let url = URL(string: "https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/README.md") else { return }
 
         guard let (data, _) = try? await URLSession.shared.data(from: url),
@@ -83,7 +83,7 @@ final class ThaiHubStore: ObservableObject {
         evaluateThaiTranslationStatus(gameDir: gameDir, mods: mods)
     }
 
-    func evaluateThaiTranslationStatus(gameDir: String, mods: [ModItem]) {
+    func evaluateThaiTranslationStatus(gameDir: String, mods: [Mod]) {
         guard !gameDir.isEmpty else { return }
         let fm = FileManager.default
         let modsDir = (gameDir as NSString).appendingPathComponent("Mods")

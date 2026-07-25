@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DependencyGraphView: View {
-    let mod: ModItem
+    let mod: Mod
     @EnvironmentObject var modsStore: ModsStore
     @EnvironmentObject var localizationStore: LocalizationStore
     
@@ -88,7 +88,7 @@ struct DependencyGraphView: View {
 }
 
 struct ModNodeView: View {
-    let mod: ModItem
+    let mod: Mod
     let status: DependencyStatus
     
     var body: some View {

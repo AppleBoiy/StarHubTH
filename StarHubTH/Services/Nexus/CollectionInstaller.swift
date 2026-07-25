@@ -5,7 +5,7 @@ final class CollectionInstaller: Sendable {
     static let shared = CollectionInstaller()
     private init() {}
     
-    func install(collection: ModCollection, currentMods: [ModItem], nexusApiKey: String) -> [String] {
+    func install(collection: ModCollection, currentMods: [Mod], nexusApiKey: String) -> [String] {
         let allMods = currentMods.flatMap { $0.allMods }
         var missingNexusIds: [String] = []
 

@@ -16,11 +16,11 @@ final class StubProfileStoring: ProfileStoring {
         savedProfiles = profiles
     }
 
-    func applyProfileToFilesystem(profile: ModProfile, mods: [ModItem], gameDir: String) -> Bool {
+    func applyProfileToFilesystem(profile: ModProfile, mods: [Mod], gameDir: String) -> Bool {
         applyResult
     }
 
-    func exportProfile(_ profile: ModProfile, mods: [ModItem], to url: URL) throws {}
+    func exportProfile(_ profile: ModProfile, mods: [Mod], to url: URL) throws {}
 
     func importProfile(from url: URL) throws -> (ModCollection, ModProfile) {
         throw StubError.unconfigured

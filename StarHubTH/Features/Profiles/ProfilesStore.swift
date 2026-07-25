@@ -31,10 +31,10 @@ final class ProfilesStore: ObservableObject {
         profileStoring.saveProfiles(modProfiles, activeProfileId: activeProfileId)
     }
 
-    func createProfile(name: String, mods: [ModItem]) {
+    func createProfile(name: String, mods: [Mod]) {
         // Snapshot the currently enabled mods into the new profile
         let currentEnabledIds = mods
-            .flatMap { mod -> [ModItem.UniqueID] in
+            .flatMap { mod -> [Mod.UniqueID] in
                 if case .group(let children) = mod.kind {
                     return children.filter { $0.isEnabled }.map { $0.uniqueId }
                 }
@@ -61,9 +61,9 @@ final class ProfilesStore: ObservableObject {
     func updateProfile(
         id: UUID,
         newName: String,
-        enabledModIds: [ModItem.UniqueID],
+        enabledModIds: [Mod.UniqueID],
         gameDir: String,
-        modsProvider: () -> [ModItem],
+        modsProvider: () -> [Mod],
         scanMods: () -> Void
     ) {
         if let index = modProfiles.firstIndex(where: { $0.id == id }) {
@@ -81,7 +81,7 @@ final class ProfilesStore: ObservableObject {
     func applyProfile(
         id: UUID?,
         gameDir: String,
-        modsProvider: () -> [ModItem],
+        modsProvider: () -> [Mod],
         scanMods: () -> Void,
         log: (String) -> Void,
         showModal: (String) -> Void
@@ -113,7 +113,7 @@ final class ProfilesStore: ObservableObject {
     private func applyProfileToFilesystem(
         profile: ModProfile,
         gameDir: String,
-        modsProvider: () -> [ModItem],
+        modsProvider: () -> [Mod],
         scanMods: () -> Void
     ) -> Bool {
         let success = profileStoring.applyProfileToFilesystem(profile: profile, mods: modsProvider(), gameDir: gameDir)
@@ -129,7 +129,7 @@ final class ProfilesStore: ObservableObject {
     ///   - enable: true = enabling, false = disabling
     ///   - currentEnabled: the current set of enabled uniqueIds in the profile
     /// - Returns: A new set with the chain applied
-    func applyChainToSet(mod: ModItem, enable: Bool, currentEnabled: Set<ModItem.UniqueID>, mods: [ModItem], chainToggleDependencies: Bool) -> Set<ModItem.UniqueID> {
+    func applyChainToSet(mod: Mod, enable: Bool, currentEnabled: Set<Mod.UniqueID>, mods: [Mod], chainToggleDependencies: Bool) -> Set<Mod.UniqueID> {
         ModGraph.enabledIDs(
             after: mod,
             enabling: enable,
@@ -147,7 +147,7 @@ final class ProfilesStore: ObservableObject {
         try profileStoring.importProfile(from: url)
     }
 
-    func exportProfile(_ profile: ModProfile, mods: [ModItem], to url: URL) throws {
+    func exportProfile(_ profile: ModProfile, mods: [Mod], to url: URL) throws {
         try profileStoring.exportProfile(profile, mods: mods, to: url)
     }
 
@@ -156,17 +156,17 @@ final class ProfilesStore: ObservableObject {
     /// direct API download for a non-premium account (see `NXMParser`'s doc comment),
     /// so the caller opens each missing mod's Nexus page for a manual download rather
     /// than downloading automatically.
-    func missingNexusIds(in collection: ModCollection, currentMods: [ModItem], nexusApiKey: String) -> [String] {
+    func missingNexusIds(in collection: ModCollection, currentMods: [Mod], nexusApiKey: String) -> [String] {
         CollectionInstaller.shared.install(collection: collection, currentMods: currentMods, nexusApiKey: nexusApiKey)
     }
 
     /// Call this after any toggleMod so the profile stays up to date.
-    func syncActiveProfileIds(mods: [ModItem]) {
+    func syncActiveProfileIds(mods: [Mod]) {
         guard let id = activeProfileId,
               let index = modProfiles.firstIndex(where: { $0.id == id }) else { return }
 
         let actualEnabledIds = mods
-            .flatMap { mod -> [ModItem.UniqueID] in
+            .flatMap { mod -> [Mod.UniqueID] in
                 if case .group(let children) = mod.kind {
                     return children.filter { $0.isEnabled }.map { $0.uniqueId }
                 }

@@ -1,7 +1,7 @@
 import Foundation
 
 struct ModManifestParser {
-    static func parse(at path: String, relativePath: String, isEnabled: Bool, customTags: [String: String]) -> ModItem? {
+    static func parse(at path: String, relativePath: String, isEnabled: Bool, customTags: [String: String]) -> Mod? {
         let manifestPath = (path as NSString).appendingPathComponent("manifest.json")
         guard FileManager.default.fileExists(atPath: manifestPath) else { return nil }
         
@@ -11,7 +11,7 @@ struct ModManifestParser {
         return parse(rawString: rawString, path: path, relativePath: relativePath, isEnabled: isEnabled, customTags: customTags)
     }
     
-    static func parse(rawString: String, path: String, relativePath: String, isEnabled: Bool, customTags: [String: String]) -> ModItem? {
+    static func parse(rawString: String, path: String, relativePath: String, isEnabled: Bool, customTags: [String: String]) -> Mod? {
         var name = (path as NSString).lastPathComponent
         var uniqueId = ""
         var version = "Unknown"
@@ -47,7 +47,7 @@ struct ModManifestParser {
                 for dep in deps {
                     if let depId = dep.caseInsensitiveValue(forKey: "UniqueID") as? String {
                         let isReq = dep.caseInsensitiveValue(forKey: "IsRequired") as? Bool ?? true
-                        dependencies.append(ModDependency(uniqueId: ModItem.UniqueID(rawValue: depId), isRequired: isReq))
+                        dependencies.append(ModDependency(uniqueId: Mod.UniqueID(rawValue: depId), isRequired: isReq))
                     }
                 }
             }
@@ -63,7 +63,7 @@ struct ModManifestParser {
             }
         }
         
-        let finalTag = customTags[uniqueId] ?? ModItem.inferTag(name: name, uniqueId: uniqueId, description: description)
+        let finalTag = customTags[uniqueId] ?? Mod.inferTag(name: name, uniqueId: uniqueId, description: description)
         
         var installDate: Date? = nil
         var lastModifiedDate: Date? = nil
@@ -76,10 +76,10 @@ struct ModManifestParser {
             print("Could not get attributes for mod path: \(path) - \(error)")
         }
         
-        return ModItem(
-            uniqueId: ModItem.UniqueID(rawValue: uniqueId),
+        return Mod(
+            uniqueId: Mod.UniqueID(rawValue: uniqueId),
             name: name,
-            folderName: ModItem.FolderName(rawValue: relativePath.isEmpty ? (path as NSString).lastPathComponent : relativePath),
+            folderName: Mod.FolderName(rawValue: relativePath.isEmpty ? (path as NSString).lastPathComponent : relativePath),
             version: version,
             author: author,
             description: description,

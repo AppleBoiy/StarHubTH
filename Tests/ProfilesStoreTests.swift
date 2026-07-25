@@ -14,11 +14,11 @@ struct ProfilesStoreTests {
         testApplyChainToSetDelegatesToModGraph()
     }
 
-    private static func mod(_ uniqueId: String, enabled: Bool) -> ModItem {
-        ModItem(
-            uniqueId: ModItem.UniqueID(rawValue: uniqueId),
+    private static func mod(_ uniqueId: String, enabled: Bool) -> Mod {
+        Mod(
+            uniqueId: Mod.UniqueID(rawValue: uniqueId),
             name: uniqueId,
-            folderName: ModItem.FolderName(rawValue: uniqueId),
+            folderName: Mod.FolderName(rawValue: uniqueId),
             version: "1.0.0",
             author: "Author",
             description: "",
@@ -51,7 +51,7 @@ struct ProfilesStoreTests {
         store.createProfile(name: "My Profile", mods: mods)
 
         SimpleTestFramework.assertEqual(store.modProfiles.count, 1, "createProfile appends a new profile")
-        SimpleTestFramework.assertEqual(store.modProfiles.first?.enabledModIds, [ModItem.UniqueID(rawValue: "a.mod")], "only currently-enabled mods are snapshotted")
+        SimpleTestFramework.assertEqual(store.modProfiles.first?.enabledModIds, [Mod.UniqueID(rawValue: "a.mod")], "only currently-enabled mods are snapshotted")
         SimpleTestFramework.assertEqual(store.activeProfileId, store.modProfiles.first?.id, "the new profile becomes active")
         SimpleTestFramework.assertTrue(stub.savedProfiles != nil, "createProfile persists via the injected ProfileStoring")
     }
@@ -74,13 +74,13 @@ struct ProfilesStoreTests {
         let mods = [mod("a.mod", enabled: true), mod("b.mod", enabled: false)]
         store.syncActiveProfileIds(mods: mods)
 
-        SimpleTestFramework.assertEqual(store.modProfiles.first?.enabledModIds, [ModItem.UniqueID(rawValue: "a.mod")], "syncActiveProfileIds reflects actual filesystem-derived enabled state")
+        SimpleTestFramework.assertEqual(store.modProfiles.first?.enabledModIds, [Mod.UniqueID(rawValue: "a.mod")], "syncActiveProfileIds reflects actual filesystem-derived enabled state")
     }
 
     private static func testApplyChainToSetDelegatesToModGraph() {
         let (store, _) = makeStore()
         let target = mod("a.mod", enabled: false)
         let result = store.applyChainToSet(mod: target, enable: true, currentEnabled: [], mods: [target], chainToggleDependencies: true)
-        SimpleTestFramework.assertTrue(result.contains(ModItem.UniqueID(rawValue: "a.mod")), "applyChainToSet enables the toggled mod")
+        SimpleTestFramework.assertTrue(result.contains(Mod.UniqueID(rawValue: "a.mod")), "applyChainToSet enables the toggled mod")
     }
 }

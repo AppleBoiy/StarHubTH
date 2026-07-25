@@ -1,18 +1,18 @@
 import Foundation
 
 struct StarHubPackMod: Codable, Identifiable, Sendable {
-    let id: ModItem.UniqueID // same as uniqueId
+    let id: Mod.UniqueID // same as uniqueId
     let name: String
-    let uniqueId: ModItem.UniqueID
+    let uniqueId: Mod.UniqueID
     let version: String?
-    let nexusId: ModItem.NexusID?
+    let nexusId: Mod.NexusID?
     // Rich per-mod metadata from Nexus API
     var modAuthor: String?
     var modDownloads: Int?
     var modUpdatedAt: String?
     var thumbnailUrl: String?
 
-    init(name: String, uniqueId: ModItem.UniqueID, version: String?, nexusId: ModItem.NexusID?,
+    init(name: String, uniqueId: Mod.UniqueID, version: String?, nexusId: Mod.NexusID?,
          modAuthor: String? = nil, modDownloads: Int? = nil,
          modUpdatedAt: String? = nil, thumbnailUrl: String? = nil) {
         self.id = uniqueId

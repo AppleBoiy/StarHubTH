@@ -5,7 +5,7 @@ struct ModDetailView: View {
     @EnvironmentObject var appEnvironment: AppEnvironment
     @EnvironmentObject var localizationStore: LocalizationStore
     @EnvironmentObject var appCoordinator: AppCoordinator
-    let mod: ModItem
+    let mod: Mod
 
     @State private var selectedTab: Int
     @State private var coverUrl: URL? = nil
@@ -15,7 +15,7 @@ struct ModDetailView: View {
 
     @Environment(\.presentationMode) var presentationMode
 
-    init(mod: ModItem, initialTab: Int = 0) {
+    init(mod: Mod, initialTab: Int = 0) {
         self.mod = mod
         self._selectedTab = State(initialValue: initialTab)
     }

@@ -196,19 +196,19 @@ struct ProfileDetailSheet: View {
     @Binding var isPresented: Bool
     
     @State private var editName: String = ""
-    @State private var editedEnabledMods: Set<ModItem.UniqueID> = []
+    @State private var editedEnabledMods: Set<Mod.UniqueID> = []
     @State private var isShowingModsPopover = false
 
     /// Mods for the checklist — top-level groups and standalone mods only.
     /// Groups show as a single row; toggling a group toggles all its children.
-    private var flatMods: [ModItem] {
+    private var flatMods: [Mod] {
         modsStore.mods
             .filter { !$0.uniqueId.rawValue.isEmpty || $0.isGroup }
             .sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
 
-    /// All uniqueIds covered by a ModItem (group = all children's ids, single mod = its own id).
-    private func idsFor(_ mod: ModItem) -> [ModItem.UniqueID] {
+    /// All uniqueIds covered by a Mod (group = all children's ids, single mod = its own id).
+    private func idsFor(_ mod: Mod) -> [Mod.UniqueID] {
         if case .group(let children) = mod.kind {
             return children.map { $0.uniqueId }.filter { !$0.rawValue.isEmpty }
         }
@@ -216,14 +216,14 @@ struct ProfileDetailSheet: View {
     }
 
     /// Whether a mod (or group) is fully checked in the current selection.
-    private func isChecked(_ mod: ModItem) -> Bool {
+    private func isChecked(_ mod: Mod) -> Bool {
         let ids = idsFor(mod)
         return !ids.isEmpty && ids.allSatisfy { editedEnabledMods.contains($0) }
     }
 
     /// Apply chain-toggle logic on the in-memory editedEnabledMods set
     /// by delegating to the ViewModel's shared logic.
-    private func applyChain(mod: ModItem, enable: Bool) {
+    private func applyChain(mod: Mod, enable: Bool) {
         editedEnabledMods = appCoordinator.applyChainToSet(mod: mod, enable: enable, currentEnabled: editedEnabledMods)
     }
     
@@ -428,7 +428,7 @@ struct ProfileDetailSheet: View {
             // If this is the active profile, reflect actual filesystem state
             if profilesStore.activeProfileId == profile.id {
                 editedEnabledMods = Set(
-                    modsStore.mods.flatMap { mod -> [ModItem.UniqueID] in
+                    modsStore.mods.flatMap { mod -> [Mod.UniqueID] in
                         if case .group(let children) = mod.kind {
                             return children.filter { $0.isEnabled }.map { $0.uniqueId }
                         }

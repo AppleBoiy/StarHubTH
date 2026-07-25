@@ -564,7 +564,7 @@ struct UpdatesView: View {
     @EnvironmentObject var localizationStore: LocalizationStore
     @Binding var currentTab: String
     
-    @State private var viewingModDetails: ModItem?
+    @State private var viewingModDetails: Mod?
     
     var body: some View {
         ScrollView {

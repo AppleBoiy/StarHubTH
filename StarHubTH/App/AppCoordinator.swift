@@ -70,7 +70,7 @@ final class AppCoordinator: ObservableObject {
         switch result {
         case .mod(let modId, let fileId, let key, let expires):
             logStore.log("Downloading from NXM: Mod \(modId), File \(fileId)", level: .info)
-            let success = await downloadModFromNexus(nexusId: ModItem.NexusID(rawValue: modId), fileId: fileId, key: key, expires: expires)
+            let success = await downloadModFromNexus(nexusId: Mod.NexusID(rawValue: modId), fileId: fileId, key: key, expires: expires)
             if success {
                 scanMods()
                 alertStore.show(localizationStore.L(L10n.VM.nxmDownloadSuccess))
@@ -110,7 +110,7 @@ final class AppCoordinator: ObservableObject {
         modsStore.parseSMAPILog(gameDir: appEnvironment.gameDir)
     }
 
-    func toggleMod(_ mod: ModItem) {
+    func toggleMod(_ mod: Mod) {
         modsStore.toggleMod(
             mod,
             gameDir: appEnvironment.gameDir,
@@ -120,15 +120,15 @@ final class AppCoordinator: ObservableObject {
         )
     }
 
-    func setCustomTag(for modId: ModItem.UniqueID, tag: String, shouldRefresh: Bool = true) {
+    func setCustomTag(for modId: Mod.UniqueID, tag: String, shouldRefresh: Bool = true) {
         modsStore.setCustomTag(for: modId, tag: tag, shouldRefresh: shouldRefresh, refresh: { [weak self] in self?.refresh() })
     }
 
-    func resetCustomTag(for modId: ModItem.UniqueID) {
+    func resetCustomTag(for modId: Mod.UniqueID) {
         modsStore.resetCustomTag(for: modId, refresh: { [weak self] in self?.refresh() })
     }
 
-    func syncTagFromNexus(for mod: ModItem, shouldRefresh: Bool = true) async -> Bool {
+    func syncTagFromNexus(for mod: Mod, shouldRefresh: Bool = true) async -> Bool {
         await modsStore.syncTagFromNexus(
             for: mod,
             nexusApiKey: appEnvironment.nexusApiKey,
@@ -179,7 +179,7 @@ final class AppCoordinator: ObservableObject {
         )
     }
 
-    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: ModItem.NexusID) async {
+    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: Mod.NexusID) async {
         await modsStore.downloadAndInstallUpdate(
             for: mod,
             nexusId: nexusId,
@@ -194,11 +194,11 @@ final class AppCoordinator: ObservableObject {
         modsStore.backupAllMods(gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
-    func backUp(_ mod: ModItem) async {
+    func backUp(_ mod: Mod) async {
         await modsStore.backUp(mod, gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
-    func restore(_ mod: ModItem) async {
+    func restore(_ mod: Mod) async {
         await modsStore.restore(mod, gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
@@ -282,7 +282,7 @@ final class AppCoordinator: ObservableObject {
         profilesStore.createProfile(name: name, mods: modsStore.mods)
     }
 
-    func updateProfile(id: UUID, newName: String, enabledModIds: [ModItem.UniqueID]) {
+    func updateProfile(id: UUID, newName: String, enabledModIds: [Mod.UniqueID]) {
         profilesStore.updateProfile(
             id: id,
             newName: newName,
@@ -304,7 +304,7 @@ final class AppCoordinator: ObservableObject {
         )
     }
 
-    func applyChainToSet(mod: ModItem, enable: Bool, currentEnabled: Set<ModItem.UniqueID>) -> Set<ModItem.UniqueID> {
+    func applyChainToSet(mod: Mod, enable: Bool, currentEnabled: Set<Mod.UniqueID>) -> Set<Mod.UniqueID> {
         profilesStore.applyChainToSet(mod: mod, enable: enable, currentEnabled: currentEnabled, mods: modsStore.mods, chainToggleDependencies: appEnvironment.chainToggleDependencies)
     }
 
@@ -331,7 +331,7 @@ final class AppCoordinator: ObservableObject {
         )
     }
 
-    func downloadModFromNexus(nexusId: ModItem.NexusID, fileId: Int? = nil, key: String? = nil, expires: String? = nil) async -> Bool {
+    func downloadModFromNexus(nexusId: Mod.NexusID, fileId: Int? = nil, key: String? = nil, expires: String? = nil) async -> Bool {
         await modPacksStore.downloadModFromNexus(
             nexusId: nexusId,
             fileId: fileId,

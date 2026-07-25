@@ -11,7 +11,7 @@ struct LogsView: View {
     @State private var searchText: String = ""
     @State private var autoScroll: Bool = true
 
-    var filteredEntries: [LogEntry] {
+    var filteredEntries: [LogLine] {
         logStore.logEntries.filter { entry in
             let sourceMatch = selectedSource == nil || entry.source == selectedSource
             let levelMatch  = selectedLevel == nil  || entry.level  == selectedLevel
@@ -233,7 +233,7 @@ struct LogsView: View {
 
 // MARK: - Log Entry Row
 struct LogEntryRow: View {
-    let entry: LogEntry
+    let entry: LogLine
     @EnvironmentObject var localizationStore: LocalizationStore
     @State private var isHovered = false
 

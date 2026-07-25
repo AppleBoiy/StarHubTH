@@ -14,11 +14,11 @@ struct ModGraphTests {
         enabled: Bool = true,
         nexusUrl: String = "",
         dependencies: [ModDependency] = []
-    ) -> ModItem {
-        ModItem(
-            uniqueId: ModItem.UniqueID(rawValue: uniqueId),
+    ) -> Mod {
+        Mod(
+            uniqueId: Mod.UniqueID(rawValue: uniqueId),
             name: name ?? uniqueId,
-            folderName: ModItem.FolderName(rawValue: folder ?? uniqueId),
+            folderName: Mod.FolderName(rawValue: folder ?? uniqueId),
             version: "1.0.0",
             author: "Author",
             description: "",
@@ -32,11 +32,11 @@ struct ModGraphTests {
         )
     }
 
-    private static func group(_ folder: String, children: [ModItem], enabled: Bool = true) -> ModItem {
-        ModItem(
+    private static func group(_ folder: String, children: [Mod], enabled: Bool = true) -> Mod {
+        Mod(
             uniqueId: "",
             name: folder,
-            folderName: ModItem.FolderName(rawValue: folder),
+            folderName: Mod.FolderName(rawValue: folder),
             version: "",
             author: "Author",
             description: "\(children.count)",
@@ -51,11 +51,11 @@ struct ModGraphTests {
     }
 
     private static func required(_ uniqueId: String) -> ModDependency {
-        ModDependency(uniqueId: ModItem.UniqueID(rawValue: uniqueId), isRequired: true)
+        ModDependency(uniqueId: Mod.UniqueID(rawValue: uniqueId), isRequired: true)
     }
 
     private static func optional(_ uniqueId: String) -> ModDependency {
-        ModDependency(uniqueId: ModItem.UniqueID(rawValue: uniqueId), isRequired: false)
+        ModDependency(uniqueId: Mod.UniqueID(rawValue: uniqueId), isRequired: false)
     }
 
     // MARK: -
@@ -222,7 +222,7 @@ struct ModGraphTests {
             mod("optional.dependent", dependencies: [optional("core.framework")]),
             mod("unrelated.mod")
         ]
-        let current: Set<ModItem.UniqueID> = ["core.framework", "dependent.mod", "optional.dependent", "unrelated.mod"]
+        let current: Set<Mod.UniqueID> = ["core.framework", "dependent.mod", "optional.dependent", "unrelated.mod"]
 
         let result = ModGraph.enabledIDs(
             after: mods[0], enabling: false, from: current, in: mods, chainingDependencies: true

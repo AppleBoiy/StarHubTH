@@ -22,14 +22,14 @@ enum ModGraph: Sendable {
     ///
     /// A group row is a synthetic entry produced by `ModScanner` for a folder containing
     /// several mods; it is never itself an installable mod.
-    static func flattened(_ mods: [ModItem]) -> [ModItem] {
+    static func flattened(_ mods: [Mod]) -> [Mod] {
         mods.flatMap { $0.allMods }
     }
 
     // MARK: - Dependency resolution
 
     /// Resolves whether the mod providing `uniqueId` is present and enabled.
-    static func dependencyStatus(for uniqueId: ModItem.UniqueID, in mods: [ModItem]) -> DependencyStatus {
+    static func dependencyStatus(for uniqueId: Mod.UniqueID, in mods: [Mod]) -> DependencyStatus {
         let candidates = flattened(mods)
         if let found = candidates.first(where: { $0.uniqueId.rawValue.caseInsensitiveCompare(uniqueId.rawValue) == .orderedSame }) {
             return found.isEnabled ? .active : .disabled(found)
@@ -41,7 +41,7 @@ enum ModGraph: Sendable {
     ///
     /// Optional dependencies are ignored. Comparison is case-insensitive because SMAPI
     /// treats manifest unique IDs case-insensitively.
-    static func missingDependencies(for mod: ModItem, in mods: [ModItem]) -> [ModItem.UniqueID] {
+    static func missingDependencies(for mod: Mod, in mods: [Mod]) -> [Mod.UniqueID] {
         // `Mod.Kind` (Phase 2.3) makes a group-with-no-children unrepresentable, so a group
         // can never contribute its own (empty) unique ID here the way it could before —
         // `flattened` only ever contributes real mod IDs.
@@ -59,7 +59,7 @@ enum ModGraph: Sendable {
     ///
     /// Matches on the Nexus numeric ID first (parsed from each installed mod's `nexusUrl`),
     /// then falls back to the SMAPI unique ID.
-    static func packModStatus(nexusID: ModItem.NexusID?, uniqueId: ModItem.UniqueID, in mods: [ModItem]) -> PackModStatus {
+    static func packModStatus(nexusID: Mod.NexusID?, uniqueId: Mod.UniqueID, in mods: [Mod]) -> PackModStatus {
         let candidates = flattened(mods)
 
         if let nexusID {
@@ -98,15 +98,15 @@ enum ModGraph: Sendable {
     ///   - chainingDependencies: whether to follow the dependency chain.
     /// - Returns: a new set; `currentEnabled` is not modified.
     static func enabledIDs(
-        after mod: ModItem,
+        after mod: Mod,
         enabling: Bool,
-        from currentEnabled: Set<ModItem.UniqueID>,
-        in mods: [ModItem],
+        from currentEnabled: Set<Mod.UniqueID>,
+        in mods: [Mod],
         chainingDependencies: Bool
-    ) -> Set<ModItem.UniqueID> {
+    ) -> Set<Mod.UniqueID> {
         var result = currentEnabled
 
-        func topLevelMod(providing uniqueId: ModItem.UniqueID) -> ModItem? {
+        func topLevelMod(providing uniqueId: Mod.UniqueID) -> Mod? {
             for candidate in mods {
                 switch candidate.kind {
                 case .single:
@@ -122,7 +122,7 @@ enum ModGraph: Sendable {
             return nil
         }
 
-        func dependencies(of topMod: ModItem) -> [ModDependency] {
+        func dependencies(of topMod: Mod) -> [ModDependency] {
             if case .group(let children) = topMod.kind {
                 return children.flatMap { $0.dependencies }
             }
@@ -130,7 +130,7 @@ enum ModGraph: Sendable {
         }
 
         /// Every unique ID a top-level entry provides — for a group, that's all its children.
-        func providedIDs(of topMod: ModItem) -> [ModItem.UniqueID] {
+        func providedIDs(of topMod: Mod) -> [Mod.UniqueID] {
             if case .group(let children) = topMod.kind {
                 return children.map { $0.uniqueId }
             }
@@ -147,7 +147,7 @@ enum ModGraph: Sendable {
 
             // Walk down: enable everything the starting mod requires.
             var queue = [startingMod]
-            var visited = Set<ModItem.FolderName>([startingMod.folderName])
+            var visited = Set<Mod.FolderName>([startingMod.folderName])
             while !queue.isEmpty {
                 let current = queue.removeFirst()
                 for dependency in dependencies(of: current) where dependency.isRequired {
@@ -165,7 +165,7 @@ enum ModGraph: Sendable {
 
             // Walk up: disable everything that requires the starting mod.
             var queue = [startingMod]
-            var visited = Set<ModItem.FolderName>([startingMod.folderName])
+            var visited = Set<Mod.FolderName>([startingMod.folderName])
             while !queue.isEmpty {
                 let current = queue.removeFirst()
                 let currentIDs = providedIDs(of: current)

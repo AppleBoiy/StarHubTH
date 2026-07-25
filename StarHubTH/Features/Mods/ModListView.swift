@@ -26,7 +26,7 @@ struct ModListView: View {
 
     // ── Full filtering + sorting pipeline ────────────────────────────
     // Pipeline lives in ModListFilter (Features/Mods/ModListFilter.swift) so it is unit-tested.
-    private var processedMods: [ModItem] {
+    private var processedMods: [Mod] {
         ModListFilter(
             searchText: searchText,
             status: modsStore.modFilterStatus,
@@ -519,9 +519,9 @@ struct ModUpdateBanner: View {
 // MARK: - Section Group
 struct ModSectionGroup: View {
     let title: String
-    let mods: [ModItem]
+    let mods: [Mod]
     @AppStorage("modListViewMode") private var viewMode: String = "list"
-    @State private var expandedGroups: [ModItem.FolderName: Bool] = [:]
+    @State private var expandedGroups: [Mod.FolderName: Bool] = [:]
 
     let columns = [GridItem(.adaptive(minimum: 280, maximum: 400), spacing: 16)]
 
@@ -578,8 +578,8 @@ struct ModSectionGroup: View {
 
 // MARK: - Mod Group Row
 struct ModGroupRow: View {
-    let mod: ModItem
-    let children: [ModItem]
+    let mod: Mod
+    let children: [Mod]
     @State private var isExpanded = false
     
     var body: some View {
@@ -612,7 +612,7 @@ struct ModGroupRow: View {
 
 // MARK: - Row
 struct ModListRow: View {
-    let mod: ModItem
+    let mod: Mod
     @EnvironmentObject var alertStore: AlertStore
     @EnvironmentObject var appCoordinator: AppCoordinator
     @EnvironmentObject var appEnvironment: AppEnvironment
@@ -760,7 +760,7 @@ struct ModListRow: View {
                 if let update = pendingUpdate {
                     Button {
                         if !appEnvironment.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
-                            Task { await appCoordinator.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId)) }
+                            Task { await appCoordinator.downloadAndInstallUpdate(for: update, nexusId: Mod.NexusID(rawValue: nId)) }
                         } else if let url = URL(string: update.url) {
                             NSWorkspace.shared.open(url)
                         }
@@ -937,7 +937,7 @@ struct ModListRow: View {
 // MARK: - Grid Card Views
 
 struct ModCardView: View {
-    let mod: ModItem
+    let mod: Mod
     @EnvironmentObject var appCoordinator: AppCoordinator
     @EnvironmentObject var appEnvironment: AppEnvironment
     @EnvironmentObject var localizationStore: LocalizationStore
@@ -1119,7 +1119,7 @@ struct ModCardView: View {
     private func updateButton(update: ModUpdateInfo) -> some View {
         Button {
             if !appEnvironment.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
-                Task { await appCoordinator.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId)) }
+                Task { await appCoordinator.downloadAndInstallUpdate(for: update, nexusId: Mod.NexusID(rawValue: nId)) }
             } else if let url = URL(string: update.url) {
                 NSWorkspace.shared.open(url)
             }

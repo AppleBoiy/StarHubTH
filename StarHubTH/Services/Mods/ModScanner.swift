@@ -1,23 +1,23 @@
 import Foundation
 
 struct ModScanner {
-    static func scan(gameDir: String, customModTags: [String: String]) -> [ModItem] {
+    static func scan(gameDir: String, customModTags: [String: String]) -> [Mod] {
         guard !gameDir.isEmpty else { return [] }
         
         let fm = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
         let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
         
-        var scannedMods: [ModItem] = []
+        var scannedMods: [Mod] = []
         
-        func parseModFolder(at path: String, relativePath: String, isEnabled: Bool) -> ModItem? {
+        func parseModFolder(at path: String, relativePath: String, isEnabled: Bool) -> Mod? {
             return ModManifestParser.parse(at: path, relativePath: relativePath, isEnabled: isEnabled, customTags: customModTags)
         }
         
         func scanFolderForMods(at path: String, isEnabled: Bool) {
             let url = URL(fileURLWithPath: path)
-            var groups: [String: [ModItem]] = [:]
-            var ungrouped: [ModItem] = []
+            var groups: [String: [Mod]] = [:]
+            var ungrouped: [Mod] = []
             
             if let enumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
                 for case let fileURL as URL in enumerator {
@@ -52,10 +52,10 @@ struct ModScanner {
                     let groupInstallDate = modsInGroup.compactMap { $0.installDate }.min()
                     let groupLastModifiedDate = modsInGroup.compactMap { $0.lastModifiedDate }.max()
                     
-                    let groupMod = ModItem(
+                    let groupMod = Mod(
                         uniqueId: "",
                         name: groupName,
-                        folderName: ModItem.FolderName(rawValue: groupName),
+                        folderName: Mod.FolderName(rawValue: groupName),
                         version: "",
                         author: groupAuthor,
                         description: "\(modsInGroup.count)",

@@ -1,14 +1,14 @@
 import Foundation
 
-extension ModItem {
+extension Mod {
     /// SMAPI UniqueID (e.g. "Pathoschild.ContentPatcher"). Distinct from `NexusID` —
     /// nothing at the type level used to stop `setCustomTag(for modId:)` and
     /// `downloadModFromNexus(nexusId:)` from being passed the wrong one.
     ///
-    /// Named `UniqueID`, not `ID` — `ModItem` conforms to `Identifiable` with `id` returning
+    /// Named `UniqueID`, not `ID` — `Mod` conforms to `Identifiable` with `id` returning
     /// `FolderName` (see `ID.5` in SWIFT_STANDARDS.md: identity is the stable folder name, not
     /// the SMAPI unique ID). A nested type literally named `ID` collides with `Identifiable`'s
-    /// own associated type `ID`: Swift infers `Identifiable.ID = ModItem.ID` from the nested
+    /// own associated type `ID`: Swift infers `Identifiable.ID = Mod.ID` from the nested
     /// type's name rather than from the `id` property's actual return type, and conformance
     /// fails with a misleading "does not conform to Identifiable" pointing at `var body`.
     ///
@@ -40,7 +40,7 @@ extension ModItem {
     }
 }
 
-extension ModItem.UniqueID: Codable {
+extension Mod.UniqueID: Codable {
     init(from decoder: Decoder) throws { rawValue = try decoder.singleValueContainer().decode(String.self) }
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -48,7 +48,7 @@ extension ModItem.UniqueID: Codable {
     }
 }
 
-extension ModItem.NexusID: Codable {
+extension Mod.NexusID: Codable {
     init(from decoder: Decoder) throws { rawValue = try decoder.singleValueContainer().decode(Int.self) }
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -56,7 +56,7 @@ extension ModItem.NexusID: Codable {
     }
 }
 
-extension ModItem.FolderName: Codable {
+extension Mod.FolderName: Codable {
     init(from decoder: Decoder) throws { rawValue = try decoder.singleValueContainer().decode(String.self) }
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -65,20 +65,20 @@ extension ModItem.FolderName: Codable {
 }
 
 struct ModDependency: Equatable, Sendable {
-    let uniqueId: ModItem.UniqueID
+    let uniqueId: Mod.UniqueID
     let isRequired: Bool
 }
 
 enum DependencyStatus: Equatable, Sendable {
     case active
-    case disabled(ModItem)
+    case disabled(Mod)
     case missing
 }
 
-struct ModItem: Identifiable, Equatable, Sendable {
+struct Mod: Identifiable, Equatable, Sendable {
     enum Kind: Equatable, Sendable {
         case single
-        case group(children: [ModItem])   // a group always has its children
+        case group(children: [Mod])   // a group always has its children
     }
 
     var id: FolderName { folderName }
@@ -104,7 +104,7 @@ struct ModItem: Identifiable, Equatable, Sendable {
     /// This mod if it's standalone, or its children if it's a group. Replaces the
     /// `isGroup ? (children ?? []) : [self]` ternary that used to be copy-pasted at every
     /// call site that needed to walk mods without caring whether they're grouped.
-    var allMods: [ModItem] {
+    var allMods: [Mod] {
         switch kind {
         case .single: return [self]
         case .group(let children): return children

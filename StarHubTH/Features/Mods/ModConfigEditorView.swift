@@ -36,7 +36,7 @@ struct ModConfigEditorView: View {
     @EnvironmentObject var localizationStore: LocalizationStore
     @EnvironmentObject var alertStore: AlertStore
     @EnvironmentObject var appCoordinator: AppCoordinator
-    let mod: ModItem
+    let mod: Mod
     
     @State private var configText: String = ""
     @State private var originalText: String = ""

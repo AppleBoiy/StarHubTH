@@ -22,11 +22,11 @@ struct ModListFilterTests {
         tag: String = "",
         installed: Date? = nil,
         modified: Date? = nil
-    ) -> ModItem {
-        ModItem(
-            uniqueId: ModItem.UniqueID(rawValue: uniqueId.isEmpty ? "id.\(name.lowercased())" : uniqueId),
+    ) -> Mod {
+        Mod(
+            uniqueId: Mod.UniqueID(rawValue: uniqueId.isEmpty ? "id.\(name.lowercased())" : uniqueId),
             name: name,
-            folderName: ModItem.FolderName(rawValue: name),
+            folderName: Mod.FolderName(rawValue: name),
             version: version,
             author: author,
             description: "",
@@ -40,11 +40,11 @@ struct ModListFilterTests {
         )
     }
 
-    private static func group(_ name: String, children: [ModItem]) -> ModItem {
-        ModItem(
+    private static func group(_ name: String, children: [Mod]) -> Mod {
+        Mod(
             uniqueId: "",
             name: name,
-            folderName: ModItem.FolderName(rawValue: name),
+            folderName: Mod.FolderName(rawValue: name),
             version: "",
             author: "Author",
             description: "\(children.count)",
@@ -58,7 +58,7 @@ struct ModListFilterTests {
         )
     }
 
-    private static func names(_ mods: [ModItem]) -> [String] {
+    private static func names(_ mods: [Mod]) -> [String] {
         mods.map(\.name)
     }
 

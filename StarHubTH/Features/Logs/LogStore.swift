@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 final class LogStore: ObservableObject {
     @Published var logOutput: String = ""
-    @Published var logEntries: [LogEntry] = []
+    @Published var logEntries: [LogLine] = []
     @Published var isReadingSMAPILog: Bool = false
 
     private var tailTask: Task<Void, Never>?
@@ -13,7 +13,7 @@ final class LogStore: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
         let timestamp = formatter.string(from: Date())
-        let entry = LogEntry(timestamp: timestamp, message: message, level: level, source: .app)
+        let entry = LogLine(timestamp: timestamp, message: message, level: level, source: .app)
 
         let logString = "[\(timestamp)] \(message)\n"
 
@@ -166,7 +166,7 @@ final class LogStore: ObservableObject {
                     : ""
 
                 if !message.isEmpty || contextName != nil {
-                    var entry = LogEntry(timestamp: ts, message: message, level: level, source: .smapi)
+                    var entry = LogLine(timestamp: ts, message: message, level: level, source: .smapi)
                     entry.modName = contextName
                     logEntries.append(entry)
                 }
@@ -175,7 +175,7 @@ final class LogStore: ObservableObject {
                 guard !trimmed.isEmpty, !logEntries.isEmpty else { continue }
                 let last = logEntries.removeLast()
                 let combined = last.message.isEmpty ? trimmed : last.message + "\n" + trimmed
-                var updated = LogEntry(timestamp: last.timestamp, message: combined, level: last.level, source: .smapi)
+                var updated = LogLine(timestamp: last.timestamp, message: combined, level: last.level, source: .smapi)
                 updated.modName = last.modName
                 logEntries.append(updated)
             }

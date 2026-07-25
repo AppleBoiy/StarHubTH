@@ -12,7 +12,7 @@ import UniformTypeIdentifiers
 /// `syncActiveProfileIds` (ProfilesStore's) is threaded through `toggleMod` the same way.
 @MainActor
 final class ModsStore: ObservableObject {
-    @Published var mods: [ModItem] = []
+    @Published var mods: [Mod] = []
 
     @Published var modFilterStatus: ModFilterStatus = .all
     @Published var modFilterTag: String = ""
@@ -26,20 +26,20 @@ final class ModsStore: ObservableObject {
     @Published var isSyncingAllTags = false
     @Published var syncAllTagsProgress: Double = 0.0
 
-    @Published var editingModConfig: ModItem?
-    @Published var viewingModDetails: ModItem?
+    @Published var editingModConfig: Mod?
+    @Published var viewingModDetails: Mod?
 
     @Published var downloadingMods: Set<String> = []
     @Published var isInstallingMod: Bool = false
 
-    @Published var selectedMod: ModItem? {
+    @Published var selectedMod: Mod? {
         didSet {
             if let mod = selectedMod, selectedModID != mod.folderName {
                 selectedModID = mod.folderName
             }
         }
     }
-    @Published var selectedModID: ModItem.FolderName? {
+    @Published var selectedModID: Mod.FolderName? {
         didSet {
             if let id = selectedModID, selectedMod?.folderName != id {
                 selectedMod = mods.first { $0.folderName == id }
@@ -72,15 +72,15 @@ final class ModsStore: ObservableObject {
 
     // MARK: - Dependency resolution (pure, delegates to ModGraph)
 
-    func resolveDependencyStatus(for uniqueId: ModItem.UniqueID) -> DependencyStatus {
+    func resolveDependencyStatus(for uniqueId: Mod.UniqueID) -> DependencyStatus {
         ModGraph.dependencyStatus(for: uniqueId, in: mods)
     }
 
-    func resolvePackModStatus(nexusId: ModItem.NexusID?, uniqueId: ModItem.UniqueID) -> PackModStatus {
+    func resolvePackModStatus(nexusId: Mod.NexusID?, uniqueId: Mod.UniqueID) -> PackModStatus {
         ModGraph.packModStatus(nexusID: nexusId, uniqueId: uniqueId, in: mods)
     }
 
-    func missingDependencies(for mod: ModItem) -> [ModItem.UniqueID] {
+    func missingDependencies(for mod: Mod) -> [Mod.UniqueID] {
         ModGraph.missingDependencies(for: mod, in: mods)
     }
 
@@ -91,21 +91,21 @@ final class ModsStore: ObservableObject {
         set { preferenceStoring.set(newValue, forKey: "customModTags") }
     }
 
-    func setCustomTag(for modId: ModItem.UniqueID, tag: String, shouldRefresh: Bool = true, refresh: () -> Void) {
+    func setCustomTag(for modId: Mod.UniqueID, tag: String, shouldRefresh: Bool = true, refresh: () -> Void) {
         var tags = customModTags
         tags[modId.rawValue] = tag
         customModTags = tags
         if shouldRefresh { refresh() }
     }
 
-    func resetCustomTag(for modId: ModItem.UniqueID, refresh: () -> Void) {
+    func resetCustomTag(for modId: Mod.UniqueID, refresh: () -> Void) {
         var tags = customModTags
         tags.removeValue(forKey: modId.rawValue)
         customModTags = tags
         refresh()
     }
 
-    func syncTagFromNexus(for mod: ModItem, nexusApiKey: String, shouldRefresh: Bool = true, refresh: @escaping () -> Void) async -> Bool {
+    func syncTagFromNexus(for mod: Mod, nexusApiKey: String, shouldRefresh: Bool = true, refresh: @escaping () -> Void) async -> Bool {
         guard !nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let modId = Int(url.lastPathComponent) else {
             return false
         }
@@ -214,14 +214,14 @@ final class ModsStore: ObservableObject {
     // MARK: - Toggle Mod Status (Enabled / Disabled)
 
     func toggleMod(
-        _ mod: ModItem,
+        _ mod: Mod,
         gameDir: String,
         chainToggleDependencies: Bool,
         log: (String) -> Void,
         onToggled: () -> Void
     ) {
         // Helper to find the top-level folder that contains a given uniqueId
-        func topLevelFolder(for uniqueId: ModItem.UniqueID) -> ModItem.FolderName? {
+        func topLevelFolder(for uniqueId: Mod.UniqueID) -> Mod.FolderName? {
             for m in self.mods {
                 switch m.kind {
                 case .single:
@@ -238,7 +238,7 @@ final class ModsStore: ObservableObject {
         }
 
         // Helper to get all dependencies of a top-level folder (including its children)
-        func dependencies(for folderName: ModItem.FolderName) -> [ModDependency] {
+        func dependencies(for folderName: Mod.FolderName) -> [ModDependency] {
             guard let m = self.mods.first(where: { $0.folderName == folderName }) else { return [] }
             if case .group(let children) = m.kind {
                 return children.flatMap { $0.dependencies }
@@ -247,7 +247,7 @@ final class ModsStore: ObservableObject {
             }
         }
 
-        var foldersToToggle: Set<ModItem.FolderName> = [mod.folderName]
+        var foldersToToggle: Set<Mod.FolderName> = [mod.folderName]
         let targetState = !mod.isEnabled // True if we are enabling, false if disabling
 
         if chainToggleDependencies {
@@ -274,7 +274,7 @@ final class ModsStore: ObservableObject {
                 while !queue.isEmpty {
                     let currentFolder = queue.removeFirst()
 
-                    var providedUniqueIds: [ModItem.UniqueID] = []
+                    var providedUniqueIds: [Mod.UniqueID] = []
                     if let m = self.mods.first(where: { $0.folderName == currentFolder }) {
                         if case .group(let children) = m.kind {
                             providedUniqueIds = children.map { $0.uniqueId }
@@ -435,7 +435,7 @@ final class ModsStore: ObservableObject {
 
     // MARK: - Nexus Auto-Download
 
-    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: ModItem.NexusID, nexusApiKey: String, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
+    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: Mod.NexusID, nexusApiKey: String, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
         downloadingMods.insert(mod.name)
 
         do {
@@ -503,7 +503,7 @@ final class ModsStore: ObservableObject {
         }
     }
 
-    func backUp(_ mod: ModItem, gameDir: String, showModal: @escaping (String) -> Void) async {
+    func backUp(_ mod: Mod, gameDir: String, showModal: @escaping (String) -> Void) async {
         guard !gameDir.isEmpty else {
             showModal(localization.L(L10n.Settings.gameDirNotSet))
             return
@@ -533,7 +533,7 @@ final class ModsStore: ObservableObject {
         }
     }
 
-    func restore(_ mod: ModItem, gameDir: String, showModal: @escaping (String) -> Void) async {
+    func restore(_ mod: Mod, gameDir: String, showModal: @escaping (String) -> Void) async {
         guard !gameDir.isEmpty else {
             showModal(localization.L(L10n.Settings.gameDirNotSet))
             return

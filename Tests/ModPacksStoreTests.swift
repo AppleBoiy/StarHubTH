@@ -92,7 +92,7 @@ struct ModPacksStoreTests {
     private static func testDownloadModFromNexusRequiresAPIKey() async {
         let (store, _) = makeStore()
         let success = await store.downloadModFromNexus(
-            nexusId: ModItem.NexusID(rawValue: 1234),
+            nexusId: Mod.NexusID(rawValue: 1234),
             nexusApiKey: "",
             installModFromZip: { _, completion in completion(true) },
             showModal: { _ in }

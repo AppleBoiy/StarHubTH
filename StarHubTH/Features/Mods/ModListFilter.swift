@@ -17,7 +17,7 @@ struct ModListFilter: Equatable {
     var sort: ModSortOption = .name
 
     /// Applies search, all three filters, then the sort — in that order.
-    func apply(to mods: [ModItem], now: Date = Date()) -> [ModItem] {
+    func apply(to mods: [Mod], now: Date = Date()) -> [Mod] {
         mods
             .filter { matchesSearch($0) }
             .filter { matchesStatus($0) }
@@ -29,7 +29,7 @@ struct ModListFilter: Equatable {
     // MARK: - Search
 
     /// Matches name, unique ID or author. For a group, also matches any child's name or ID.
-    private func matchesSearch(_ mod: ModItem) -> Bool {
+    private func matchesSearch(_ mod: Mod) -> Bool {
         let query = searchText.lowercased()
         guard !query.isEmpty else { return true }
 
@@ -47,7 +47,7 @@ struct ModListFilter: Equatable {
 
     // MARK: - Filters
 
-    private func matchesStatus(_ mod: ModItem) -> Bool {
+    private func matchesStatus(_ mod: Mod) -> Bool {
         switch status {
         case .all:      return true
         case .enabled:  return mod.isEnabled
@@ -56,7 +56,7 @@ struct ModListFilter: Equatable {
     }
 
     /// A group matches if any of its children carries the tag.
-    private func matchesTag(_ mod: ModItem) -> Bool {
+    private func matchesTag(_ mod: Mod) -> Bool {
         guard !tag.isEmpty else { return true }
         if case .group(let children) = mod.kind {
             return children.contains { $0.modTag == tag }
@@ -64,7 +64,7 @@ struct ModListFilter: Equatable {
         return mod.modTag == tag
     }
 
-    private func matchesDate(_ mod: ModItem, now: Date) -> Bool {
+    private func matchesDate(_ mod: Mod, now: Date) -> Bool {
         guard date != .all else { return true }
 
         let reference = mod.lastModifiedDate ?? mod.installDate ?? Date.distantPast
@@ -81,7 +81,7 @@ struct ModListFilter: Equatable {
     // MARK: - Sort
 
     /// Groups always float above standalone mods, whatever the sort option.
-    private func isOrderedBefore(_ first: ModItem, _ second: ModItem) -> Bool {
+    private func isOrderedBefore(_ first: Mod, _ second: Mod) -> Bool {
         if first.isGroup != second.isGroup { return first.isGroup }
 
         switch sort {

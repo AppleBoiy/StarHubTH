@@ -181,7 +181,7 @@ enum CoreModStatus {
 }
 
 extension HomeView {
-    func coreModStatus(matching keyword: String) -> (CoreModStatus, ModItem?) {
+    func coreModStatus(matching keyword: String) -> (CoreModStatus, Mod?) {
         let allMods = modsStore.mods.flatMap { $0.allMods }
         let matches = allMods.filter { $0.name.lowercased().contains(keyword) }
         guard !matches.isEmpty else { return (.notInstalled, nil) }
@@ -195,7 +195,7 @@ extension HomeView {
         return (mod.isEnabled ? .enabledAndInstalled : .installedButDisabled, mod)
     }
 
-    func coreModStatusThai() -> (CoreModStatus, ModItem?) {
+    func coreModStatusThai() -> (CoreModStatus, Mod?) {
         let allMods = modsStore.mods.flatMap { $0.allMods }
         // Match by folder name first (exact), then by name containing "thai"
         let mod = allMods.first { $0.folderName.rawValue.lowercased() == "stardew valley - thai" && $0.isEnabled }
@@ -212,7 +212,7 @@ struct CoreModRow: View {
     @EnvironmentObject var localizationStore: LocalizationStore
     let title: String
     let status: CoreModStatus
-    let mod: ModItem?
+    let mod: Mod?
 
     var body: some View {
         HStack {

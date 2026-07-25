@@ -36,13 +36,13 @@ final class ProfileManager: Sendable {
     }
     
     /// Moves mod files to match the given profile's enabledModIds.
-    func applyProfileToFilesystem(profile: ModProfile, mods: [ModItem], gameDir: String) -> Bool {
+    func applyProfileToFilesystem(profile: ModProfile, mods: [Mod], gameDir: String) -> Bool {
         let fm = FileManager.default
         let modsPath = (gameDir as NSString).appendingPathComponent("Mods")
         let disabledModsPath = (gameDir as NSString).appendingPathComponent("Mods_disabled")
         var hasError = false
         
-        func isCoveredByProfile(_ mod: ModItem) -> Bool {
+        func isCoveredByProfile(_ mod: Mod) -> Bool {
             if case .group(let children) = mod.kind {
                 return children.contains { profile.enabledModIds.contains($0.uniqueId) }
             }
@@ -120,7 +120,7 @@ final class ProfileManager: Sendable {
         return !hasError
     }
     
-    func exportProfile(_ profile: ModProfile, mods: [ModItem], to url: URL) throws {
+    func exportProfile(_ profile: ModProfile, mods: [Mod], to url: URL) throws {
         let allMods = mods.flatMap { $0.allMods }
         let activeMods = allMods.filter { profile.enabledModIds.contains($0.uniqueId) }
 
@@ -149,7 +149,7 @@ final class ProfileManager: Sendable {
         let newProfile = ModProfile(
             id: UUID(),
             name: "\(collection.name) (Imported)",
-            enabledModIds: collection.mods.map { ModItem.UniqueID(rawValue: $0.uniqueID) }
+            enabledModIds: collection.mods.map { Mod.UniqueID(rawValue: $0.uniqueID) }
         )
         return (collection, newProfile)
     }

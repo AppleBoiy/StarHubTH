@@ -24,7 +24,7 @@ enum NexusDownloaderError: Error, LocalizedError {
 
 struct NexusDownloader {
     static func downloadUpdate(
-        nexusId: ModItem.NexusID,
+        nexusId: Mod.NexusID,
         apiKey: String,
         nexusAPIClient: NexusAPIClient = LiveNexusAPIClient.shared
     ) async throws -> URL {

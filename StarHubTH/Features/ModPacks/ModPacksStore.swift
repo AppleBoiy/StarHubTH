@@ -28,16 +28,16 @@ final class ModPacksStore: ObservableObject {
         self.logStore = logStore
     }
 
-    func exportModPack(name: String, mods: [ModItem], steamUsername: String, showModal: (String) -> Void) -> URL? {
+    func exportModPack(name: String, mods: [Mod], steamUsername: String, showModal: (String) -> Void) -> URL? {
         let packMods = mods.flatMap { mod -> [StarHubPackMod] in
             if case .group(let children) = mod.kind {
                 return children.filter { $0.isEnabled }.map {
-                    let nexusId = Int($0.nexusUrl.components(separatedBy: "/").last ?? "").map { ModItem.NexusID(rawValue: $0) }
+                    let nexusId = Int($0.nexusUrl.components(separatedBy: "/").last ?? "").map { Mod.NexusID(rawValue: $0) }
                     return StarHubPackMod(name: $0.name, uniqueId: $0.uniqueId, version: $0.version, nexusId: nexusId)
                 }
             }
             if mod.isEnabled {
-                let nexusId = Int(mod.nexusUrl.components(separatedBy: "/").last ?? "").map { ModItem.NexusID(rawValue: $0) }
+                let nexusId = Int(mod.nexusUrl.components(separatedBy: "/").last ?? "").map { Mod.NexusID(rawValue: $0) }
                 return [StarHubPackMod(name: mod.name, uniqueId: mod.uniqueId, version: mod.version, nexusId: nexusId)]
             }
             return []
@@ -120,9 +120,9 @@ final class ModPacksStore: ObservableObject {
             }
             return StarHubPackMod(
                 name: modDetail.name,
-                uniqueId: ModItem.UniqueID(rawValue: "nexus_\(modDetail.modId)"),
+                uniqueId: Mod.UniqueID(rawValue: "nexus_\(modDetail.modId)"),
                 version: detail.version ?? "",
-                nexusId: ModItem.NexusID(rawValue: modDetail.modId),
+                nexusId: Mod.NexusID(rawValue: modDetail.modId),
                 modAuthor: modDetail.author,
                 modDownloads: modDetail.downloads,
                 modUpdatedAt: modUpdated,
@@ -163,7 +163,7 @@ final class ModPacksStore: ObservableObject {
     /// API key authorize that one download; pass `nil` for both for an in-app-triggered
     /// download (auto-update, "Download All"), which then only succeeds for a premium key.
     func downloadModFromNexus(
-        nexusId: ModItem.NexusID,
+        nexusId: Mod.NexusID,
         fileId: Int? = nil,
         key: String? = nil,
         expires: String? = nil,
@@ -195,7 +195,7 @@ final class ModPacksStore: ObservableObject {
     }
 
     private func startDownload(
-        nexusId: ModItem.NexusID,
+        nexusId: Mod.NexusID,
         fileId: Int,
         key: String?,
         expires: String?,
@@ -257,7 +257,7 @@ final class ModPacksStore: ObservableObject {
     /// this reports an aggregate count instead of silently dropping failures.
     func downloadAllMissing(
         from packMods: [StarHubPackMod],
-        currentMods: [ModItem],
+        currentMods: [Mod],
         nexusApiKey: String,
         installModFromZip: @escaping (URL, @escaping (Bool) -> Void) -> Void,
         showModal: @escaping (String) -> Void
