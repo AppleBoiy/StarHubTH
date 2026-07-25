@@ -1,6 +1,7 @@
 import Foundation
 
-final class CollectionInstaller {
+/// No stored properties, pure computation — a plain `Sendable` conformance, no actor needed.
+final class CollectionInstaller: Sendable {
     static let shared = CollectionInstaller()
     private init() {}
     

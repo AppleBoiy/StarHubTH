@@ -3,7 +3,10 @@ import Foundation
 import AppKit
 #endif
 
-final class SaveManager {
+/// `savesDir` is a `let`, set once in `init()` and never mutated — a plain `Sendable`
+/// conformance, no actor needed (see Phase 5's Context notes on why `SaveManager` isn't
+/// worth actor-izing: it holds no mutable state for an actor to protect).
+final class SaveManager: Sendable {
     static let shared = SaveManager()
 
     private let savesDir: URL

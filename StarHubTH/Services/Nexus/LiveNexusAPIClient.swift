@@ -37,8 +37,9 @@ enum NexusAPIError: Error, LocalizedError {
     }
 }
 
-/// A service to interact with the Nexus Mods API (v1).
-final class LiveNexusAPIClient {
+/// A service to interact with the Nexus Mods API (v1). `baseURL`/`gameName` are `let`
+/// constants — a plain `Sendable` conformance, no actor needed (see Phase 5's Context notes).
+final class LiveNexusAPIClient: Sendable {
     static let shared = LiveNexusAPIClient()
     private let baseURL = "https://api.nexusmods.com/v1"
     private let gameName = "stardewvalley"

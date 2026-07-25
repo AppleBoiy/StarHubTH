@@ -1,6 +1,9 @@
 import Foundation
 
-final class ProfileManager {
+/// Every stored property is a `let`/absent entirely; every method is a pure UserDefaults or
+/// filesystem operation with no shared mutable state, so `Sendable` is a plain, honest
+/// conformance here — no `actor` isolation needed (see Phase 5's Context notes).
+final class ProfileManager: Sendable {
     static let shared = ProfileManager()
     private init() {}
     
