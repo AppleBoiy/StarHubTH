@@ -1,20 +1,22 @@
 import SwiftUI
 
 struct ThaiTranslationHubView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var thaiHubStore: ThaiHubStore
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     @State private var searchText = ""
     
     var filteredMods: [ThaiTranslationMod] {
         if searchText.isEmpty {
-            return vm.thaiTranslations
+            return thaiHubStore.thaiTranslations
         } else {
-            return vm.thaiTranslations.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+            return thaiHubStore.thaiTranslations.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
         }
     }
     
     var body: some View {
-        if let mod = vm.viewingThaiMod {
-            ThaiModDetailView(vm: vm, mod: mod)
+        if let mod = thaiHubStore.viewingThaiMod {
+            ThaiModDetailView(mod: mod)
         } else {
             ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -33,11 +35,11 @@ struct ThaiTranslationHubView: View {
                         .frame(width: 32, height: 32)
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(vm.L(L10n.ThaiHub.title))
+                            Text(localizationStore.L(L10n.ThaiHub.title))
                                 .font(.system(size: 13, weight: .regular))
                                 .foregroundColor(.primary)
                             
-                            Text(vm.L(L10n.ThaiHub.note))
+                            Text(localizationStore.L(L10n.ThaiHub.note))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                                 .lineSpacing(2)
@@ -49,21 +51,21 @@ struct ThaiTranslationHubView: View {
                 .background(Color(nsColor: .controlBackgroundColor))
                 .cornerRadius(10)
                 
-                if vm.thaiTranslations.isEmpty {
+                if thaiHubStore.thaiTranslations.isEmpty {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.2)
-                        Text(vm.L(L10n.ThaiHub.loading))
+                        Text(localizationStore.L(L10n.ThaiHub.loading))
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, minHeight: 200)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(filteredMods.enumerated()), id: \.element.id) { index, mod in
-                            ThaiModRow(vm: vm, mod: mod)
+                            ThaiModRow(mod: mod)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
-                                    vm.viewingThaiMod = mod
+                                    thaiHubStore.viewingThaiMod = mod
                                 }
                             
                             if index < filteredMods.count - 1 {
@@ -80,12 +82,12 @@ struct ThaiTranslationHubView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
-        .searchable(text: $searchText, prompt: Text(vm.L(L10n.Main.search)))
+        .searchable(text: $searchText, prompt: Text(localizationStore.L(L10n.Main.search)))
         .onAppear {
-            if vm.thaiTranslations.isEmpty {
-                vm.fetchThaiTranslations()
+            if thaiHubStore.thaiTranslations.isEmpty {
+                appCoordinator.fetchThaiTranslations()
             } else {
-                vm.evaluateThaiTranslationStatus()
+                appCoordinator.evaluateThaiTranslationStatus()
             }
         }
         }
@@ -93,7 +95,7 @@ struct ThaiTranslationHubView: View {
 }
 
 struct ThaiModRow: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var localizationStore: LocalizationStore
     let mod: ThaiTranslationMod
     @State private var isHovered = false
     
@@ -107,7 +109,7 @@ struct ThaiModRow: View {
                     .foregroundColor(.primary)
                 
                 if mod.isInstalled {
-                    Text("\(mod.author) • v\(mod.version) • \(vm.L(L10n.ThaiHub.installed))")
+                    Text("\(mod.author) • v\(mod.version) • \(localizationStore.L(L10n.ThaiHub.installed))")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 } else {
@@ -132,7 +134,8 @@ struct ThaiModRow: View {
 }
 
 struct ThaiModDetailView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     let mod: ThaiTranslationMod
     
     var body: some View {
@@ -142,13 +145,13 @@ struct ThaiModDetailView: View {
                     
                     // Description Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(vm.L(L10n.ThaiHub.description))
+                        Text(localizationStore.L(L10n.ThaiHub.description))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
                             
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(vm.L(L10n.ThaiHub.descriptionPrefix) + mod.name + vm.L(L10n.ThaiHub.descriptionSuffix))
+                            Text(localizationStore.L(L10n.ThaiHub.descriptionPrefix) + mod.name + localizationStore.L(L10n.ThaiHub.descriptionSuffix))
                                 .font(.system(size: 13))
                                 .foregroundColor(.primary)
                                 .lineSpacing(4)
@@ -161,17 +164,17 @@ struct ThaiModDetailView: View {
                     
                     // Installation Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(vm.L(L10n.ThaiHub.installation))
+                        Text(localizationStore.L(L10n.ThaiHub.installation))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
                             
                         VStack(spacing: 0) {
                             HStack {
-                                Text(vm.L(L10n.ThaiHub.status))
+                                Text(localizationStore.L(L10n.ThaiHub.status))
                                     .font(.system(size: 13))
                                 Spacer()
-                                Text(vm.L(mod.availability.localizationKey))
+                                Text(localizationStore.L(mod.availability.localizationKey))
                                     .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                             }
@@ -182,19 +185,19 @@ struct ThaiModDetailView: View {
                             
                             HStack(alignment: .center) {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(vm.L(L10n.ThaiHub.downloadAndInstall))
+                                    Text(localizationStore.L(L10n.ThaiHub.downloadAndInstall))
                                         .font(.system(size: 13))
                                         
                                     HStack(spacing: 4) {
-                                        Text(vm.L(mod.isInstalled ? L10n.ThaiHub.alreadyInstalled : L10n.ThaiHub.clickToInstall))
+                                        Text(localizationStore.L(mod.isInstalled ? L10n.ThaiHub.alreadyInstalled : L10n.ThaiHub.clickToInstall))
                                             .font(.system(size: 11))
                                             .foregroundColor(.secondary)
                                     }
                                 }
                                 Spacer()
                                 
-                                Button(action: { vm.installThaiTranslation(mod: mod) }) {
-                                    Text(vm.L(mod.isInstalled ? L10n.ThaiHub.reinstall : L10n.ThaiHub.install))
+                                Button(action: { appCoordinator.installThaiTranslation(mod: mod) }) {
+                                    Text(localizationStore.L(mod.isInstalled ? L10n.ThaiHub.reinstall : L10n.ThaiHub.install))
                                         .font(.system(size: 12))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 4)
@@ -213,14 +216,14 @@ struct ThaiModDetailView: View {
                     
                     // Thai Translation Mod Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(vm.L(L10n.ThaiHub.thaiTranslationMod))
+                        Text(localizationStore.L(L10n.ThaiHub.thaiTranslationMod))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
                         
                         VStack(spacing: 0) {
                             HStack {
-                                Text(vm.L(L10n.ThaiHub.translator))
+                                Text(localizationStore.L(L10n.ThaiHub.translator))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Text("AppleBoiy & Contributors")
@@ -233,7 +236,7 @@ struct ThaiModDetailView: View {
                             Divider().padding(.leading, 16)
                             
                             HStack {
-                                Text(vm.L(L10n.ThaiHub.version))
+                                Text(localizationStore.L(L10n.ThaiHub.version))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Text("v\(mod.version)")
@@ -246,7 +249,7 @@ struct ThaiModDetailView: View {
                             Divider().padding(.leading, 16)
                             
                             HStack {
-                                Text(vm.L(L10n.ThaiHub.destinationFolder))
+                                Text(localizationStore.L(L10n.ThaiHub.destinationFolder))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Text("Mods/")
@@ -262,14 +265,14 @@ struct ThaiModDetailView: View {
                     
                     // Original Mod Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(vm.L(L10n.ThaiHub.originalMod))
+                        Text(localizationStore.L(L10n.ThaiHub.originalMod))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
                         
                         VStack(spacing: 0) {
                             HStack {
-                                Text(vm.L(L10n.ThaiHub.author))
+                                Text(localizationStore.L(L10n.ThaiHub.author))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Text(mod.author)
@@ -282,14 +285,14 @@ struct ThaiModDetailView: View {
                             Divider().padding(.leading, 16)
                             
                             HStack {
-                                Text(vm.L(L10n.ThaiHub.website))
+                                Text(localizationStore.L(L10n.ThaiHub.website))
                                     .font(.system(size: 13))
                                 Spacer()
                                 Button(action: {
                                     let targetUrl = mod.nexusUrl.isEmpty ? mod.url : mod.nexusUrl
                                     if let url = URL(string: targetUrl) { NSWorkspace.shared.open(url) }
                                 }) {
-                                    Text(vm.L(L10n.ThaiHub.viewOnNexus))
+                                    Text(localizationStore.L(L10n.ThaiHub.viewOnNexus))
                                         .font(.system(size: 13))
                                         .foregroundColor(.blue)
                                 }
