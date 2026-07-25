@@ -62,4 +62,18 @@ while modPacksDone.wait(timeout: .now()) == .timedOut && Date() < modPacksDeadli
     RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
 }
 
+// ModsStoreTests: several tests call drainMainQueue() (a local semaphore wait) to let
+// DispatchQueue.main.async-wrapped state updates (scanMods, installModFromZip) finish
+// before asserting — that wait would deadlock on the main thread, same reasoning as
+// ModPacksStoreTests above.
+let modsStoreDone = DispatchSemaphore(value: 0)
+DispatchQueue.global(qos: .userInitiated).async {
+    ModsStoreTests.run()
+    modsStoreDone.signal()
+}
+let modsStoreDeadline = Date().addingTimeInterval(10)
+while modsStoreDone.wait(timeout: .now()) == .timedOut && Date() < modsStoreDeadline {
+    RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+}
+
 SimpleTestFramework.report()

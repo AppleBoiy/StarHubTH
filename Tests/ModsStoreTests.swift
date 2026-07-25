@@ -1,0 +1,154 @@
+import Foundation
+
+/// Characterization tests for ModsStore, extracted from StarHubTHViewModel in refactor
+/// Phase 4.7. Covers what's testable via stubs: scanning, custom tags, and mod
+/// installation. toggleMod, downloadAndInstallUpdate (uses NexusDownloader, which has no
+/// protocol seam), and the Mods-directory backup/restore trio all shell out to real
+/// Process/FileManager work with no injection seam — same reasoning as LogStore's
+/// loadSmapiLog() and ModPacksStore's exportModPack.
+struct ModsStoreTests {
+    static func run() {
+        print("Running ModsStoreTests...")
+        testDependencyDelegationToModGraph()
+        testCustomModTagsRoundTrip()
+        testSetCustomTagRefreshesConditionally()
+        testResetCustomTagAlwaysRefreshes()
+        testScanModsPopulatesStateFromStub()
+        testInstallModRequiresGameDir()
+        testInstallModFromZipUsesModInstalling()
+        testOpenInstallModPanelInstallsEachPickedURL()
+    }
+
+    /// scanMods/installModFromZip/handleInstallResult wrap their state updates in
+    /// DispatchQueue.main.async with no completion callback to hook into. Queueing another
+    /// block on the main queue afterward and waiting for it runs after anything already
+    /// pending there, since it's a serial FIFO queue — this only resolves because
+    /// Tests/main.swift runs this whole suite on a background thread while pumping
+    /// RunLoop.main, the same pattern ModPacksStoreTests needed.
+    private static func drainMainQueue() {
+        let sem = DispatchSemaphore(value: 0)
+        DispatchQueue.main.async { sem.signal() }
+        _ = sem.wait(timeout: .now() + 2)
+    }
+
+    private static func mod(_ uniqueId: String, enabled: Bool = true) -> ModItem {
+        ModItem(
+            uniqueId: ModItem.UniqueID(rawValue: uniqueId),
+            name: uniqueId,
+            folderName: ModItem.FolderName(rawValue: uniqueId),
+            version: "1.0.0",
+            author: "Author",
+            description: "",
+            nexusUrl: "",
+            isEnabled: enabled,
+            dependencies: [],
+            kind: .single
+        )
+    }
+
+    private static func makeStore() -> (store: ModsStore, scanning: StubModScanning, installing: StubModInstalling, filePicking: StubFilePicking, preferenceStoring: StubPreferenceStoring) {
+        let scanning = StubModScanning()
+        let installing = StubModInstalling()
+        let filePicking = StubFilePicking()
+        let preferenceStoring = StubPreferenceStoring()
+        let store = ModsStore(
+            modScanning: scanning,
+            modInstalling: installing,
+            nexusAPIClient: StubNexusAPIClient(),
+            filePicking: filePicking,
+            preferenceStoring: preferenceStoring,
+            localization: LocalizationStore(preferenceStoring: StubPreferenceStoring())
+        )
+        return (store, scanning, installing, filePicking, preferenceStoring)
+    }
+
+    private static func testDependencyDelegationToModGraph() {
+        let (store, _, _, _, _) = makeStore()
+        store.mods = [mod("a.mod", enabled: true)]
+        SimpleTestFramework.assertEqual(
+            store.resolveDependencyStatus(for: ModItem.UniqueID(rawValue: "a.mod")), .active,
+            "resolveDependencyStatus delegates to ModGraph using the store's own mods"
+        )
+        SimpleTestFramework.assertEqual(
+            store.getMissingDependencies(for: mod("b.mod")), [],
+            "getMissingDependencies delegates to ModGraph"
+        )
+    }
+
+    private static func testCustomModTagsRoundTrip() {
+        let (store, _, _, _, _) = makeStore()
+        store.customModTags = ["a.mod": "Framework"]
+        SimpleTestFramework.assertEqual(store.customModTags["a.mod"], "Framework", "customModTags persists through the injected PreferenceStoring")
+    }
+
+    private static func testSetCustomTagRefreshesConditionally() {
+        let (store, _, _, _, _) = makeStore()
+        var refreshCount = 0
+
+        store.setCustomTag(for: ModItem.UniqueID(rawValue: "a.mod"), tag: "UI", shouldRefresh: true, refresh: { refreshCount += 1 })
+        SimpleTestFramework.assertEqual(refreshCount, 1, "setCustomTag refreshes when shouldRefresh is true")
+        SimpleTestFramework.assertEqual(store.customModTags["a.mod"], "UI", "setCustomTag persists the new tag")
+
+        store.setCustomTag(for: ModItem.UniqueID(rawValue: "b.mod"), tag: "Audio", shouldRefresh: false, refresh: { refreshCount += 1 })
+        SimpleTestFramework.assertEqual(refreshCount, 1, "setCustomTag does not refresh when shouldRefresh is false")
+    }
+
+    private static func testResetCustomTagAlwaysRefreshes() {
+        let (store, _, _, _, _) = makeStore()
+        store.customModTags = ["a.mod": "UI"]
+        var refreshCount = 0
+
+        store.resetCustomTag(for: ModItem.UniqueID(rawValue: "a.mod"), refresh: { refreshCount += 1 })
+        SimpleTestFramework.assertEqual(refreshCount, 1, "resetCustomTag always refreshes")
+        SimpleTestFramework.assertTrue(store.customModTags["a.mod"] == nil, "resetCustomTag removes the tag")
+    }
+
+    private static func testScanModsPopulatesStateFromStub() {
+        let (store, scanning, _, _, _) = makeStore()
+        scanning.mods = [mod("a.mod"), mod("stardew valley - thai", enabled: true)]
+
+        store.scanMods(gameDir: "/fake/gamedir")
+        drainMainQueue()
+
+        SimpleTestFramework.assertEqual(scanning.lastGameDir, "/fake/gamedir", "scanMods passes gameDir through to ModScanning")
+        SimpleTestFramework.assertEqual(store.mods.count, 2, "scanMods populates mods from the scan result")
+        SimpleTestFramework.assertEqual(store.selectedMod?.uniqueId, ModItem.UniqueID(rawValue: "a.mod"), "scanMods selects the first mod when nothing was selected")
+        SimpleTestFramework.assertTrue(store.isThaiTranslationInstalled, "scanMods detects an installed, enabled Thai translation mod")
+    }
+
+    private static func testInstallModRequiresGameDir() {
+        let (store, _, _, _, _) = makeStore()
+        var modalMessage: String?
+        store.installMod(url: URL(fileURLWithPath: "/tmp/mod.zip"), gameDir: "", showModal: { modalMessage = $0 }, log: { _ in })
+        SimpleTestFramework.assertTrue(modalMessage != nil, "installMod shows a modal when gameDir is empty")
+    }
+
+    private static func testInstallModFromZipUsesModInstalling() {
+        let (store, _, installing, _, _) = makeStore()
+        installing.installFromZipResult = .success(["MyMod"])
+
+        var successMessage: String?
+        var logged: String?
+        store.installModFromZip(
+            url: URL(fileURLWithPath: "/tmp/mod.zip"),
+            gameDir: "/fake/gamedir",
+            showModal: { successMessage = $0 },
+            log: { logged = $0 }
+        )
+        drainMainQueue()
+        SimpleTestFramework.assertTrue(successMessage != nil, "a successful install shows a modal")
+        SimpleTestFramework.assertTrue(logged != nil, "a successful install logs a message")
+        SimpleTestFramework.assertFalse(store.isInstallingMod, "isInstallingMod resets to false after completion")
+    }
+
+    private static func testOpenInstallModPanelInstallsEachPickedURL() {
+        let (store, _, installing, filePicking, _) = makeStore()
+        installing.installFromZipResult = .success(["MyMod"])
+        filePicking.filesToReturn = [URL(fileURLWithPath: "/tmp/one.zip"), URL(fileURLWithPath: "/tmp/two.zip")]
+
+        var modalCount = 0
+        store.openInstallModPanel(gameDir: "/fake/gamedir", showModal: { _ in modalCount += 1 }, log: { _ in })
+        drainMainQueue()
+        SimpleTestFramework.assertEqual(modalCount, 2, "openInstallModPanel installs every URL FilePicking returns")
+    }
+}
