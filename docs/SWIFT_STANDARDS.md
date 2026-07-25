@@ -4,7 +4,9 @@
 **Baseline:** Swift 5, `arm64-apple-macos13.0`, SwiftUI + AppKit interop.
 **Source of truth:** [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) and Apple's SwiftUI/Swift Concurrency guidance. Where this document and Apple's guidelines disagree, Apple wins — file an issue and fix this doc.
 
-Every rule below is written as **Rule → Why → What's in the repo today → What to write instead.** The "in the repo today" lines are real, so nobody has to guess what the rule is reacting to.
+Every rule below is written as **Rule → Why → What's in the repo today → What to write instead.** The "in the repo today" lines were real at the time each rule was written, so nobody had to guess what the rule was reacting to.
+
+**These "Today" paragraphs are frozen pre-refactor snapshots, not current state.** The multi-phase refactor they describe (`StarHubTHViewModel` dissolved, protocols + DI at every I/O boundary, every store `@MainActor`, view decomposition, etc.) is complete — see §6/§10's "Today" paragraphs for the two that have been updated, and `docs/PROJECT_STRUCTURE.md`'s `Counts` table for real current numbers. The rest are left as-written on purpose: they're the concrete "here's the anti-pattern this rule stops" example each rule was built around, and rewriting all of them to track a moving target would just make this doc go stale again the way `docs/PROJECT_STRUCTURE.md`'s old file map did. If a "Today" line names a specific file/count and you're not sure it's still accurate, verify with `grep` before trusting it — the **Rule**/**Why**/code-example parts of each entry are what's actually binding.
 
 ---
 
@@ -12,7 +14,7 @@ Every rule below is written as **Rule → Why → What's in the repo today → W
 
 1. **Every PR / every agent change** runs through the [Pre-merge checklist](#12-pre-merge-checklist).
 2. `.agents/AGENTS.md` and `CLAUDE.md` point here. Any agent touching Swift reads this file first.
-3. New code is held to 100% of these rules. Touched code is held to the rules relevant to the change ("campsite rule" — leave it cleaner). Untouched legacy is migrated on the schedule in `docs/REFACTOR_PLAN.md`, not opportunistically.
+3. New code is held to 100% of these rules. Touched code is held to the rules relevant to the change ("campsite rule" — leave it cleaner). The multi-phase migration that brought existing code up to these rules is complete (see `docs/PROJECT_STRUCTURE.md`); if a future one is needed, a `docs/*_PLAN.md` tracking file is the source of truth for its schedule, not opportunistic drive-by refactors.
 4. A rule you cannot follow is a rule that gets an explicit, one-line `// STANDARDS-EXCEPTION: <rule id> — <reason>` comment. No silent exceptions.
 
 ---
@@ -190,7 +192,7 @@ extension Mod {
 }
 ```
 
-**Do not name the first one `ID`.** §2.5 below has `Mod.id` return `FolderName`, not this type — but a nested type literally named `ID` collides with `Identifiable`'s own associated type `ID`. Swift infers `Identifiable.ID` from the nested type's name rather than from what `id` actually returns, so conformance silently fails with "type 'Mod' does not conform to protocol 'Identifiable'," reported against `var body`, nowhere near the real cause. `UniqueID` avoids the collision. (Found the hard way during Phase 2.5 — see `REFACTOR_PLAN.md`.)
+**Do not name the first one `ID`.** §2.5 below has `Mod.id` return `FolderName`, not this type — but a nested type literally named `ID` collides with `Identifiable`'s own associated type `ID`. Swift infers `Identifiable.ID` from the nested type's name rather than from what `id` actually returns, so conformance silently fails with "type 'Mod' does not conform to protocol 'Identifiable'," reported against `var body`, nowhere near the real cause. `UniqueID` avoids the collision. (Found the hard way migrating `Mod`'s identity types.)
 
 ### 2.5 `Equatable`/`Hashable`/`Identifiable` conformance is deliberate
 
@@ -347,7 +349,7 @@ Swift's answer to a base class is a protocol extension. Use it. There is no clas
 
 **Why this hurts, concretely.** Every one of those 43 `@Published` properties invalidates **every view** that holds `@ObservedObject var vm` — and 44 views do. Typing in a search box, ticking a mod, or a log line arriving from the SMAPI tail re-renders the entire app. It is also why 44 views are coupled to one type, so no view can be previewed, tested, or moved independently.
 
-**Target decomposition** (details and sequencing in `docs/REFACTOR_PLAN.md`):
+**How it was decomposed** (this migration is complete — the table is historical, kept because it shows the reasoning):
 
 | Store | Owns | Approx. source today |
 |---|---|---|
@@ -402,7 +404,7 @@ As stores are split, prefer `@EnvironmentObject` for the handful that are genuin
 
 **Why.** Compiler-checked, cancellable, no callback nesting, and it's the only path to data-race safety.
 
-**Today.** 65 `DispatchQueue` calls across 8 files, 23 `@escaping` completion handlers, `async` used in 8 files — the codebase is mid-migration with no rule about which side it's on. Everything on macOS 13 supports full structured concurrency; there is no compatibility reason to keep the old style.
+**Today.** Migration complete — every I/O boundary is `async`/`await`, every store is `@MainActor`. The remaining ~8 `DispatchQueue` calls are legitimate background-queue work (`Process` wrapping, a debug-log file write, a live-tail dispatch source, 2 UI debounce timers) — `scripts/check_standards.py` flags any new one without a nearby justifying comment.
 
 ```swift
 // ✗ before — callback + manual hop + weak dance, 3 nesting levels
@@ -432,26 +434,30 @@ Note what disappears: the manual main-queue hop, `[weak self]`, the `Bool` succe
 
 **Rule.** Every observable store is `@MainActor`. Every service that owns mutable state is an `actor` or is documented immutable/`Sendable`. Model types are `Sendable`.
 
-**Today.** **Zero `@MainActor` annotations in the codebase.** `StarHubTHViewModel` publishes to SwiftUI from `URLSession` callbacks, timer callbacks, and `FileManager` work, and correctness rests entirely on 65 hand-written `DispatchQueue.main.async` calls being individually correct. One miss is a UI-thread violation the compiler currently cannot see.
+**Today.** Every store (all 8 feature stores + `AlertStore` + `AppCoordinator`) is `@MainActor`, plus `SmapiInstaller`/`DependencyContainer`. Filesystem services that are genuinely stateless (`SaveManager`, `ModInstaller`) are `Sendable` instead of `actor` — see the gotcha below on why that's the correct call, not a shortcut.
 
 ```swift
 @MainActor final class ModsStore: ObservableObject { ... }   // hops are now the compiler's job
-actor SaveStorage { ... }                                     // owns filesystem serialization
+final class SaveManager: Sendable { ... }                     // no mutable state — actor would just add await noise
 struct Mod: Sendable, Identifiable { ... }
 ```
 
-### 6.3 Turn on concurrency checking
+### 6.3 Concurrency checking is on, at the strictest level this toolchain supports
 
-Add to `build_app.py`'s `swiftc` invocation:
+`build_app.py`'s `concurrency_check_flags()` probes for `-swift-version 6` first (full Swift 6 language mode — every one of these diagnostics becomes a hard compile error, not a warning), falling back to `-strict-concurrency=complete` or the older `-warn-concurrency` on an unsupported toolchain, and to nothing rather than breaking the build on an unrecognized flag. The codebase compiles clean under full Swift 6 mode with zero warnings. `scripts/check_standards.py` additionally flags any new `@Published` without `private(set)`, new `.shared` outside `App/`, and non-`final` classes.
 
-```python
-"-Xfrontend", "-warn-concurrency",
-"-Xfrontend", "-enable-actor-data-race-checks",
-```
+### 6.4 Concurrency gotchas learned the hard way
 
-Warnings first (Phase 5 of the plan), then error-level once the count reaches zero. This is what makes §6.2 enforceable rather than aspirational.
+A few Swift-compiler behaviors that cost real debugging time during the concurrency migration — worth knowing before you hit them again:
 
-### 6.4 Timers and file watchers are cancellable and owned
+- **A type's default-argument *values* are evaluated in a nonisolated context, regardless of the enclosing function's own actor isolation.** Marking a composition root (or its init) `@MainActor` does not let `= SomeMainActorType()` live as a default parameter value once that type is itself `@MainActor` — Swift errors on "main actor-isolated initializer in a nonisolated context" at the default-value expression itself. Fix: default the parameter to `nil` and construct the real value inside the init's body, which *is* isolated correctly since the whole type is.
+- **A `@MainActor` type's conformance to a plain (non-isolated) protocol only stops warning once *every* conformer and *every* caller of that protocol are on the same actor.** Marking just the conforming type (or just the extension) `@MainActor` leaves a residual actor-isolation warning; it only clears once the protocol itself is also `@MainActor` (safe once every real caller is `@MainActor` too). Similarly, a protocol requiring `Sendable` needs its test-double conformers marked `@unchecked Sendable` if they hold mutable `var` canned results, and a struct's `Sendable` conformance declared via an `extension` in a *different file* than the struct itself triggers a "must occur in the same source file" error — declare it directly on the type instead.
+- **Sequence `@MainActor` last, after `async` conversions, not first.** Annotating a store `@MainActor` before its methods are `async` forces every synchronous caller onto an awkward `Task { @MainActor in }` wrapper for no benefit. Doing the `async` conversion first means `@MainActor` mostly *deletes* code (redundant `DispatchQueue.main.async` hops) instead of adding it.
+- **Converting a synchronous test function to `async` can turn a previously-harmless `DispatchSemaphore.wait(timeout:)` into an "unavailable from asynchronous contexts" warning.** Harmless in practice if the semaphore blocks a `Task.detached` carrier thread rather than the actor itself, but worth knowing before converting a test's outer function to `async` for unrelated reasons.
+- **Don't reach for `actor` on a stateless type.** A `static`-only namespace or a type with one immutable `let` has no mutable state for an `actor` to protect — actor-izing it only adds `await` noise. The honest fix (and what actually silences the compiler's mutable-global-state warning) is a plain `Sendable` conformance. Reserve `actor` for genuine shared mutable state; where a flagged singleton *does* have real mutable state, `@MainActor` is usually the right fix instead, not `Sendable` — the compiler won't even accept `Sendable` there, since it'd be a lie.
+- **Don't assume Timer/FileHandle-shaped stored properties mean a feature is live — check.** Code can look like a live-polling feature from its stored properties alone (a `Timer?`, a `FileHandle`) while actually being a one-shot read wearing a live-tailer's clothes. Grep for the actual scheduling call (`Timer.scheduledTimer`, a `DispatchSourceFileSystemObject`, etc.) before assuming a conversion is "just" a modernization.
+
+### 6.5 Timers and file watchers are cancellable and owned
 
 `@Published var smapiLogTimer: Timer?` on the ViewModel is a leak waiting to happen and a redraw trigger (§5.3). Replace with a `Task` held privately by `LogStore`, cancelled in `stopWatching()`:
 

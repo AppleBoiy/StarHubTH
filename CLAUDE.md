@@ -6,9 +6,9 @@ macOS app (SwiftUI + AppKit) for managing Stardew Valley mods, saves, and Thai t
 
 **[`docs/SWIFT_STANDARDS.md`](docs/SWIFT_STANDARDS.md) is binding for all Swift you write or modify.** Read it before your first Swift edit in a session. It is not a style suggestion — it encodes Apple's Swift API Design Guidelines plus the architecture decisions this project has committed to, with a concrete before/after for every rule drawn from this repo.
 
-**[`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)** says where every file goes — folder-by-folder import rules, the complete file map, and a decision list for placing new files. Check it before creating any file.
+**[`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)** says where every file goes — folder-by-folder import rules, the current layout, and a decision list for placing new files. Check it before creating any file.
 
-**[`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md)** is the migration sequence for existing code. Do not refactor legacy code opportunistically — follow the phase order, because the phases are dependency-ordered and skipping ahead means moving untested code.
+**If a `docs/*_PLAN.md` tracking file exists** (e.g. `docs/QOC_PLAN.md`), it's the source of truth for whatever phased migration or audit is currently in progress — read it first and follow the phase order; don't refactor ahead of it opportunistically. These files are deleted once their work is done and any durable lesson is folded into `SWIFT_STANDARDS.md`/`PROJECT_STRUCTURE.md` — no such file existing right now means there's no active phased plan, not that this rule stopped applying. (`docs/REFACTOR_PLAN.md`, the original multi-phase refactor from god-object ViewModel to protocol-DI'd stores, finished all 9 phases and was retired this way — see git history for the full record.)
 
 **[`docs/DOMAIN_CONTEXT.md`](docs/DOMAIN_CONTEXT.md)** explains what the app is and the external systems it wraps — read it before touching mod install, Nexus/SMAPI integration, packs/profiles, or saves. Bare-minimum goal: a native macOS alternative to Vortex, scoped to Stardew Valley only. Do not generalize the app to other games.
 
@@ -45,7 +45,7 @@ Before finishing any Swift change, walk the pre-merge checklist in `docs/SWIFT_S
 StarHubTH/          app source — see docs/PROJECT_STRUCTURE.md for the full map
 Tests/              custom TestRunner suites
 assets/             en.json / th.json → generated .lproj/Localizable.strings, icons, custom UI
-docs/               SWIFT_STANDARDS.md, PROJECT_STRUCTURE.md, REFACTOR_PLAN.md
+docs/               SWIFT_STANDARDS.md, PROJECT_STRUCTURE.md, DOMAIN_CONTEXT.md, plus any active docs/*_PLAN.md tracking file
 build_app.py        build + bundle + codesign
 run_tests.py        test runner
 release.py          package to bundles/

@@ -80,8 +80,8 @@ python3 run_tests.py
 If you are writing or modifying Swift in this project, read these first:
 
 *   [**docs/SWIFT_STANDARDS.md**](docs/SWIFT_STANDARDS.md) — the project's Swift coding standards, based on Apple's Swift API Design Guidelines, with a before/after drawn from real code in this repo for every rule. **Binding for all new code.**
-*   [**docs/PROJECT_STRUCTURE.md**](docs/PROJECT_STRUCTURE.md) — folder layout, per-layer import rules, and the complete file map. Check before creating any file.
-*   [**docs/REFACTOR_PLAN.md**](docs/REFACTOR_PLAN.md) — the phased migration plan for existing code.
+*   [**docs/PROJECT_STRUCTURE.md**](docs/PROJECT_STRUCTURE.md) — folder layout, per-layer import rules, and where new files go.
+*   [**docs/DOMAIN_CONTEXT.md**](docs/DOMAIN_CONTEXT.md) — what the app is for and the external systems (Nexus, SMAPI) it wraps.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/credits_banner.png" alt="Credits & License" width="300">

@@ -86,8 +86,8 @@ python3 run_tests.py
 หากคุณจะเขียนหรือแก้ไขโค้ด Swift ในโปรเจกต์นี้ กรุณาอ่านเอกสารเหล่านี้ก่อน:
 
 *   [**docs/SWIFT_STANDARDS.md**](docs/SWIFT_STANDARDS.md) — มาตรฐานการเขียนโค้ด Swift ของโปรเจกต์ (อ้างอิงจาก Swift API Design Guidelines ของ Apple) พร้อมตัวอย่างก่อน/หลังจากโค้ดจริงในโปรเจกต์ **บังคับใช้กับโค้ดใหม่ทุกบรรทัด**
-*   [**docs/PROJECT_STRUCTURE.md**](docs/PROJECT_STRUCTURE.md) — โครงสร้างโฟลเดอร์ กฎการ import ของแต่ละชั้น และแผนที่ไฟล์ทั้งหมด ดูก่อนสร้างไฟล์ใหม่ทุกครั้ง
-*   [**docs/REFACTOR_PLAN.md**](docs/REFACTOR_PLAN.md) — แผนการปรับโครงสร้างโค้ดแบบเป็นเฟส สำหรับการแก้โค้ดเดิม
+*   [**docs/PROJECT_STRUCTURE.md**](docs/PROJECT_STRUCTURE.md) — โครงสร้างโฟลเดอร์ กฎการ import ของแต่ละชั้น และควรวางไฟล์ใหม่ไว้ที่ไหน
+*   [**docs/DOMAIN_CONTEXT.md**](docs/DOMAIN_CONTEXT.md) — แอปนี้มีไว้เพื่ออะไร และระบบภายนอก (Nexus, SMAPI) ที่แอปเชื่อมต่อด้วย
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/credits_banner.png" alt="เครดิตและลิขสิทธิ์" width="300">
