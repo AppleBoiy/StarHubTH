@@ -10,6 +10,8 @@ macOS app (SwiftUI + AppKit) for managing Stardew Valley mods, saves, and Thai t
 
 **[`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md)** is the migration sequence for existing code. Do not refactor legacy code opportunistically — follow the phase order, because the phases are dependency-ordered and skipping ahead means moving untested code.
 
+**[`docs/DOMAIN_CONTEXT.md`](docs/DOMAIN_CONTEXT.md)** explains what the app is and the external systems it wraps — read it before touching mod install, Nexus/SMAPI integration, packs/profiles, or saves. Bare-minimum goal: a native macOS alternative to Vortex, scoped to Stardew Valley only. Do not generalize the app to other games.
+
 ## Build and test
 
 ```bash
