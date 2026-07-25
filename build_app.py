@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 import os
 import shutil
-import glob
 import subprocess
-import plistlib
 import json
 import sys
 
-APP_NAME = "StarHubTH"
-APP_DIR = f"{APP_NAME}.app"
+from build_config import APP_NAME, APP_DIR, TARGET_TRIPLE
+
 CONTENTS_DIR = os.path.join(APP_DIR, "Contents")
 MACOS_DIR = os.path.join(CONTENTS_DIR, "MacOS")
 RESOURCES_DIR = os.path.join(CONTENTS_DIR, "Resources")
@@ -90,7 +88,7 @@ def concurrency_check_flags():
 
     for flags in candidates:
         probe = subprocess.run(
-            ["swiftc", probe_source, "-typecheck", "-target", "arm64-apple-macos13.0"] + flags,
+            ["swiftc", probe_source, "-typecheck", "-target", TARGET_TRIPLE] + flags,
             capture_output=True,
         )
         if probe.returncode == 0:
@@ -129,27 +127,36 @@ def create_app_bundle():
     os.makedirs(RESOURCES_DIR, exist_ok=True)
     
     # 3. Copy Info.plist and Generate Custom Assets
+    if not os.path.exists("Info.plist"):
+        print("[ERROR] Info.plist not found — cannot build without it.")
+        return 1
     shutil.copy2("Info.plist", os.path.join(CONTENTS_DIR, "Info.plist"))
-    
+
     print("[INFO] Using existing Custom Stardew UI Assets...")
-    
+
     custom_ui_dir = "assets/custom_ui"
     if os.path.exists(custom_ui_dir):
         for img in os.listdir(custom_ui_dir):
             if img.endswith(".png"):
                 shutil.copy2(os.path.join(custom_ui_dir, img), os.path.join(RESOURCES_DIR, img))
         print("[INFO] Copied Custom UI Assets to App Resources")
-        
+    else:
+        print(f"[WARN] {custom_ui_dir} not found — skipping custom UI assets.")
+
     app_icon_path = "assets/AppIcon.icns"
     if os.path.exists(app_icon_path):
         shutil.copy2(app_icon_path, os.path.join(RESOURCES_DIR, "AppIcon.icns"))
         print("[INFO] Copied AppIcon.icns to App Resources")
-        
+    else:
+        print(f"[WARN] {app_icon_path} not found — app bundle will have no icon.")
+
     changelog_path = "CHANGELOG.md"
     if os.path.exists(changelog_path):
         shutil.copy2(changelog_path, os.path.join(RESOURCES_DIR, "CHANGELOG.md"))
         print("[INFO] Copied CHANGELOG.md to App Resources")
-        
+    else:
+        print(f"[WARN] {changelog_path} not found — skipping in-app changelog.")
+
     for lang in ["en.lproj", "th.lproj"]:
         lproj_src = os.path.join("assets", lang)
         if os.path.exists(lproj_src):
@@ -157,7 +164,9 @@ def create_app_bundle():
             os.makedirs(lproj_dest, exist_ok=True)
             shutil.copy2(os.path.join(lproj_src, "Localizable.strings"), os.path.join(lproj_dest, "Localizable.strings"))
             print(f"[INFO] Copied {lang} to App Resources")
-        
+        else:
+            print(f"[WARN] {lproj_src} not found — {lang} strings will be missing from the bundle.")
+
     # 4. Compile Swift App
     app_executable = os.path.join(MACOS_DIR, APP_NAME)
     module_cache_dir = os.path.join(".build", "module-cache")
@@ -172,29 +181,33 @@ def create_app_bundle():
                 
     if not swift_files:
         print("[ERROR] No Swift source files (.swift) found.")
-        return
-        
+        return 1
+
     print(f"[INFO] Compiling Swift code ({len(swift_files)} files)...")
     swiftc_cmd = ["swiftc"] + swift_files + [
         "-o", app_executable,
         "-parse-as-library",
         "-module-cache-path", module_cache_dir,
-        "-target", "arm64-apple-macos13.0",
+        "-target", TARGET_TRIPLE,
     ] + concurrency_check_flags()
-    
+
     # Run compiler
     result = subprocess.run(swiftc_cmd)
     if result.returncode != 0:
         print("[ERROR] Swift compilation failed.")
-        return
-        
+        return 1
+
     # 5. Ad-hoc codesign to make it run locally without Gatekeeper blocking
     print("[INFO] Signing application (Codesign)...")
     codesign_cmd = ["codesign", "-s", "-", "-f", APP_DIR]
-    subprocess.run(codesign_cmd)
-    
+    codesign_result = subprocess.run(codesign_cmd)
+    if codesign_result.returncode != 0:
+        print("[ERROR] Codesign failed.")
+        return 1
+
     print(f"[SUCCESS] Successfully built {APP_DIR}")
     print("[INFO] Run 'open StarHubTH.app' to launch the application.")
+    return 0
 
 if __name__ == "__main__":
-    create_app_bundle()
+    sys.exit(create_app_bundle())
