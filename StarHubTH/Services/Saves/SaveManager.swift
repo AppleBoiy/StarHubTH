@@ -97,7 +97,17 @@ final class SaveManager {
         let timestamp = formatter.string(from: Date())
 
         let folderPath = info.fileURL.deletingLastPathComponent()
-        let backupPath = folderPath.appendingPathExtension("backup_\(timestamp)")
+        var backupPath = folderPath.appendingPathExtension("backup_\(timestamp)")
+
+        // The timestamp has 1-second resolution, so two edits within the same second
+        // (e.g. updateSave and updateInventory both call this) would otherwise collide
+        // on the same path, make copyItem throw "already exists", and silently abort
+        // the caller's edit since both guard on this returning true.
+        var suffix = 1
+        while fm.fileExists(atPath: backupPath.path) {
+            backupPath = folderPath.appendingPathExtension("backup_\(timestamp)_\(suffix)")
+            suffix += 1
+        }
 
         do {
             try fm.copyItem(at: folderPath, to: backupPath)
@@ -241,24 +251,36 @@ final class SaveManager {
         }
     }
 
-    private func modifyInternalSaveNames(in folderURL: URL, newSaveName: String, newPlayerName: String, newFarmName: String) {
+    /// Returns `false` if any file that needed updating couldn't be read or written —
+    /// callers must propagate that instead of reporting overall success, since a
+    /// duplicated/branched save whose internal name silently didn't update still shows
+    /// the *old* player/farm name in-game despite the app confirming the rename worked.
+    @discardableResult
+    private func modifyInternalSaveNames(in folderURL: URL, newSaveName: String, newPlayerName: String, newFarmName: String) -> Bool {
         let fm = FileManager.default
         let saveGameInfoURL = folderURL.appendingPathComponent("SaveGameInfo")
         let mainSaveURL = folderURL.appendingPathComponent(newSaveName)
 
-        func updateFile(at url: URL) {
-            guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
+        func updateFile(at url: URL) -> Bool {
+            guard let content = try? String(contentsOf: url, encoding: .utf8) else { return false }
             var modified = replaceFirstTag(tag: "name", with: newPlayerName, in: content)
             modified = replaceFirstTag(tag: "farmName", with: newFarmName, in: modified)
-            try? modified.write(to: url, atomically: true, encoding: .utf8)
+            do {
+                try modified.write(to: url, atomically: true, encoding: .utf8)
+                return true
+            } catch {
+                return false
+            }
         }
 
+        var succeeded = true
         if fm.fileExists(atPath: saveGameInfoURL.path) {
-            updateFile(at: saveGameInfoURL)
+            succeeded = updateFile(at: saveGameInfoURL) && succeeded
         }
         if fm.fileExists(atPath: mainSaveURL.path) {
-            updateFile(at: mainSaveURL)
+            succeeded = updateFile(at: mainSaveURL) && succeeded
         }
+        return succeeded
     }
 
     func duplicateSave(info: SaveGameInfo, newName: String, newFarm: String) -> Bool {
@@ -287,9 +309,7 @@ final class SaveManager {
             }
 
             // Modify name and farm name inside XML files
-            modifyInternalSaveNames(in: newFolderPath, newSaveName: newSaveName, newPlayerName: newName, newFarmName: newFarm)
-
-            return true
+            return modifyInternalSaveNames(in: newFolderPath, newSaveName: newSaveName, newPlayerName: newName, newFarmName: newFarm)
         } catch {
             print("Failed to duplicate save: \(error)")
             return false
@@ -325,9 +345,7 @@ final class SaveManager {
             }
 
             // Modify name and farm name inside XML files
-            modifyInternalSaveNames(in: newFolderPath, newSaveName: newSaveName, newPlayerName: newName, newFarmName: newFarm)
-
-            return true
+            return modifyInternalSaveNames(in: newFolderPath, newSaveName: newSaveName, newPlayerName: newName, newFarmName: newFarm)
         } catch {
             print("Failed to branch backup: \(error)")
             return false
@@ -421,8 +439,13 @@ final class SaveManager {
     // MARK: - Inventory Editing
 
     func fetchInventory(for info: SaveGameInfo) -> [InventoryItem]? {
+        // No `.documentTidyXML` — that's libxml's HTML-tidy-style repair mode for
+        // malformed input, and it can reformat/normalize content it considers invalid.
+        // Stardew's save XML is always well-formed (produced by .NET's XmlSerializer),
+        // so plain parsing avoids passing SMAPI mods' own <modData> content through a
+        // "repair" pass it was never meant for.
         guard let data = try? Data(contentsOf: info.fileURL),
-              let document = try? XMLDocument(data: data, options: .documentTidyXML),
+              let document = try? XMLDocument(data: data, options: []),
               let root = document.rootElement() else {
             return nil
         }
@@ -465,8 +488,9 @@ final class SaveManager {
         // Backup first
         guard backupSave(info: info) else { return false }
 
+        // Same reasoning as `fetchInventory`: no `.documentTidyXML` on the way in.
         guard let data = try? Data(contentsOf: info.fileURL),
-              let document = try? XMLDocument(data: data, options: .documentTidyXML),
+              let document = try? XMLDocument(data: data, options: []),
               let root = document.rootElement() else {
             return false
         }
@@ -507,7 +531,9 @@ final class SaveManager {
         }
 
         do {
-            let updatedXMLData = document.xmlData(options: .nodePrettyPrint)
+            // No `.nodePrettyPrint` — that reformats the entire document's whitespace,
+            // not just the nodes this function actually changed.
+            let updatedXMLData = document.xmlData
             try updatedXMLData.write(to: info.fileURL, options: .atomic)
             return true
         } catch {
