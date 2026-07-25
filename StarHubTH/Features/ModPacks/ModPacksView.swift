@@ -2,17 +2,19 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ModPacksView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var modPacksStore: ModPacksStore
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
     @State private var isHoveringDrop = false
     @State private var collectionURL = ""
     
     var body: some View {
         VStack(spacing: 20) {
             
-            if let pack = vm.importedModPack {
+            if let pack = modPacksStore.importedModPack {
                 // ── Rich Collection Banner ──────────────────────────────
                 VStack(alignment: .leading, spacing: 0) {
-                    CollectionBannerView(vm: vm, pack: pack)
+                    CollectionBannerView(pack: pack)
                     
                     Divider()
                     
@@ -20,7 +22,7 @@ struct ModPacksView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(Array(pack.mods.enumerated()), id: \.element.id) { index, packMod in
-                                PackModRow(vm: vm, packMod: packMod)
+                                PackModRow(packMod: packMod)
                                 if index < pack.mods.count - 1 {
                                     Divider().padding(.leading, 56)
                                 }
@@ -42,11 +44,11 @@ struct ModPacksView: View {
                         .font(.system(size: 60))
                         .foregroundColor(isHoveringDrop ? .accentColor : .secondary)
                     
-                    Text(vm.L(L10n.ModPacks.importHint))
+                    Text(localizationStore.L(L10n.ModPacks.importHint))
                         .font(.headline)
                         .foregroundColor(.secondary)
                     
-                    Text(vm.L(L10n.ModPacksExtra.enterCollectionURL))
+                    Text(localizationStore.L(L10n.ModPacksExtra.enterCollectionURL))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 10)
@@ -56,9 +58,9 @@ struct ModPacksView: View {
                             .textFieldStyle(.roundedBorder)
                         Button("Import") {
                             guard !collectionURL.isEmpty else { return }
-                            vm.importCollectionFromURL(collectionURL) { pack in
+                            appCoordinator.importCollectionFromURL(collectionURL) { pack in
                                 if let p = pack {
-                                    withAnimation { self.vm.importedModPack = p }
+                                    withAnimation { self.modPacksStore.importedModPack = p }
                                 }
                             }
                         }
@@ -76,9 +78,9 @@ struct ModPacksView: View {
                     guard let provider = providers.first else { return false }
                     provider.loadItem(forTypeIdentifier: UTType.json.identifier, options: nil) { item, error in
                         guard let url = item as? URL,
-                              let pack = vm.importModPack(from: url) else { return }
+                              let pack = modPacksStore.importModPack(from: url) else { return }
                         DispatchQueue.main.async {
-                            withAnimation { self.vm.importedModPack = pack }
+                            withAnimation { self.modPacksStore.importedModPack = pack }
                         }
                     }
                     return true
@@ -92,7 +94,11 @@ struct ModPacksView: View {
 // MARK: - Rich Collection Banner
 
 struct CollectionBannerView: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var modPacksStore: ModPacksStore
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    @EnvironmentObject var appCoordinator: AppCoordinator
+    @EnvironmentObject var alertStore: AlertStore
     let pack: StarHubPack
     @State private var isDownloadingAll = false
 
@@ -175,7 +181,7 @@ struct CollectionBannerView: View {
                 Spacer(minLength: 0)
                 
                 // Dismiss
-                Button(action: { withAnimation { vm.importedModPack = nil } }) {
+                Button(action: { withAnimation { modPacksStore.importedModPack = nil } }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
                         .font(.system(size: 16))
@@ -201,25 +207,25 @@ struct CollectionBannerView: View {
                 Spacer()
                 
                 // Download All action
-                if !vm.nexusApiKey.isEmpty {
+                if !appEnvironment.nexusApiKey.isEmpty {
                     Button {
                         isDownloadingAll = true
-                        vm.downloadAllMissingPackMods(pack) { installed, failed in
+                        appCoordinator.downloadAllMissingPackMods(pack) { installed, failed in
                             isDownloadingAll = false
-                            vm.scanMods()
+                            appCoordinator.scanMods()
                             let message: String
                             if failed > 0 {
-                                message = String(format: vm.L(L10n.ModPacks.downloadAllSummaryWithFailures), installed, failed)
+                                message = String(format: localizationStore.L(L10n.ModPacks.downloadAllSummaryWithFailures), installed, failed)
                             } else {
-                                message = String(format: vm.L(L10n.ModPacks.downloadAllSummary), installed)
+                                message = String(format: localizationStore.L(L10n.ModPacks.downloadAllSummary), installed)
                             }
-                            vm.showModal(message: message)
+                            alertStore.show(message)
                         }
                     } label: {
                         if isDownloadingAll {
-                            Label(vm.L(L10n.ModPacks.downloading), systemImage: "arrow.down.circle.fill")
+                            Label(localizationStore.L(L10n.ModPacks.downloading), systemImage: "arrow.down.circle.fill")
                         } else {
-                            Label(vm.L(L10n.ModPacks.downloadAll), systemImage: "arrow.down.circle.fill")
+                            Label(localizationStore.L(L10n.ModPacks.downloadAll), systemImage: "arrow.down.circle.fill")
                         }
                     }
                     .font(.system(size: 12, weight: .semibold))
@@ -231,7 +237,7 @@ struct CollectionBannerView: View {
                     .buttonStyle(.plain)
                     .disabled(isDownloadingAll)
                 } else {
-                    Text(vm.L(L10n.ModPacksExtra.addApiKeyHint))
+                    Text(localizationStore.L(L10n.ModPacksExtra.addApiKeyHint))
                         .font(.caption2)
                         .foregroundColor(.orange)
                 }
@@ -273,7 +279,8 @@ struct CollectionBannerView: View {
 // MARK: - Mod Row
 
 struct PackModRow: View {
-    @ObservedObject var vm: StarHubTHViewModel
+    @EnvironmentObject var modsStore: ModsStore
+    @EnvironmentObject var localizationStore: LocalizationStore
     let packMod: StarHubPackMod
     
     var body: some View {
@@ -326,20 +333,20 @@ struct PackModRow: View {
             Spacer()
             
             // Status badge + action
-            let status = vm.resolvePackModStatus(nexusId: packMod.nexusId, uniqueId: packMod.uniqueId)
+            let status = modsStore.resolvePackModStatus(nexusId: packMod.nexusId, uniqueId: packMod.uniqueId)
             
             HStack(spacing: 8) {
                 switch status {
                 case .installed:
-                    Label(vm.L(L10n.ModPacks.installed), systemImage: "checkmark.circle.fill")
+                    Label(localizationStore.L(L10n.ModPacks.installed), systemImage: "checkmark.circle.fill")
                         .foregroundColor(.green)
                         .font(.system(size: 12, weight: .medium))
                 case .disabled:
-                    Label(vm.L(L10n.ModPacksExtra.disabled), systemImage: "pause.circle.fill")
+                    Label(localizationStore.L(L10n.ModPacksExtra.disabled), systemImage: "pause.circle.fill")
                         .foregroundColor(.orange)
                         .font(.system(size: 12, weight: .medium))
                 case .missing:
-                    Label(vm.L(L10n.ModPacks.missing), systemImage: "exclamationmark.circle.fill")
+                    Label(localizationStore.L(L10n.ModPacks.missing), systemImage: "exclamationmark.circle.fill")
                         .foregroundColor(.red)
                         .font(.system(size: 12, weight: .medium))
                     
@@ -349,7 +356,7 @@ struct PackModRow: View {
                                 NSWorkspace.shared.open(url)
                             }
                         } label: {
-                            Text(vm.L(L10n.ModPacks.getFromNexus))
+                            Text(localizationStore.L(L10n.ModPacks.getFromNexus))
                                 .font(.system(size: 12))
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)

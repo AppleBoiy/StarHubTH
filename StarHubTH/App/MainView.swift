@@ -272,7 +272,7 @@ struct MainView: View {
             // ── CONTENT AREA ─────────────────────────────────────────
             Group {
                 if currentTab == "ModPacks" {
-                    ModPacksView(vm: vm)
+                    ModPacksView()
                 } else if currentTab == "Mods" {
                     if let mod = vm.editingModConfig {
                         ModConfigEditorView(vm: vm, mod: mod)
