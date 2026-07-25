@@ -4,8 +4,8 @@
 
 - **Read [`docs/SWIFT_STANDARDS.md`](../docs/SWIFT_STANDARDS.md) before writing or modifying any Swift.** It is binding, not advisory. Every rule has a worked before/after from this repo.
 - **Check [`docs/PROJECT_STRUCTURE.md`](../docs/PROJECT_STRUCTURE.md) before creating any file.** It has the folder-by-folder import rules and a decision list for placement. Do not invent a location.
-- **Follow [`docs/REFACTOR_PLAN.md`](../docs/REFACTOR_PLAN.md) when touching legacy code.** Phases are dependency-ordered. Do not refactor ahead of the current phase.
-- **Do not add code to `StarHubTH/StarHubTHViewModel.swift`.** It is a god object being dismantled. New observable state belongs in a feature store.
+- **New observable state belongs in a feature store** (`Features/<Feature>/<Feature>Store.swift`), never a shared god object.
+- **If a `docs/*_PLAN.md` tracking file exists** (e.g. `docs/QOC_PLAN.md`), it's the source of truth for in-progress, phase-ordered work — read it before touching anything it covers, and don't skip ahead of the current phase. These files are deleted once their work is done and any durable lesson is folded into `SWIFT_STANDARDS.md`/`PROJECT_STRUCTURE.md` — their absence means there's no active phased plan right now, not that the rule stopped applying.
 - Before reporting a Swift change complete, walk the pre-merge checklist in `docs/SWIFT_STANDARDS.md` §12 and state your answers explicitly.
 - If a standard genuinely cannot be met, leave a `// STANDARDS-EXCEPTION: <rule id> — <reason>` comment. Never skip a rule silently.
 

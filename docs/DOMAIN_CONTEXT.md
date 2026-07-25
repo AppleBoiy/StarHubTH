@@ -10,7 +10,7 @@ This scoping decision is load-bearing for every design choice in the codebase:
 
 - No game-abstraction layer, no "profile per game," no plugin system for other titles. `Mods/`, `manifest.json`, SMAPI, and the Nexus Stardew Valley game domain are hardcoded assumptions, not configuration — and that's intentional, not a shortcut to fix later.
 - The bar for "done" on any mod-management feature is **parity with what Vortex does for Stardew Valley specifically**, not full Vortex feature parity across every game it supports (collections UI, LOOT-style load-order solvers for Bethesda games, FOMOD installers, etc. are out of scope unless Stardew Valley mods actually use them).
-- Published on Nexus Mods itself as a tool page (`nexus_description.txt`, `nexus_changelog.txt` at repo root are the listing copy — Thai-language, since the author also ships a companion [Thai translation pack](https://github.com/AppleBoiy/stardew-thai-translations)). The app is bilingual (en/th) because its primary audience is the Thai Stardew Valley modding community.
+- Published on Nexus Mods itself as a tool page (`assets/nexus_description.txt`, `assets/nexus_changelog.txt` are the Thai-language listing copy, `assets/nexus_description_en.txt` is the English counterpart — since the author also ships a companion [Thai translation pack](https://github.com/AppleBoiy/stardew-thai-translations)). These are hand-maintained, pasted directly into the Nexus web listing — not read by any build script. The app is bilingual (en/th) because its primary audience is the Thai Stardew Valley modding community.
 
 If a task description sounds like "add support for game X" or "generalize this to work with any game," that's a scope violation — flag it rather than building it.
 
