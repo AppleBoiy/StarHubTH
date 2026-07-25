@@ -421,7 +421,7 @@
 "vm_collection_exported" = "Collection exported successfully.";
 "vm_collection_import_failed" = "Failed to import collection.";
 "vm_collection_imported" = "Collection imported successfully.";
-"vm_collection_imported_missing" = "Collection imported, but some mods are missing.";
+"vm_collection_imported_missing" = "Imported. %d mod(s) are missing — opening their Nexus pages one by one so you can download them manually.";
 "mods_sort_update_asc" = "Oldest Update";
 "mods_sort_update_desc" = "Newest Update";
 "tags_spoiler" = "Spoiler";

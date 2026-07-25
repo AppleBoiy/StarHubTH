@@ -421,7 +421,7 @@
   "vm_collection_exported": "ส่งออกคอลเลกชันสำเร็จ",
   "vm_collection_import_failed": "นำเข้าคอลเลกชันล้มเหลว",
   "vm_collection_imported": "นำเข้าคอลเลกชันสำเร็จ",
-  "vm_collection_imported_missing": "นำเข้าคอลเลกชันแล้ว แต่บางม็อดขาดหายไป",
+  "vm_collection_imported_missing": "นำเข้าแล้ว ขาดม็อดอีก %d รายการ — กำลังเปิดหน้า Nexus ของแต่ละม็อดให้ทีละหน้าเพื่อให้คุณดาวน์โหลดเอง",
   "mods_sort_update_asc": "อัปเดตเก่าสุด",
   "mods_sort_update_desc": "อัปเดตล่าสุด",
   "tags_spoiler": "สปอยล์",

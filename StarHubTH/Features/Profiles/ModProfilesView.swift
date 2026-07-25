@@ -53,19 +53,20 @@ struct ModProfilesView: View {
                             let (collection, newProfile) = try ProfileManager.shared.importProfile(from: url)
                             vm.modProfiles.append(newProfile)
                             ProfileManager.shared.saveProfiles(vm.modProfiles, activeProfileId: vm.activeProfileId)
-                            // Queue installer
+                            // Queue installer. This local collection format has no
+                            // nxm:// key/expires pair to authorize a direct API download
+                            // for a non-premium account (see NXMParser's doc comment), so
+                            // opening each missing mod's Nexus page for a manual download
+                            // is the correct behavior here, not a stand-in for a real
+                            // download that got cut — the message says so explicitly.
                             CollectionInstaller.shared.install(collection: collection, currentMods: vm.mods, nexusApiKey: vm.nexusApiKey) { missingIds in
-                                if !missingIds.isEmpty {
-                                    DispatchQueue.main.async {
-                                        for id in missingIds {
-                                            if let url = URL(string: "https://www.nexusmods.com/stardewvalley/mods/\(id)") {
-                                                NSWorkspace.shared.open(url)
-                                            }
-                                        }
-                                        vm.showModal(message: vm.L(L10n.VM.collectionImportedMissing))
+                                DispatchQueue.main.async {
+                                    if !missingIds.isEmpty {
+                                        vm.showModal(message: String(format: vm.L(L10n.VM.collectionImportedMissing), missingIds.count))
+                                        openMissingModPages(missingIds)
+                                    } else {
+                                        vm.showModal(message: vm.L(L10n.VM.collectionImported))
                                     }
-                                } else {
-                                    DispatchQueue.main.async { vm.showModal(message: vm.L(L10n.VM.collectionImported)) }
                                 }
                             }
                         } catch {
@@ -107,6 +108,19 @@ struct ModProfilesView: View {
             }
         } message: {
             Text(vm.L(L10n.Profiles.newProfileNote))
+        }
+    }
+
+    /// Opens each missing mod's Nexus page with a short stagger between them, instead of
+    /// firing every NSWorkspace.shared.open call in one tight loop — a dozen-plus tabs
+    /// opening at once reads as a popup storm, not a helpful "here's what to grab."
+    private func openMissingModPages(_ missingIds: [String], index: Int = 0) {
+        guard index < missingIds.count else { return }
+        if let url = URL(string: "https://www.nexusmods.com/stardewvalley/mods/\(missingIds[index])") {
+            NSWorkspace.shared.open(url)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            openMissingModPages(missingIds, index: index + 1)
         }
     }
 }
