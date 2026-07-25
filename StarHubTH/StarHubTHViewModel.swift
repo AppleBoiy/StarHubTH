@@ -233,12 +233,15 @@ final class StarHubTHViewModel: ObservableObject {
         // the ones the closure actually touches.
         thaiHubStore = ThaiHubStore(localization: localizationStore)
         profilesStore = ProfilesStore(profileStoring: ProfileManager.shared, localization: localizationStore)
+        modPacksStore = ModPacksStore(nexusAPIClient: LiveNexusAPIClient.shared, localization: localizationStore, logStore: logStore)
 
         // LogStore, ThaiHubStore, and ProfilesStore all mutate their own @Published
         // state from within their own methods (often via an async dispatch), not just
         // through a setter this ViewModel exposes — unlike currentLanguage (Phase 4.1),
         // a single objectWillChange.send() in a forwarding setter isn't enough. Forward
-        // each store's own publisher instead.
+        // each store's own publisher instead. ModPacksStore doesn't need this — its one
+        // @Published property only ever changes through the ViewModel's own forwarding
+        // setter, which already calls objectWillChange.send() manually.
         logStore.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
@@ -280,7 +283,19 @@ final class StarHubTHViewModel: ObservableObject {
         return ""
     }
     @Published var requestedTab: String? = nil
-    @Published var importedModPack: StarHubPack? = nil
+
+    /// Phase 4.5: mod-pack export/import/collection-fetch now lives in ModPacksStore
+    /// (Features/ModPacks/ModPacksStore.swift). Assigned in init() since it depends on
+    /// localizationStore/logStore.
+    let modPacksStore: ModPacksStore
+
+    var importedModPack: StarHubPack? {
+        get { modPacksStore.importedModPack }
+        set {
+            objectWillChange.send()
+            modPacksStore.importedModPack = newValue
+        }
+    }
 
     func handleOpenURL(_ url: URL) {
         log("Opened with URL: \(url.absoluteString)", level: .info)
@@ -1175,221 +1190,36 @@ final class StarHubTHViewModel: ObservableObject {
 
 
     // MARK: - Mod Pack Sharing
-    
+
     func exportModPack(name: String) -> URL? {
-        let packMods = mods.flatMap { mod -> [StarHubPackMod] in
-            if case .group(let children) = mod.kind {
-                return children.filter { $0.isEnabled }.map {
-                    let nexusId = Int($0.nexusUrl.components(separatedBy: "/").last ?? "").map { ModItem.NexusID(rawValue: $0) }
-                    return StarHubPackMod(name: $0.name, uniqueId: $0.uniqueId, version: $0.version, nexusId: nexusId)
-                }
-            }
-            if mod.isEnabled {
-                let nexusId = Int(mod.nexusUrl.components(separatedBy: "/").last ?? "").map { ModItem.NexusID(rawValue: $0) }
-                return [StarHubPackMod(name: mod.name, uniqueId: mod.uniqueId, version: mod.version, nexusId: nexusId)]
-            }
-            return []
-        }
-        
-        let pack = StarHubPack(packName: name, author: steamUsername.isEmpty ? "Player" : steamUsername, description: nil, mods: packMods)
-        
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
-        
-        guard let data = try? encoder.encode(pack) else { return nil }
-        
-        let savePanel = NSSavePanel()
-        savePanel.allowedContentTypes = [.json]
-        savePanel.nameFieldStringValue = "\(name.replacingOccurrences(of: " ", with: "_")).starhubpack"
-        savePanel.canCreateDirectories = true
-        
-        if savePanel.runModal() == .OK, let url = savePanel.url {
-            do {
-                try data.write(to: url)
-                return url
-            } catch {
-                showModal(message: L(L10n.VM.packSaveFailed))
-            }
-        }
-        return nil
+        modPacksStore.exportModPack(
+            name: name,
+            mods: mods,
+            steamUsername: steamUsername,
+            showModal: { [weak self] message in self?.showModal(message: message) }
+        )
     }
-    
+
     func importModPack(from url: URL) -> StarHubPack? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        let decoder = JSONDecoder()
-        do {
-            return try decoder.decode(StarHubPack.self, from: data)
-        } catch {
-            print("Failed to decode Mod Pack: \(error)")
-            return nil
-        }
+        modPacksStore.importModPack(from: url)
     }
-    
+
     func importCollectionFromURL(_ urlString: String, completion: @escaping (StarHubPack?) -> Void) {
-        guard let url = URL(string: urlString) else {
-            completion(nil)
-            return
-        }
-        
-        let path = url.path
-        let components = path.components(separatedBy: "/")
-        // Extract slug from e.g. /stardewvalley/collections/tckf0m
-        var slug = ""
-        if let idx = components.firstIndex(of: "collections"), idx + 1 < components.count {
-            slug = components[idx + 1]
-        }
-        
-        if slug.isEmpty {
-            completion(nil)
-            return
-        }
-        
-        let apiKey = nexusApiKey
-        if apiKey.isEmpty {
-            showModal(message: L(L10n.VM.collectionApiKeyRequired))
-            completion(nil)
-            return
-        }
-        
-        self.log("Fetching collection metadata for slug: \(slug)...")
-        LiveNexusAPIClient.shared.getCollectionGraph(slug: slug, apiKey: apiKey) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let collection):
-                    let packMods = collection.latestPublishedRevision?.modFiles?.compactMap { modFile -> StarHubPackMod? in
-                        guard let detail = modFile.file, let modDetail = detail.mod else { return nil }
-                        // Format mod's updatedAt as relative string
-                        var modUpdated: String? = nil
-                        if let rawDate = modDetail.updatedAt {
-                            let iso = ISO8601DateFormatter()
-                            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                            if let date = iso.date(from: rawDate) ?? ISO8601DateFormatter().date(from: rawDate) {
-                                let rel = RelativeDateTimeFormatter()
-                                rel.unitsStyle = .abbreviated
-                                modUpdated = rel.localizedString(for: date, relativeTo: Date())
-                            }
-                        }
-                        return StarHubPackMod(
-                            name: modDetail.name,
-                            uniqueId: ModItem.UniqueID(rawValue: "nexus_\(modDetail.modId)"),
-                            version: detail.version ?? "",
-                            nexusId: ModItem.NexusID(rawValue: modDetail.modId),
-                            modAuthor: modDetail.author,
-                            modDownloads: modDetail.downloads,
-                            modUpdatedAt: modUpdated,
-                            thumbnailUrl: modDetail.thumbnailUrl
-                        )
-                    } ?? []
-                    
-                    // Format updatedAt from ISO8601 to readable date string
-                    var updatedAtDisplay: String? = nil
-                    if let rawDate = collection.updatedAt {
-                        let iso = ISO8601DateFormatter()
-                        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                        if let date = iso.date(from: rawDate) ?? ISO8601DateFormatter().date(from: rawDate) {
-                            let rel = RelativeDateTimeFormatter()
-                            rel.unitsStyle = .abbreviated
-                            updatedAtDisplay = rel.localizedString(for: date, relativeTo: Date())
-                        }
-                    }
-                    
-                    let gameVersion = collection.latestPublishedRevision?.gameVersions?.first?.reference
-                    
-                    var pack = StarHubPack(
-                        packName: collection.name,
-                        author: collection.user?.name ?? "Unknown",
-                        description: collection.summary,
-                        mods: packMods
-                    )
-                    pack.imageUrl = collection.tileImage?.url
-                    pack.revision = collection.latestPublishedRevision?.revisionNumber
-                    pack.updatedAt = updatedAtDisplay
-                    pack.gameVersion = gameVersion
-                    pack.totalDownloads = collection.totalDownloads
-                    pack.endorsements = collection.endorsements
-                    completion(pack)
-                case .failure(_):
-                    self.showModal(message: self.L(L10n.VM.collectionFetchFailed))
-                    completion(nil)
-                }
-            }
-        }
+        modPacksStore.importCollectionFromURL(
+            urlString,
+            nexusApiKey: nexusApiKey,
+            showModal: { [weak self] message in self?.showModal(message: message) },
+            completion: completion
+        )
     }
-    
+
     func downloadModFromNexus(nexusId: ModItem.NexusID, fileId: Int? = nil, completion: @escaping (Bool) -> Void) {
-        let apiKey = nexusApiKey
-        if apiKey.isEmpty {
-            completion(false)
-            return
-        }
-
-        let targetFileId: Int
-
-        if let fId = fileId {
-            targetFileId = fId
-            startDownload(nexusId: nexusId, fileId: targetFileId, apiKey: apiKey, completion: completion)
-        } else {
-            self.log("Fetching latest file for Nexus Mod #\(nexusId.rawValue)...")
-            LiveNexusAPIClient.shared.getModFiles(modId: nexusId.rawValue, apiKey: apiKey) { result in
-                switch result {
-                case .success(let response):
-                    guard let latestFile = response.files.first else {
-                        self.log("No files found for Nexus Mod #\(nexusId.rawValue).")
-                        completion(false)
-                        return
-                    }
-                    self.startDownload(nexusId: nexusId, fileId: latestFile.fileId, apiKey: apiKey, completion: completion)
-                case .failure(let error):
-                    self.log("Failed to fetch mod files: \(error.localizedDescription)")
-                    completion(false)
-                }
-            }
-        }
-    }
-
-    private func startDownload(nexusId: ModItem.NexusID, fileId: Int, apiKey: String, completion: @escaping (Bool) -> Void) {
-        self.log("Requesting download link for file #\(fileId)...")
-        LiveNexusAPIClient.shared.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, apiKey: apiKey) { linkResult in
-                    switch linkResult {
-                    case .success(let links):
-                        guard let firstLink = links.first, let downloadURL = URL(string: firstLink.URI) else {
-                            self.log("No valid download links found.")
-                            completion(false)
-                            return
-                        }
-
-                        self.log("Starting download for Nexus Mod #\(nexusId.rawValue)...")
-                        let task = URLSession.shared.downloadTask(with: downloadURL) { localURL, response, error in
-                            if let error = error {
-                                self.log("Download failed: \(error.localizedDescription)")
-                                completion(false)
-                                return
-                            }
-                            
-                            guard let localURL = localURL else {
-                                completion(false)
-                                return
-                            }
-                            
-                            // Move to a temp zip file
-                            let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).zip")
-                            do {
-                                try FileManager.default.moveItem(at: localURL, to: tempZipURL)
-                                DispatchQueue.main.async {
-                                    // Pass completion into installModFromZip so it fires AFTER extraction finishes
-                                    self.installModFromZip(url: tempZipURL, completion: completion)
-                                }
-                            } catch {
-                                self.log("Failed to process downloaded file: \(error.localizedDescription)")
-                                completion(false)
-                            }
-                        }
-                        task.resume()
-                        
-                    case .failure(let error):
-                        self.log("Failed to get download link (Premium required?): \(error.localizedDescription)")
-                        completion(false)
-                    }
-        }
+        modPacksStore.downloadModFromNexus(
+            nexusId: nexusId,
+            fileId: fileId,
+            nexusApiKey: nexusApiKey,
+            installModFromZip: { [weak self] url, completion in self?.installModFromZip(url: url, completion: completion) },
+            completion: completion
+        )
     }
 }

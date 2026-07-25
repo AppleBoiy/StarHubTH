@@ -48,4 +48,17 @@ while updateDone.wait(timeout: .now()) == .timedOut && Date() < updateDeadline {
     RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
 }
 
+// ModPacksStoreTests: its stub still goes through the store's real DispatchQueue.main.async
+// hop, so it needs the same RunLoop-pumping pattern even though nothing here touches a
+// real network.
+let modPacksDone = DispatchSemaphore(value: 0)
+DispatchQueue.global(qos: .userInitiated).async {
+    ModPacksStoreTests.run()
+    modPacksDone.signal()
+}
+let modPacksDeadline = Date().addingTimeInterval(5)
+while modPacksDone.wait(timeout: .now()) == .timedOut && Date() < modPacksDeadline {
+    RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+}
+
 SimpleTestFramework.report()
