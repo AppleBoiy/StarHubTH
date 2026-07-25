@@ -75,8 +75,8 @@
 - [x] 6.3 Argument label sweep — `backupMod(mod:)`→`backUp(_:)`, `restoreModZip(mod:)`→`restore(_:)`, `installThaiTranslation(mod:)`→`install(_:)`, `setNote(for:tag:note:)`→`setNote(_:tag:forSave:)`
 - [x] 6.4 Type renames (`ModItem` → `Mod`, `LogEntry` → `LogLine`; `NexusAPIService`→`NexusAPIClient` and `StarHubTHViewModel`'s removal were already done in 3.2/4.9) — `InventoryItem` deliberately left alone, out of this step's literal scope per the table below
 - [x] 6.5 Member renames — `.modTag` → `.tag` done. **`uniqueId` → `id` deliberately NOT done** — see lesson 8 below; this line in the plan predates the Phase 2.4/2.5 group-identity fix and now directly contradicts SWIFT_STANDARDS.md §2.5's own explicit warning.
-- [ ] 6.6 Boolean renames (`showAlert` → `isAlertPresented`, etc.)
-- [ ] 6.7 Local `fm` → `fileManager`
+- [x] 6.6 Boolean renames — `showAlert` was already replaced by `AlertStore.isPresented` in 4.9; `showSmapiAlerts` → `areSmapiAlertsPresented` (found to be dead code with zero readers — flagged separately, not deleted here since that's outside a rename step's scope)
+- [x] 6.7 Local `fm` → `fileManager` — 16 declarations across 7 files, all function-scoped
 - [ ] 7.1 Typed error enum per service
 - [ ] 7.2 Audit all `try?`
 - [ ] 7.3 Audit all bare `catch {}`
@@ -89,7 +89,7 @@
 - [ ] 9.3 SwiftLint / swift-format config (optional)
 - [ ] 9.4 Update `CHANGELOG.md`
 
-**Current state (verified 2026-07-25): Phases 0–5 all done** (0.2/0.3 still partial — characterization coverage was never fully backfilled, and nothing in Phase 5 needed it). All 8 stores + `AlertStore` + `AppCoordinator` + `SmapiInstaller` + `DependencyContainer` are `@MainActor`. Every completion-handler-based I/O path is `async`/`await`; every model and the flagged `.shared` singletons are `Sendable`. `build_app.py` compiles the whole app under full Swift 6 language mode with zero warnings. Test suite: 192 assertions (down slightly from 196 — two redundant semaphore-timeout assertions were dropped as their async equivalents no longer need a manual timeout; see lesson 6).
+**Current state (verified 2026-07-25): Phases 0–6 all done** (0.2/0.3 still partial — characterization coverage was never fully backfilled, and nothing in Phase 5/6 needed it). All 8 stores + `AlertStore` + `AppCoordinator` + `SmapiInstaller` + `DependencyContainer` are `@MainActor`. Every completion-handler-based I/O path is `async`/`await`; every model and the flagged `.shared` singletons are `Sendable`. `build_app.py` compiles the whole app under full Swift 6 language mode with zero warnings. Test suite: 192 assertions (down slightly from 196 — two redundant semaphore-timeout assertions were dropped as their async equivalents no longer need a manual timeout; see lesson 6). Phase 6's naming sweep is done: `get`-prefixes gone, argument labels read as phrases, `ModItem`→`Mod`/`LogEntry`→`LogLine`, `modTag`→`tag`, `fm`→`fileManager`. `6.1`'s `vm` sweep was already a byproduct of 4.9. `uniqueId`→`id` was deliberately skipped (lesson 8) — that swap would violate §2.5's own group-identity warning, not honor it.
 
 Lessons from 4.1–4.8/4.9 that held up through Phase 5, plus what's new:
 1. **(New in 5.4) Don't reach for `actor` on stateless types.** `ModInstaller` (a `static`-only namespace) and `SaveManager` (one immutable `let`) have no mutable state for an `actor` to protect — actor-izing them would only add `await` noise. The honest fix, and what actually silences the compiler's `#MutableGlobalVariable` warning, is a plain `Sendable` conformance. Reserve `actor` for genuine shared mutable state. Where a flagged singleton *does* have real mutable state (`URLDispatcher`'s `@Published var`, `SaveNotesStore`'s `cache`), the correct fix is `@MainActor` instead, not `Sendable` — the compiler won't even accept `Sendable` there, since it'd be a lie.
