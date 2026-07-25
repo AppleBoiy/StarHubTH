@@ -119,7 +119,7 @@ struct ModsStoreTests {
     private static func testInstallModRequiresGameDir() async {
         let (store, _, _, _, _) = makeStore()
         var modalMessage: String?
-        _ = await store.installMod(url: URL(fileURLWithPath: "/tmp/mod.zip"), gameDir: "", showModal: { modalMessage = $0 }, log: { _ in })
+        try? await store.installMod(url: URL(fileURLWithPath: "/tmp/mod.zip"), gameDir: "", showModal: { modalMessage = $0 }, log: { _ in })
         SimpleTestFramework.assertTrue(modalMessage != nil, "installMod shows a modal when gameDir is empty")
     }
 
@@ -129,7 +129,7 @@ struct ModsStoreTests {
 
         var successMessage: String?
         var logged: String?
-        _ = await store.installModFromZip(
+        try? await store.installModFromZip(
             url: URL(fileURLWithPath: "/tmp/mod.zip"),
             gameDir: "/fake/gamedir",
             showModal: { successMessage = $0 },

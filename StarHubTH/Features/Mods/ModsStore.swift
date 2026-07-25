@@ -105,19 +105,22 @@ final class ModsStore: ObservableObject {
         refresh()
     }
 
-    func syncTagFromNexus(for mod: Mod, nexusApiKey: String, shouldRefresh: Bool = true, refresh: @escaping () -> Void) async -> Bool {
+    /// No-ops (rather than surfacing an error) when the mod has no valid Nexus URL — that's
+    /// an expected, silent case for locally-added mods, not a failure. A real API failure
+    /// underneath `nexusAPIClient.modInfo` is swallowed too — see the tracked follow-up to
+    /// give this a real `showModal` path, same as `syncTagFromNexus`'s siblings.
+    func syncTagFromNexus(for mod: Mod, nexusApiKey: String, shouldRefresh: Bool = true, refresh: @escaping () -> Void) async {
         guard !nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let modId = Int(url.lastPathComponent) else {
-            return false
+            return
         }
 
         guard let info = try? await nexusAPIClient.modInfo(modId: modId, apiKey: nexusApiKey),
               let categoryId = info.categoryId else {
-            return false
+            return
         }
 
         let newTag = LiveNexusAPIClient.categoryTag(from: categoryId)
         setCustomTag(for: mod.uniqueId, tag: newTag, shouldRefresh: shouldRefresh, refresh: refresh)
-        return true
     }
 
     /// Phase 4.9: replaces ModDetailView's direct `LiveNexusAPIClient.shared.modInfo`/
@@ -168,7 +171,7 @@ final class ModsStore: ObservableObject {
         }
 
         for (index, mod) in modsToSync.enumerated() {
-            _ = await syncTagFromNexus(for: mod, nexusApiKey: nexusApiKey, shouldRefresh: false, refresh: refresh)
+            await syncTagFromNexus(for: mod, nexusApiKey: nexusApiKey, shouldRefresh: false, refresh: refresh)
             syncAllTagsProgress = Double(index + 1) / Double(modsToSync.count)
         }
 
@@ -358,56 +361,54 @@ final class ModsStore: ObservableObject {
             canChooseDirectories: true   // ← also accept extracted folders
         )
         for url in urls {
-            _ = await installMod(url: url, gameDir: gameDir, showModal: showModal, log: log)
+            // Each picked file/folder installs independently — one failing (already
+            // shown to the user via showModal inside installMod) shouldn't stop the
+            // rest of a multi-selection from being attempted.
+            try? await installMod(url: url, gameDir: gameDir, showModal: showModal, log: log)
         }
     }
 
     /// Entry point — detects whether the URL is a .zip or a folder and routes accordingly.
-    @discardableResult
-    func installMod(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async -> Bool {
+    func installMod(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async throws(ModInstallerError) {
         guard !gameDir.isEmpty else {
             showModal(localization.L(L10n.Settings.gameDirNotSet))
-            return false
+            return
         }
         var isDir: ObjCBool = false
         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
 
         if isDir.boolValue {
-            return await installModFromFolder(url: url, gameDir: gameDir, showModal: showModal, log: log)
+            try await installModFromFolder(url: url, gameDir: gameDir, showModal: showModal, log: log)
         } else if url.pathExtension.lowercased() == "zip" {
-            return await installModFromZip(url: url, gameDir: gameDir, showModal: showModal, log: log)
+            try await installModFromZip(url: url, gameDir: gameDir, showModal: showModal, log: log)
         } else {
             showModal(localization.L(L10n.Mods.installInvalidFile))
-            return false
         }
     }
 
     /// Installs a mod from a .zip file
-    @discardableResult
-    func installModFromZip(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async -> Bool {
+    func installModFromZip(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async throws(ModInstallerError) {
         isInstallingMod = true
         do {
             let installedNames = try await modInstalling.installFromZip(url: url, gameDir: gameDir)
-            return handleInstallResult(.success(installedNames), gameDir: gameDir, showModal: showModal, log: log)
+            try handleInstallResult(.success(installedNames), gameDir: gameDir, showModal: showModal, log: log)
         } catch {
-            return handleInstallResult(.failure(error), gameDir: gameDir, showModal: showModal, log: log)
+            try handleInstallResult(.failure(error), gameDir: gameDir, showModal: showModal, log: log)
         }
     }
 
     /// Installs a mod from an already-extracted folder.
-    @discardableResult
-    func installModFromFolder(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async -> Bool {
+    func installModFromFolder(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async throws(ModInstallerError) {
         isInstallingMod = true
         do {
             let installedNames = try await modInstalling.installFromFolder(url: url, gameDir: gameDir)
-            return handleInstallResult(.success(installedNames), gameDir: gameDir, showModal: showModal, log: log)
+            try handleInstallResult(.success(installedNames), gameDir: gameDir, showModal: showModal, log: log)
         } catch {
-            return handleInstallResult(.failure(error), gameDir: gameDir, showModal: showModal, log: log)
+            try handleInstallResult(.failure(error), gameDir: gameDir, showModal: showModal, log: log)
         }
     }
 
-    @discardableResult
-    private func handleInstallResult(_ result: Result<[String], ModInstallerError>, gameDir: String, showModal: (String) -> Void, log: (String) -> Void) -> Bool {
+    private func handleInstallResult(_ result: Result<[String], ModInstallerError>, gameDir: String, showModal: (String) -> Void, log: (String) -> Void) throws(ModInstallerError) {
         isInstallingMod = false
         switch result {
         case .success(let installedNames):
@@ -416,7 +417,6 @@ final class ModsStore: ObservableObject {
             showModal(msg)
             log(msg)
             scanMods(gameDir: gameDir)
-            return true
         case .failure(let error):
             switch error {
             case .noModFound:
@@ -429,7 +429,7 @@ final class ModsStore: ObservableObject {
                 log("Install failed: \(msg)")
                 showModal(String(format: localization.L(L10n.VM.unzipFailed), msg))
             }
-            return false
+            throw error
         }
     }
 
@@ -438,10 +438,9 @@ final class ModsStore: ObservableObject {
     func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: Mod.NexusID, nexusApiKey: String, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
         downloadingMods.insert(mod.name)
 
+        let zipUrl: URL
         do {
-            let zipUrl = try await NexusDownloader.downloadUpdate(nexusId: nexusId, apiKey: nexusApiKey)
-            downloadingMods.remove(mod.name)
-            await installModFromZip(url: zipUrl, gameDir: gameDir, showModal: showModal, log: log)
+            zipUrl = try await NexusDownloader.downloadUpdate(nexusId: nexusId, apiKey: nexusApiKey)
         } catch {
             downloadingMods.remove(mod.name)
             if let downloaderError = error as? NexusDownloaderError, case .premiumRequired = downloaderError {
@@ -449,7 +448,11 @@ final class ModsStore: ObservableObject {
             } else {
                 showModal(error.localizedDescription)
             }
+            return
         }
+        downloadingMods.remove(mod.name)
+        // installModFromZip already shows its own success/failure message via showModal.
+        try? await installModFromZip(url: zipUrl, gameDir: gameDir, showModal: showModal, log: log)
     }
 
     // MARK: - Mods-directory backup & restore

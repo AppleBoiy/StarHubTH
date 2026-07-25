@@ -128,7 +128,7 @@ final class AppCoordinator: ObservableObject {
         modsStore.resetCustomTag(for: modId, refresh: { [weak self] in self?.refresh() })
     }
 
-    func syncTagFromNexus(for mod: Mod, shouldRefresh: Bool = true) async -> Bool {
+    func syncTagFromNexus(for mod: Mod, shouldRefresh: Bool = true) async {
         await modsStore.syncTagFromNexus(
             for: mod,
             nexusApiKey: appEnvironment.nexusApiKey,
@@ -149,9 +149,9 @@ final class AppCoordinator: ObservableObject {
         )
     }
 
-    @discardableResult
-    func installMod(url: URL) async -> Bool {
-        await modsStore.installMod(
+    func installMod(url: URL) async {
+        // installMod already shows its own success/failure message via showModal.
+        try? await modsStore.installMod(
             url: url,
             gameDir: appEnvironment.gameDir,
             showModal: { [weak self] message in self?.alertStore.show(message) },
@@ -159,24 +159,22 @@ final class AppCoordinator: ObservableObject {
         )
     }
 
+    /// Returns whether the install succeeded, for callers (Nexus mod-pack downloads)
+    /// that need to track install counts — the message itself is already shown to the
+    /// user inside `ModsStore.installModFromZip` regardless of outcome.
     @discardableResult
     func installModFromZip(url: URL) async -> Bool {
-        await modsStore.installModFromZip(
-            url: url,
-            gameDir: appEnvironment.gameDir,
-            showModal: { [weak self] message in self?.alertStore.show(message) },
-            log: { [weak self] message in self?.logStore.log(message) }
-        )
-    }
-
-    @discardableResult
-    func installModFromFolder(url: URL) async -> Bool {
-        await modsStore.installModFromFolder(
-            url: url,
-            gameDir: appEnvironment.gameDir,
-            showModal: { [weak self] message in self?.alertStore.show(message) },
-            log: { [weak self] message in self?.logStore.log(message) }
-        )
+        do {
+            try await modsStore.installModFromZip(
+                url: url,
+                gameDir: appEnvironment.gameDir,
+                showModal: { [weak self] message in self?.alertStore.show(message) },
+                log: { [weak self] message in self?.logStore.log(message) }
+            )
+            return true
+        } catch {
+            return false
+        }
     }
 
     func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: Mod.NexusID) async {

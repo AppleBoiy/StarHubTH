@@ -193,7 +193,7 @@ struct ModDetailView: View {
                     Button {
                         isLoading = true
                         Task {
-                            _ = await appCoordinator.syncTagFromNexus(for: mod)
+                            await appCoordinator.syncTagFromNexus(for: mod)
                             isLoading = false
                         }
                     } label: {
