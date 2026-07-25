@@ -1,0 +1,48 @@
+# StarHubTH — Release Numbering
+
+Read this before touching `release.py`, `Info.plist`'s version keys, or any future release automation. It defines the versioning standard this project follows — nothing here wires up auto-release CI yet, that's a separate step once this is settled.
+
+## The standard: SemVer + a separate build number
+
+`CHANGELOG.md` already declares [Semantic Versioning](https://semver.org/spec/v2.0.0.html) — this doc makes that binding and adds the one thing SemVer doesn't cover: Apple's build-number field.
+
+Two numbers, two different jobs, both live in `Info.plist`:
+
+| Key | Format | Means | Bumped |
+|---|---|---|---|
+| `CFBundleShortVersionString` | `MAJOR.MINOR.PATCH` (SemVer, optional `-preview.N`) | The version a user sees | Once per release |
+| `CFBundleVersion` | Plain monotonically increasing integer (`"1"`, `"2"`, `"3"`, ...) | Distinguishes builds macOS/Gatekeeper/an updater can compare | Every build that ships, even two builds of the same `CFBundleShortVersionString` |
+
+**Current state is broken and needs fixing before automation goes on top of it:** `CFBundleShortVersionString` has moved 1.0.0 → 1.1.3 correctly, but `CFBundleVersion` has stayed `"1"` since the first release. It must become a real incrementing counter — this is what a future updater or `defaults compare` check relies on, not the marketing string.
+
+### SemVer rules for this app
+
+StarHubTH is a shipped desktop app, not a library — there's no public API to break — so read the three fields as:
+
+- **PATCH** — bug fix, no new user-facing capability. (`1.1.3` → `1.1.4`)
+- **MINOR** — new feature or visible behavior change, backward compatible (existing profiles/packs/saves still load). (`1.1.3` → `1.2.0`)
+- **MAJOR** — reserved for changes that break compatibility with existing user data/config (e.g. a mod-pack export format change, a save-file schema the old app can't read) or a deliberate relaunch milestone. Don't bump it for size of effort alone — the Phase 9 architecture refactor was internal-only and correctly stayed PATCH/MINOR in the changelog, not MAJOR.
+- **Prerelease** — `MAJOR.MINOR.PATCH-preview.N` (e.g. `1.2.0-preview.1`) for a build shared before the stable cut of that version. `N` starts at `1` and increments; it resets when the base version changes. Use `-preview.N`, not ad hoc suffixes — `1.1.1-preview` and `1.1.2-preview-2` (both in the changelog history) are exactly the inconsistency this doc exists to stop.
+
+## Single source of truth
+
+`Info.plist` is authoritative. Every other place a version appears is *derived*, never hand-typed separately:
+
+- **Git tag** — always `vMAJOR.MINOR.PATCH[-preview.N]`, created from whatever `Info.plist` says at release time. No other tag shapes (retire the `-rev1` pattern seen on `v1.0.6-rev1`; if a build needs a redo, bump `CFBundleVersion` and re-tag the same `CFBundleShortVersionString` only if it never shipped — otherwise cut a new PATCH).
+- **Release zip filename / GitHub release title** (`release.py`) — already reads `CFBundleShortVersionString` out of `Info.plist`. Keep it that way; don't let it take a version argument that could disagree with the plist.
+- **`CHANGELOG.md` heading** — the `## [Unreleased]` section is renamed to `## [MAJOR.MINOR.PATCH] - YYYY-MM-DD` at release time, matching `Info.plist` exactly. A version with no changelog entry, or a changelog entry with no matching tag, is a bug — the current history has both (1.1.1-preview and 1.1.2-preview-2 have changelog entries but no tag).
+
+## Release procedure
+
+Until this is automated, cutting a release is one commit + one tag:
+
+1. Decide the new `MAJOR.MINOR.PATCH` per the rules above.
+2. In `Info.plist`: set `CFBundleShortVersionString` to the new version, increment `CFBundleVersion` by 1 (regardless of whether this is a MAJOR/MINOR/PATCH bump — it counts builds, not releases).
+3. In `CHANGELOG.md`: rename `## [Unreleased]` to `## [MAJOR.MINOR.PATCH] - YYYY-MM-DD`, add a fresh empty `## [Unreleased]` above it.
+4. Commit both together as `release: vMAJOR.MINOR.PATCH` — one concern, not mixed with feature work.
+5. Tag the commit `vMAJOR.MINOR.PATCH[-preview.N]`.
+6. Run `python3 release.py` to build, zip, and optionally publish to GitHub.
+
+## Out of scope for this doc
+
+Wiring `release.py` or CI to bump these automatically, generate changelog entries, or push tags on merge — that's the next step, and it should build on top of this numbering standard rather than deciding it ad hoc.
