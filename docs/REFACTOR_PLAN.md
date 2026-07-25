@@ -71,8 +71,8 @@
 - [x] 5.6 SMAPI log tailing → `AsyncStream` — real live tailing added (not just a modernization), per your choice; see lesson 2.
 - [x] 5.7 Burn down warnings to zero, then promote to full Swift 6 language mode — `-strict-concurrency=complete` warnings: 240 → 0. Verified the whole codebase also compiles clean under `-swift-version 6` (every one of those warnings becomes a hard error in that mode) and switched `build_app.py`'s `concurrency_check_flags()` to prefer it, falling back to the older flags on an unsupported toolchain.
 - [x] 6.1 `vm` → store name at all call sites — resolved as a byproduct of 4.9, not a dedicated pass: deleting `StarHubTHViewModel` meant every `vm.` reference had to become a specific store/coordinator reference anyway. No `vm` variable remains anywhere in `StarHubTH/`.
-- [ ] 6.2 Drop `get` prefix / convert to properties
-- [ ] 6.3 Argument label sweep
+- [x] 6.2 Drop `get` prefix / convert to properties — 10 methods renamed (`getModInfo`→`modInfo`, `getNote`→`note`, `getInstalledVersion`→`installedVersion`, etc). None qualified as a bare property — every one takes at least one argument.
+- [x] 6.3 Argument label sweep — `backupMod(mod:)`→`backUp(_:)`, `restoreModZip(mod:)`→`restore(_:)`, `installThaiTranslation(mod:)`→`install(_:)`, `setNote(for:tag:note:)`→`setNote(_:tag:forSave:)`
 - [ ] 6.4 Type renames (`ModItem` → `Mod`, etc.)
 - [ ] 6.5 Member renames (`uniqueId` → `id`, etc.)
 - [ ] 6.6 Boolean renames (`showAlert` → `isAlertPresented`, etc.)
