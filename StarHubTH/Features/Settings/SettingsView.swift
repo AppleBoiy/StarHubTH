@@ -4,8 +4,12 @@ import CoreServices
 #endif
 
 struct SettingsView: View {
-    @ObservedObject var vm: StarHubTHViewModel
-    
+    @EnvironmentObject var localizationStore: LocalizationStore
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    @EnvironmentObject var savesStore: SavesStore
+    @EnvironmentObject var alertStore: AlertStore
+    @EnvironmentObject var appCoordinator: AppCoordinator
+
     @AppStorage("launchProfile") private var launchProfile: String = "SMAPI"
     @AppStorage("closeAfterLaunch") private var closeAfterLaunch: Bool = false
     @AppStorage("appColorScheme") private var appColorScheme: String = "System"
@@ -17,38 +21,38 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 32) {
                 
                 // ── Language ──
-                StandardSection(title: vm.L(L10n.Settings.appLanguage)) {
+                StandardSection(title: localizationStore.L(L10n.Settings.appLanguage)) {
                     HStack {
-                        Text(vm.L(L10n.Settings.selectLanguage))
+                        Text(localizationStore.L(L10n.Settings.selectLanguage))
                             .font(.system(size: 13))
                         Spacer()
-                        Picker("", selection: $vm.currentLanguage) {
-                            Text(vm.L(L10n.Settings.languageThai)).tag("th")
-                            Text(vm.L(L10n.Settings.languageEnglish)).tag("en")
+                        Picker("", selection: $localizationStore.currentLanguage) {
+                            Text(localizationStore.L(L10n.Settings.languageThai)).tag("th")
+                            Text(localizationStore.L(L10n.Settings.languageEnglish)).tag("en")
                         }
                         .pickerStyle(MenuPickerStyle())
                         .fixedSize()
                         
-                        InfoPopoverButton(text: vm.L(L10n.Settings.selectLanguage))
+                        InfoPopoverButton(text: localizationStore.L(L10n.Settings.selectLanguage))
                     }
                 }
                 
                 // ── Nexus API ──
                 StandardSection(
-                    title: vm.L(L10n.Settings.nexusApiKey),
-                    footer: vm.L(L10n.Settings.nexusApiSectionFooter)
+                    title: localizationStore.L(L10n.Settings.nexusApiKey),
+                    footer: localizationStore.L(L10n.Settings.nexusApiSectionFooter)
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(alignment: .center, spacing: 12) {
-                            SecureField(vm.L(L10n.Settings.nexusApiKeyPlaceholder), text: $nexusApiKey)
+                            SecureField(localizationStore.L(L10n.Settings.nexusApiKeyPlaceholder), text: $nexusApiKey)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                             
                             if !nexusApiKey.isEmpty {
-                                Label(vm.L(L10n.Settings.nexusConnected), systemImage: "checkmark.circle.fill")
+                                Label(localizationStore.L(L10n.Settings.nexusConnected), systemImage: "checkmark.circle.fill")
                                     .foregroundColor(.green)
                                     .font(.system(size: 13, weight: .medium))
                             } else {
-                                Label(vm.L(L10n.Settings.nexusNotConnected), systemImage: "xmark.circle.fill")
+                                Label(localizationStore.L(L10n.Settings.nexusNotConnected), systemImage: "xmark.circle.fill")
                                     .foregroundColor(.red)
                                     .font(.system(size: 13, weight: .medium))
                             }
@@ -59,34 +63,34 @@ struct SettingsView: View {
                                 }
                             }) {
                                 HStack(spacing: 4) {
-                                    Text(vm.L(L10n.Settings.nexusGetApiKey))
+                                    Text(localizationStore.L(L10n.Settings.nexusGetApiKey))
                                     Image(systemName: "arrow.up.right.square")
                                 }
                             }
                             
-                            InfoPopoverButton(text: vm.L(L10n.Settings.nexusApiKeyHint))
+                            InfoPopoverButton(text: localizationStore.L(L10n.Settings.nexusApiKeyHint))
                         }
                     }
                 }
                 
                 // ── Nexus Protocol Handler ──
                 StandardSection(
-                    title: vm.L(L10n.SettingsExtra.nexusHandlerTitle),
-                    footer: vm.L(L10n.SettingsExtra.nexusHandlerDesc)
+                    title: localizationStore.L(L10n.SettingsExtra.nexusHandlerTitle),
+                    footer: localizationStore.L(L10n.SettingsExtra.nexusHandlerDesc)
                 ) {
                     HStack(spacing: 12) {
-                        Text(vm.L(L10n.SettingsExtra.nexusHandlerTitle))
+                        Text(localizationStore.L(L10n.SettingsExtra.nexusHandlerTitle))
                             .font(.system(size: 13))
                         Spacer()
-                        Button(vm.L(L10n.SettingsExtra.setAsDefault)) {
+                        Button(localizationStore.L(L10n.SettingsExtra.setAsDefault)) {
                             #if os(macOS)
                             let scheme = "nxm" as CFString
                             let bundleID = "com.appleboiy.StarHubTH" as CFString
                             let status = LSSetDefaultHandlerForURLScheme(scheme, bundleID)
                             if status == 0 {
-                                vm.showModal(message: "StarHubTH is now successfully registered as your default Nexus Mods handler!")
+                                alertStore.show("StarHubTH is now successfully registered as your default Nexus Mods handler!")
                             } else {
-                                vm.showModal(message: "Failed to set default handler. macOS returned status code: \(status)")
+                                alertStore.show("Failed to set default handler. macOS returned status code: \(status)")
                             }
                             #endif
                         }
@@ -99,28 +103,28 @@ struct SettingsView: View {
                 
                 // ── Launch Options ──
                 StandardSection(
-                    title: vm.L(L10n.Settings.launchOptions),
-                    footer: vm.L(L10n.Settings.footerLaunch)
+                    title: localizationStore.L(L10n.Settings.launchOptions),
+                    footer: localizationStore.L(L10n.Settings.footerLaunch)
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text(vm.L(L10n.Settings.defaultLaunchMode))
+                            Text(localizationStore.L(L10n.Settings.defaultLaunchMode))
                                 .font(.system(size: 13))
                             Spacer()
                             Picker("", selection: $launchProfile) {
-                                Text(vm.L(L10n.Settings.playSMAPI)).tag("SMAPI")
-                                Text(vm.L(L10n.Settings.vanillaGame)).tag("Vanilla")
+                                Text(localizationStore.L(L10n.Settings.playSMAPI)).tag("SMAPI")
+                                Text(localizationStore.L(L10n.Settings.vanillaGame)).tag("Vanilla")
                             }
                             .pickerStyle(MenuPickerStyle())
                             .fixedSize()
                             
-                            InfoPopoverButton(text: vm.L(L10n.Settings.hintNextLaunchMode))
+                            InfoPopoverButton(text: localizationStore.L(L10n.Settings.hintNextLaunchMode))
                         }
                         
                         Divider().padding(.leading, 0)
                         
                         HStack {
-                            Text(vm.L(L10n.Settings.closeLauncher))
+                            Text(localizationStore.L(L10n.Settings.closeLauncher))
                                 .font(.system(size: 13))
                             Spacer()
                             Toggle("", isOn: $closeAfterLaunch)
@@ -128,66 +132,66 @@ struct SettingsView: View {
                                 .controlSize(.small)
                                 .labelsHidden()
                             
-                            InfoPopoverButton(text: vm.L(L10n.Settings.hintSaveResources))
+                            InfoPopoverButton(text: localizationStore.L(L10n.Settings.hintSaveResources))
                         }
                     }
                 }
                 
                 // ── Backup ──
                 StandardSection(
-                    title: vm.L(L10n.Settings.backup),
-                    footer: vm.L(L10n.Settings.footerBackup)
+                    title: localizationStore.L(L10n.Settings.backup),
+                    footer: localizationStore.L(L10n.Settings.footerBackup)
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text(vm.L(L10n.Settings.backupSaves))
+                            Text(localizationStore.L(L10n.Settings.backupSaves))
                                 .font(.system(size: 13))
                             Spacer()
-                            Button(action: { vm.backupAllSaves() }) {
-                                Text(vm.L(L10n.Settings.backupSavesButton))
+                            Button(action: { appCoordinator.backupAllSaves() }) {
+                                Text(localizationStore.L(L10n.Settings.backupSavesButton))
                             }
-                            InfoPopoverButton(text: vm.L(L10n.Settings.hintCompressSaves))
+                            InfoPopoverButton(text: localizationStore.L(L10n.Settings.hintCompressSaves))
                         }
                         
                         Divider().padding(.leading, 0)
                         
                         HStack {
-                            Text(vm.L(L10n.Settings.backupMods))
+                            Text(localizationStore.L(L10n.Settings.backupMods))
                                 .font(.system(size: 13))
                             Spacer()
-                            Button(action: { vm.backupAllMods() }) {
-                                Text(vm.L(L10n.Settings.backupModsButton))
+                            Button(action: { appCoordinator.backupAllMods() }) {
+                                Text(localizationStore.L(L10n.Settings.backupModsButton))
                             }
-                            InfoPopoverButton(text: vm.L(L10n.Settings.hintCompressMods))
+                            InfoPopoverButton(text: localizationStore.L(L10n.Settings.hintCompressMods))
                         }
                     }
                 }
                 
                 // ── Appearance ──
                 StandardSection(
-                    title: vm.L(L10n.Settings.appearance),
-                    footer: vm.L(L10n.Settings.footerAppearance)
+                    title: localizationStore.L(L10n.Settings.appearance),
+                    footer: localizationStore.L(L10n.Settings.footerAppearance)
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text(vm.L(L10n.Settings.appTheme))
+                            Text(localizationStore.L(L10n.Settings.appTheme))
                                 .font(.system(size: 13))
                             Spacer()
                             Picker("", selection: $appColorScheme) {
-                                Text(vm.L(L10n.Settings.themeSystem)).tag("System")
-                                Text(vm.L(L10n.Settings.themeLight)).tag("Light")
-                                Text(vm.L(L10n.Settings.themeDark)).tag("Dark")
+                                Text(localizationStore.L(L10n.Settings.themeSystem)).tag("System")
+                                Text(localizationStore.L(L10n.Settings.themeLight)).tag("Light")
+                                Text(localizationStore.L(L10n.Settings.themeDark)).tag("Dark")
                             }
                             .pickerStyle(SegmentedPickerStyle())
                             .fixedSize()
                             
-                            InfoPopoverButton(text: vm.L(L10n.Settings.selectLanguage))
+                            InfoPopoverButton(text: localizationStore.L(L10n.Settings.selectLanguage))
                         }
                         
                         Divider().padding(.leading, 0)
                         
                         HStack {
-                            Text(vm.L(L10n.Settings.showDevLogs))
+                            Text(localizationStore.L(L10n.Settings.showDevLogs))
                                 .font(.system(size: 13))
                             Spacer()
                             Toggle("", isOn: $showDeveloperLogs)
@@ -195,60 +199,60 @@ struct SettingsView: View {
                                 .controlSize(.small)
                                 .labelsHidden()
                             
-                            InfoPopoverButton(text: vm.L(L10n.Settings.hintDevLogs))
+                            InfoPopoverButton(text: localizationStore.L(L10n.Settings.hintDevLogs))
                         }
                     }
                 }
                 
                 // ── Mod Behavior ──
                 StandardSection(
-                    title: vm.L(L10n.Settings.modBehavior),
-                    footer: vm.L(L10n.Settings.chainToggleHint)
+                    title: localizationStore.L(L10n.Settings.modBehavior),
+                    footer: localizationStore.L(L10n.Settings.chainToggleHint)
                 ) {
                     HStack {
-                        Text(vm.L(L10n.Settings.chainToggle))
+                        Text(localizationStore.L(L10n.Settings.chainToggle))
                             .font(.system(size: 13))
                         Spacer()
                         Toggle("", isOn: Binding(
-                            get: { vm.chainToggleDependencies },
-                            set: { vm.chainToggleDependencies = $0 }
+                            get: { appEnvironment.chainToggleDependencies },
+                            set: { appEnvironment.chainToggleDependencies = $0 }
                         ))
                         .toggleStyle(SwitchToggleStyle(tint: .blue))
                         .controlSize(.small)
                         .labelsHidden()
                         
-                        InfoPopoverButton(text: vm.L(L10n.Settings.chainToggleHint))
+                        InfoPopoverButton(text: localizationStore.L(L10n.Settings.chainToggleHint))
                     }
                 }
 
                 // ── Management ──
                 StandardSection(
-                    title: vm.L(L10n.Settings.management),
-                    footer: vm.L(L10n.Settings.footerManagement)
+                    title: localizationStore.L(L10n.Settings.management),
+                    footer: localizationStore.L(L10n.Settings.footerManagement)
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text(vm.L(L10n.Settings.savesFolder))
+                            Text(localizationStore.L(L10n.Settings.savesFolder))
                                 .font(.system(size: 13))
                             Spacer()
-                            Button(action: { vm.openSavesFolder() }) {
-                                Text(vm.L(L10n.Settings.openFolder))
+                            Button(action: { savesStore.openSavesFolder() }) {
+                                Text(localizationStore.L(L10n.Settings.openFolder))
                             }
-                            InfoPopoverButton(text: vm.L(L10n.Settings.openFolder))
+                            InfoPopoverButton(text: localizationStore.L(L10n.Settings.openFolder))
                         }
                         
                         Divider().padding(.leading, 0)
                         
                         HStack {
-                            Text(vm.L(L10n.Settings.clearDisabledMods))
+                            Text(localizationStore.L(L10n.Settings.clearDisabledMods))
                                 .font(.system(size: 13))
                             Spacer()
-                            Button(action: { vm.cleanDisabledMods() }) {
-                                Text(vm.L(L10n.Settings.deleteJunkMods))
+                            Button(action: { appCoordinator.cleanDisabledMods() }) {
+                                Text(localizationStore.L(L10n.Settings.deleteJunkMods))
                             }
                             .foregroundColor(.red)
                             
-                            InfoPopoverButton(text: vm.L(L10n.Settings.clearDisabledMods), color: .red.opacity(0.8))
+                            InfoPopoverButton(text: localizationStore.L(L10n.Settings.clearDisabledMods), color: .red.opacity(0.8))
                         }
                     }
                 }

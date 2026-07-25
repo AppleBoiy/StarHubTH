@@ -296,7 +296,7 @@ struct MainView: View {
                 } else if currentTab == "ThaiHub" {
                     ThaiTranslationHubView()
                 } else if currentTab == "Settings" {
-                    SettingsView(vm: vm)
+                    SettingsView()
                 } else if currentTab == "AppChangelog" {
                     AppChangelogView()
                 } else if currentTab == "Logs" {
