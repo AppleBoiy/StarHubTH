@@ -210,10 +210,9 @@ final class LiveNexusAPIClient {
     
     // MARK: - Core Fetch Method
     
-    private func fetch<T: Decodable>(endpoint: String, apiKey: String, method: String = "GET", completion: @escaping (Result<T, Error>) -> Void) {
+    private func fetch<T: Decodable>(endpoint: String, apiKey: String, method: String = "GET") async throws -> T {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else {
-            completion(.failure(NexusAPIError.invalidURL))
-            return
+            throw NexusAPIError.invalidURL
         }
 
         var request = URLRequest(url: url)
@@ -221,37 +220,23 @@ final class LiveNexusAPIClient {
         request.setValue(apiKey, forHTTPHeaderField: "apikey")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
+        let (data, response) = try await URLSession.shared.data(for: request)
 
-            if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
-                completion(.failure(NexusAPIError.httpStatus(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                completion(.failure(NexusAPIError.noData))
-                return
-            }
-
-            do {
-                let decoder = JSONDecoder()
-                let result = try decoder.decode(T.self, from: data)
-                completion(.success(result))
-            } catch {
-                completion(.failure(NexusAPIError.decodingFailed(error.localizedDescription)))
-            }
+        if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
+            throw NexusAPIError.httpStatus(httpResponse.statusCode)
         }
-        task.resume()
+
+        do {
+            let decoder = JSONDecoder()
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw NexusAPIError.decodingFailed(error.localizedDescription)
+        }
     }
 
-    private func post(endpoint: String, apiKey: String, completion: @escaping (Result<Void, Error>) -> Void) {
+    private func post(endpoint: String, apiKey: String) async throws {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else {
-            completion(.failure(NexusAPIError.invalidURL))
-            return
+            throw NexusAPIError.invalidURL
         }
 
         var request = URLRequest(url: url)
@@ -259,27 +244,17 @@ final class LiveNexusAPIClient {
         request.setValue(apiKey, forHTTPHeaderField: "apikey")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
+        let (_, response) = try await URLSession.shared.data(for: request)
 
-            if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
-                completion(.failure(NexusAPIError.httpStatus(httpResponse.statusCode)))
-                return
-            }
-
-            completion(.success(()))
+        if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
+            throw NexusAPIError.httpStatus(httpResponse.statusCode)
         }
-        task.resume()
     }
 
-    private func postGraphQL<T: Decodable>(query: String, variables: [String: Any], apiKey: String, completion: @escaping (Result<T, Error>) -> Void) {
+    private func postGraphQL<T: Decodable>(query: String, variables: [String: Any], apiKey: String) async throws -> T {
         let graphqlURL = "https://api.nexusmods.com/v2/graphql"
         guard let url = URL(string: graphqlURL) else {
-            completion(.failure(NexusAPIError.invalidURL))
-            return
+            throw NexusAPIError.invalidURL
         }
 
         var request = URLRequest(url: url)
@@ -293,58 +268,40 @@ final class LiveNexusAPIClient {
             "variables": variables
         ]
 
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
+            throw NexusAPIError.httpStatus(httpResponse.statusCode)
+        }
+
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let decoder = JSONDecoder()
+            return try decoder.decode(T.self, from: data)
         } catch {
-            completion(.failure(error))
-            return
+            throw NexusAPIError.decodingFailed(error.localizedDescription)
         }
-
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-
-            if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
-                completion(.failure(NexusAPIError.httpStatus(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
-                completion(.failure(NexusAPIError.noData))
-                return
-            }
-
-            do {
-                let decoder = JSONDecoder()
-                let result = try decoder.decode(T.self, from: data)
-                completion(.success(result))
-            } catch {
-                completion(.failure(NexusAPIError.decodingFailed(error.localizedDescription)))
-            }
-        }
-        task.resume()
     }
-    
+
     // MARK: - Endpoints
-    
-    func getModInfo(modId: Int, apiKey: String, completion: @escaping (Result<ModInfo, Error>) -> Void) {
+
+    func getModInfo(modId: Int, apiKey: String) async throws -> ModInfo {
         let endpoint = "/games/\(gameName)/mods/\(modId).json"
-        fetch(endpoint: endpoint, apiKey: apiKey, completion: completion)
+        return try await fetch(endpoint: endpoint, apiKey: apiKey)
     }
-    
-    func getModFiles(modId: Int, apiKey: String, completion: @escaping (Result<ModFileListResponse, Error>) -> Void) {
+
+    func getModFiles(modId: Int, apiKey: String) async throws -> ModFileListResponse {
         let endpoint = "/games/\(gameName)/mods/\(modId)/files.json"
-        fetch(endpoint: endpoint, apiKey: apiKey, completion: completion)
+        return try await fetch(endpoint: endpoint, apiKey: apiKey)
     }
-    
+
     /// `key`/`expires` are the one-time authorization pair from a manual "Download with
     /// Manager" `nxm://` link (see `NXMParser`). Nexus's API requires them for a
     /// non-premium API key to obtain a download link at all; a premium key ignores them.
     /// Pass `nil` for both when the caller has no `nxm://` link to source them from —
     /// the request will then only succeed for a premium API key.
-    func getDownloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String, completion: @escaping (Result<[ModDownloadLink], Error>) -> Void) {
+    func getDownloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String) async throws -> [ModDownloadLink] {
         var endpoint = "/games/\(gameName)/mods/\(modId)/files/\(fileId)/download_link.json"
 
         if let key, let expires, !key.isEmpty, !expires.isEmpty {
@@ -360,10 +317,10 @@ final class LiveNexusAPIClient {
             }
         }
 
-        fetch(endpoint: endpoint, apiKey: apiKey, completion: completion)
+        return try await fetch(endpoint: endpoint, apiKey: apiKey)
     }
-    
-    func endorseMod(modId: Int, version: String?, apiKey: String, completion: @escaping (Result<Void, Error>) -> Void) {
+
+    func endorseMod(modId: Int, version: String?, apiKey: String) async throws {
         // Technically nexus requires version but it's optional in their query params sometimes, or we can just send the one we know.
         var endpoint = "/games/\(gameName)/mods/\(modId)/endorse.json"
         if let v = version, !v.isEmpty {
@@ -371,10 +328,10 @@ final class LiveNexusAPIClient {
                 endpoint += "?version=\(encoded)"
             }
         }
-        post(endpoint: endpoint, apiKey: apiKey, completion: completion)
+        try await post(endpoint: endpoint, apiKey: apiKey)
     }
-    
-    func getCollectionGraph(slug: String, apiKey: String, completion: @escaping (Result<CollectionGraph, Error>) -> Void) {
+
+    func getCollectionGraph(slug: String, apiKey: String) async throws -> CollectionGraph {
         let query = """
         query GetCollection($slug: String!) {
             collection(slug: $slug) {
@@ -422,23 +379,16 @@ final class LiveNexusAPIClient {
             }
         }
         """
-        postGraphQL(query: query, variables: ["slug": slug], apiKey: apiKey) { (result: Result<GraphQLResponse<CollectionData>, Error>) in
-            switch result {
-            case .success(let response):
-                if let errors = response.errors, !errors.isEmpty {
-                    let errStr = errors.map { $0.message }.joined(separator: ", ")
-                    completion(.failure(NexusAPIError.graphQLErrors(errStr)))
-                    return
-                }
-                guard let collection = response.data?.collection else {
-                    completion(.failure(NexusAPIError.collectionNotFound))
-                    return
-                }
-                completion(.success(collection))
-            case .failure(let error):
-                completion(.failure(error))
-            }
+        let response: GraphQLResponse<CollectionData> = try await postGraphQL(query: query, variables: ["slug": slug], apiKey: apiKey)
+
+        if let errors = response.errors, !errors.isEmpty {
+            let errStr = errors.map { $0.message }.joined(separator: ", ")
+            throw NexusAPIError.graphQLErrors(errStr)
         }
+        guard let collection = response.data?.collection else {
+            throw NexusAPIError.collectionNotFound
+        }
+        return collection
     }
     
     enum DescriptionBlock: Hashable {

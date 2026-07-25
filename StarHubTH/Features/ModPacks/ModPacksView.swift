@@ -58,9 +58,9 @@ struct ModPacksView: View {
                             .textFieldStyle(.roundedBorder)
                         Button("Import") {
                             guard !collectionURL.isEmpty else { return }
-                            appCoordinator.importCollectionFromURL(collectionURL) { pack in
-                                if let p = pack {
-                                    withAnimation { self.modPacksStore.importedModPack = p }
+                            Task {
+                                if let pack = await appCoordinator.importCollectionFromURL(collectionURL) {
+                                    withAnimation { self.modPacksStore.importedModPack = pack }
                                 }
                             }
                         }
@@ -210,7 +210,8 @@ struct CollectionBannerView: View {
                 if !appEnvironment.nexusApiKey.isEmpty {
                     Button {
                         isDownloadingAll = true
-                        appCoordinator.downloadAllMissingPackMods(pack) { installed, failed in
+                        Task {
+                            let (installed, failed) = await appCoordinator.downloadAllMissingPackMods(pack)
                             isDownloadingAll = false
                             appCoordinator.scanMods()
                             let message: String

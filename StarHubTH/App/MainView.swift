@@ -471,7 +471,7 @@ struct MainView: View {
         }
         .onReceive(URLDispatcher.shared.$openedURL) { url in
             if let u = url {
-                appCoordinator.handleOpenURL(u)
+                Task { await appCoordinator.handleOpenURL(u) }
                 URLDispatcher.shared.openedURL = nil
             }
         }

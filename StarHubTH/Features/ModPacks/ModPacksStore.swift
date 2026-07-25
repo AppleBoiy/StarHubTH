@@ -76,11 +76,8 @@ final class ModPacksStore: ObservableObject {
         }
     }
 
-    func importCollectionFromURL(_ urlString: String, nexusApiKey: String, showModal: @escaping (String) -> Void, completion: @escaping (StarHubPack?) -> Void) {
-        guard let url = URL(string: urlString) else {
-            completion(nil)
-            return
-        }
+    func importCollectionFromURL(_ urlString: String, nexusApiKey: String, showModal: @escaping (String) -> Void) async -> StarHubPack? {
+        guard let url = URL(string: urlString) else { return nil }
 
         let path = url.path
         let components = path.components(separatedBy: "/")
@@ -90,81 +87,75 @@ final class ModPacksStore: ObservableObject {
             slug = components[idx + 1]
         }
 
-        if slug.isEmpty {
-            completion(nil)
-            return
-        }
+        guard !slug.isEmpty else { return nil }
 
-        if nexusApiKey.isEmpty {
+        guard !nexusApiKey.isEmpty else {
             showModal(localization.L(L10n.VM.collectionApiKeyRequired))
-            completion(nil)
-            return
+            return nil
         }
 
         logStore.log("Fetching collection metadata for slug: \(slug)...")
-        nexusAPIClient.getCollectionGraph(slug: slug, apiKey: nexusApiKey) { [weak self] result in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let collection):
-                    let packMods = collection.latestPublishedRevision?.modFiles?.compactMap { modFile -> StarHubPackMod? in
-                        guard let detail = modFile.file, let modDetail = detail.mod else { return nil }
-                        // Format mod's updatedAt as relative string
-                        var modUpdated: String? = nil
-                        if let rawDate = modDetail.updatedAt {
-                            let iso = ISO8601DateFormatter()
-                            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                            if let date = iso.date(from: rawDate) ?? ISO8601DateFormatter().date(from: rawDate) {
-                                let rel = RelativeDateTimeFormatter()
-                                rel.unitsStyle = .abbreviated
-                                modUpdated = rel.localizedString(for: date, relativeTo: Date())
-                            }
-                        }
-                        return StarHubPackMod(
-                            name: modDetail.name,
-                            uniqueId: ModItem.UniqueID(rawValue: "nexus_\(modDetail.modId)"),
-                            version: detail.version ?? "",
-                            nexusId: ModItem.NexusID(rawValue: modDetail.modId),
-                            modAuthor: modDetail.author,
-                            modDownloads: modDetail.downloads,
-                            modUpdatedAt: modUpdated,
-                            thumbnailUrl: modDetail.thumbnailUrl
-                        )
-                    } ?? []
 
-                    // Format updatedAt from ISO8601 to readable date string
-                    var updatedAtDisplay: String? = nil
-                    if let rawDate = collection.updatedAt {
-                        let iso = ISO8601DateFormatter()
-                        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                        if let date = iso.date(from: rawDate) ?? ISO8601DateFormatter().date(from: rawDate) {
-                            let rel = RelativeDateTimeFormatter()
-                            rel.unitsStyle = .abbreviated
-                            updatedAtDisplay = rel.localizedString(for: date, relativeTo: Date())
-                        }
-                    }
+        let collection: LiveNexusAPIClient.CollectionGraph
+        do {
+            collection = try await nexusAPIClient.getCollectionGraph(slug: slug, apiKey: nexusApiKey)
+        } catch {
+            showModal(localization.L(L10n.VM.collectionFetchFailed))
+            return nil
+        }
 
-                    let gameVersion = collection.latestPublishedRevision?.gameVersions?.first?.reference
-
-                    var pack = StarHubPack(
-                        packName: collection.name,
-                        author: collection.user?.name ?? "Unknown",
-                        description: collection.summary,
-                        mods: packMods
-                    )
-                    pack.imageUrl = collection.tileImage?.url
-                    pack.revision = collection.latestPublishedRevision?.revisionNumber
-                    pack.updatedAt = updatedAtDisplay
-                    pack.gameVersion = gameVersion
-                    pack.totalDownloads = collection.totalDownloads
-                    pack.endorsements = collection.endorsements
-                    completion(pack)
-                case .failure(_):
-                    showModal(self.localization.L(L10n.VM.collectionFetchFailed))
-                    completion(nil)
+        let packMods = collection.latestPublishedRevision?.modFiles?.compactMap { modFile -> StarHubPackMod? in
+            guard let detail = modFile.file, let modDetail = detail.mod else { return nil }
+            // Format mod's updatedAt as relative string
+            var modUpdated: String? = nil
+            if let rawDate = modDetail.updatedAt {
+                let iso = ISO8601DateFormatter()
+                iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                if let date = iso.date(from: rawDate) ?? ISO8601DateFormatter().date(from: rawDate) {
+                    let rel = RelativeDateTimeFormatter()
+                    rel.unitsStyle = .abbreviated
+                    modUpdated = rel.localizedString(for: date, relativeTo: Date())
                 }
             }
+            return StarHubPackMod(
+                name: modDetail.name,
+                uniqueId: ModItem.UniqueID(rawValue: "nexus_\(modDetail.modId)"),
+                version: detail.version ?? "",
+                nexusId: ModItem.NexusID(rawValue: modDetail.modId),
+                modAuthor: modDetail.author,
+                modDownloads: modDetail.downloads,
+                modUpdatedAt: modUpdated,
+                thumbnailUrl: modDetail.thumbnailUrl
+            )
+        } ?? []
+
+        // Format updatedAt from ISO8601 to readable date string
+        var updatedAtDisplay: String? = nil
+        if let rawDate = collection.updatedAt {
+            let iso = ISO8601DateFormatter()
+            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = iso.date(from: rawDate) ?? ISO8601DateFormatter().date(from: rawDate) {
+                let rel = RelativeDateTimeFormatter()
+                rel.unitsStyle = .abbreviated
+                updatedAtDisplay = rel.localizedString(for: date, relativeTo: Date())
+            }
         }
+
+        let gameVersion = collection.latestPublishedRevision?.gameVersions?.first?.reference
+
+        var pack = StarHubPack(
+            packName: collection.name,
+            author: collection.user?.name ?? "Unknown",
+            description: collection.summary,
+            mods: packMods
+        )
+        pack.imageUrl = collection.tileImage?.url
+        pack.revision = collection.latestPublishedRevision?.revisionNumber
+        pack.updatedAt = updatedAtDisplay
+        pack.gameVersion = gameVersion
+        pack.totalDownloads = collection.totalDownloads
+        pack.endorsements = collection.endorsements
+        return pack
     }
 
     /// `key`/`expires` come from an `nxm://` link (see `NXMParser`) and let a non-premium
@@ -177,37 +168,29 @@ final class ModPacksStore: ObservableObject {
         expires: String? = nil,
         nexusApiKey: String,
         installModFromZip: @escaping (URL, @escaping (Bool) -> Void) -> Void,
-        showModal: @escaping (String) -> Void,
-        completion: @escaping (Bool) -> Void
-    ) {
-        if nexusApiKey.isEmpty {
-            completion(false)
-            return
-        }
+        showModal: @escaping (String) -> Void
+    ) async -> Bool {
+        guard !nexusApiKey.isEmpty else { return false }
 
         let targetFileId: Int
-
         if let fId = fileId {
             targetFileId = fId
-            startDownload(nexusId: nexusId, fileId: targetFileId, key: key, expires: expires, apiKey: nexusApiKey, installModFromZip: installModFromZip, showModal: showModal, completion: completion)
         } else {
             logStore.log("Fetching latest file for Nexus Mod #\(nexusId.rawValue)...")
-            nexusAPIClient.getModFiles(modId: nexusId.rawValue, apiKey: nexusApiKey) { [weak self] result in
-                guard let self = self else { return }
-                switch result {
-                case .success(let response):
-                    guard let latestFile = response.files.first else {
-                        self.logStore.log("No files found for Nexus Mod #\(nexusId.rawValue).")
-                        completion(false)
-                        return
-                    }
-                    self.startDownload(nexusId: nexusId, fileId: latestFile.fileId, key: key, expires: expires, apiKey: nexusApiKey, installModFromZip: installModFromZip, showModal: showModal, completion: completion)
-                case .failure(let error):
-                    self.logStore.log("Failed to fetch mod files: \(error.localizedDescription)")
-                    completion(false)
+            do {
+                let response = try await nexusAPIClient.getModFiles(modId: nexusId.rawValue, apiKey: nexusApiKey)
+                guard let latestFile = response.files.first else {
+                    logStore.log("No files found for Nexus Mod #\(nexusId.rawValue).")
+                    return false
                 }
+                targetFileId = latestFile.fileId
+            } catch {
+                logStore.log("Failed to fetch mod files: \(error.localizedDescription)")
+                return false
             }
         }
+
+        return await startDownload(nexusId: nexusId, fileId: targetFileId, key: key, expires: expires, apiKey: nexusApiKey, installModFromZip: installModFromZip, showModal: showModal)
     }
 
     private func startDownload(
@@ -217,56 +200,51 @@ final class ModPacksStore: ObservableObject {
         expires: String?,
         apiKey: String,
         installModFromZip: @escaping (URL, @escaping (Bool) -> Void) -> Void,
-        showModal: @escaping (String) -> Void,
-        completion: @escaping (Bool) -> Void
-    ) {
+        showModal: @escaping (String) -> Void
+    ) async -> Bool {
         logStore.log("Requesting download link for file #\(fileId)...")
-        nexusAPIClient.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, key: key, expires: expires, apiKey: apiKey) { [weak self] linkResult in
-            guard let self = self else { return }
-            switch linkResult {
-            case .success(let links):
-                guard let firstLink = links.first, let downloadURL = URL(string: firstLink.URI) else {
-                    self.logStore.log("No valid download links found.")
-                    completion(false)
-                    return
-                }
 
-                self.logStore.log("Starting download for Nexus Mod #\(nexusId.rawValue)...")
-                let task = URLSession.shared.downloadTask(with: downloadURL) { localURL, response, error in
-                    if let error = error {
-                        self.logStore.log("Download failed: \(error.localizedDescription)")
-                        completion(false)
-                        return
-                    }
+        let links: [LiveNexusAPIClient.ModDownloadLink]
+        do {
+            links = try await nexusAPIClient.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, key: key, expires: expires, apiKey: apiKey)
+        } catch {
+            if let nexusError = error as? NexusAPIError, nexusError.isPremiumRequired {
+                logStore.log("Download requires Nexus Premium (Mod #\(nexusId.rawValue), File #\(fileId)).")
+                showModal(localization.L(L10n.VM.nexusPremiumRequired))
+            } else {
+                logStore.log("Failed to get download link: \(error.localizedDescription)")
+            }
+            return false
+        }
 
-                    guard let localURL = localURL else {
-                        completion(false)
-                        return
-                    }
+        guard let firstLink = links.first, let downloadURL = URL(string: firstLink.URI) else {
+            logStore.log("No valid download links found.")
+            return false
+        }
 
-                    // Move to a temp zip file
-                    let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).zip")
-                    do {
-                        try FileManager.default.moveItem(at: localURL, to: tempZipURL)
-                        DispatchQueue.main.async {
-                            // Pass completion into installModFromZip so it fires AFTER extraction finishes
-                            installModFromZip(tempZipURL, completion)
-                        }
-                    } catch {
-                        self.logStore.log("Failed to process downloaded file: \(error.localizedDescription)")
-                        completion(false)
-                    }
-                }
-                task.resume()
+        logStore.log("Starting download for Nexus Mod #\(nexusId.rawValue)...")
 
-            case .failure(let error):
-                if let nexusError = error as? NexusAPIError, nexusError.isPremiumRequired {
-                    self.logStore.log("Download requires Nexus Premium (Mod #\(nexusId.rawValue), File #\(fileId)).")
-                    showModal(self.localization.L(L10n.VM.nexusPremiumRequired))
-                } else {
-                    self.logStore.log("Failed to get download link: \(error.localizedDescription)")
-                }
-                completion(false)
+        let localURL: URL
+        do {
+            let (downloaded, _) = try await URLSession.shared.download(for: URLRequest(url: downloadURL))
+            localURL = downloaded
+        } catch {
+            logStore.log("Download failed: \(error.localizedDescription)")
+            return false
+        }
+
+        let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).zip")
+        do {
+            try FileManager.default.moveItem(at: localURL, to: tempZipURL)
+        } catch {
+            logStore.log("Failed to process downloaded file: \(error.localizedDescription)")
+            return false
+        }
+
+        // Pass a continuation into installModFromZip so it resumes AFTER extraction finishes
+        return await withCheckedContinuation { continuation in
+            installModFromZip(tempZipURL) { success in
+                continuation.resume(returning: success)
             }
         }
     }
@@ -281,33 +259,27 @@ final class ModPacksStore: ObservableObject {
         currentMods: [ModItem],
         nexusApiKey: String,
         installModFromZip: @escaping (URL, @escaping (Bool) -> Void) -> Void,
-        showModal: @escaping (String) -> Void,
-        completion: @escaping (_ installed: Int, _ failed: Int) -> Void
-    ) {
+        showModal: @escaping (String) -> Void
+    ) async -> (installed: Int, failed: Int) {
         let missing = packMods.filter { packMod in
             guard let nexusId = packMod.nexusId else { return false }
             return ModGraph.packModStatus(nexusID: nexusId, uniqueId: packMod.uniqueId, in: currentMods) == .missing
         }
 
-        func step(_ index: Int, installed: Int, failed: Int) {
-            guard index < missing.count else {
-                completion(installed, failed)
-                return
-            }
-            guard let nexusId = missing[index].nexusId else {
-                step(index + 1, installed: installed, failed: failed)
-                return
-            }
-            downloadModFromNexus(
+        var installed = 0
+        var failed = 0
+
+        for packMod in missing {
+            guard let nexusId = packMod.nexusId else { continue }
+            let success = await downloadModFromNexus(
                 nexusId: nexusId,
                 nexusApiKey: nexusApiKey,
                 installModFromZip: installModFromZip,
                 showModal: showModal
-            ) { success in
-                step(index + 1, installed: installed + (success ? 1 : 0), failed: failed + (success ? 0 : 1))
-            }
+            )
+            if success { installed += 1 } else { failed += 1 }
         }
 
-        step(0, installed: 0, failed: 0)
+        return (installed, failed)
     }
 }

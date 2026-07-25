@@ -9,23 +9,23 @@ final class StubNexusAPIClient: NexusAPIClient {
     var endorseResult: Result<Void, Error> = .success(())
     var collectionGraphResult: Result<LiveNexusAPIClient.CollectionGraph, Error> = .failure(StubError.unconfigured)
 
-    func getModInfo(modId: Int, apiKey: String, completion: @escaping (Result<LiveNexusAPIClient.ModInfo, Error>) -> Void) {
-        completion(modInfoResult)
+    func getModInfo(modId: Int, apiKey: String) async throws -> LiveNexusAPIClient.ModInfo {
+        try modInfoResult.get()
     }
 
-    func getModFiles(modId: Int, apiKey: String, completion: @escaping (Result<LiveNexusAPIClient.ModFileListResponse, Error>) -> Void) {
-        completion(modFilesResult)
+    func getModFiles(modId: Int, apiKey: String) async throws -> LiveNexusAPIClient.ModFileListResponse {
+        try modFilesResult.get()
     }
 
-    func getDownloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String, completion: @escaping (Result<[LiveNexusAPIClient.ModDownloadLink], Error>) -> Void) {
-        completion(downloadLinkResult)
+    func getDownloadLink(modId: Int, fileId: Int, key: String?, expires: String?, apiKey: String) async throws -> [LiveNexusAPIClient.ModDownloadLink] {
+        try downloadLinkResult.get()
     }
 
-    func endorseMod(modId: Int, version: String?, apiKey: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        completion(endorseResult)
+    func endorseMod(modId: Int, version: String?, apiKey: String) async throws {
+        try endorseResult.get()
     }
 
-    func getCollectionGraph(slug: String, apiKey: String, completion: @escaping (Result<LiveNexusAPIClient.CollectionGraph, Error>) -> Void) {
-        completion(collectionGraphResult)
+    func getCollectionGraph(slug: String, apiKey: String) async throws -> LiveNexusAPIClient.CollectionGraph {
+        try collectionGraphResult.get()
     }
 }

@@ -7,14 +7,14 @@ import Foundation
 /// loadSmapiLog() — no injection seam for those without a bigger change than this
 /// extraction warrants.
 struct ModPacksStoreTests {
-    static func run() {
+    static func run() async {
         print("Running ModPacksStoreTests...")
         testImportModPackDecodesValidJSON()
         testImportModPackRejectsInvalidJSON()
-        testImportCollectionFromURLRejectsInvalidURL()
-        testImportCollectionFromURLRequiresAPIKey()
-        testImportCollectionFromURLFetchesGraph()
-        testDownloadModFromNexusRequiresAPIKey()
+        await testImportCollectionFromURLRejectsInvalidURL()
+        await testImportCollectionFromURLRequiresAPIKey()
+        await testImportCollectionFromURLFetchesGraph()
+        await testDownloadModFromNexusRequiresAPIKey()
     }
 
     private static func makeStore() -> (ModPacksStore, StubNexusAPIClient) {
@@ -48,35 +48,27 @@ struct ModPacksStoreTests {
         SimpleTestFramework.assertTrue(store.importModPack(from: url) == nil, "importModPack returns nil for invalid JSON")
     }
 
-    private static func testImportCollectionFromURLRejectsInvalidURL() {
+    private static func testImportCollectionFromURLRejectsInvalidURL() async {
         let (store, _) = makeStore()
-        var completed = false
         // A well-formed URL with no "collections" path segment — the slug extraction
         // finds nothing, which is the guaranteed-empty-slug path.
-        store.importCollectionFromURL("https://next.nexusmods.com/stardewvalley/mods/123", nexusApiKey: "key", showModal: { _ in }) { pack in
-            completed = true
-            SimpleTestFramework.assertTrue(pack == nil, "a URL with no collections segment completes with nil")
-        }
-        SimpleTestFramework.assertTrue(completed, "completion fires synchronously when no slug can be extracted")
+        let pack = await store.importCollectionFromURL("https://next.nexusmods.com/stardewvalley/mods/123", nexusApiKey: "key", showModal: { _ in })
+        SimpleTestFramework.assertTrue(pack == nil, "a URL with no collections segment resolves to nil")
     }
 
-    private static func testImportCollectionFromURLRequiresAPIKey() {
+    private static func testImportCollectionFromURLRequiresAPIKey() async {
         let (store, _) = makeStore()
-        var completed = false
         var modalMessage: String?
-        store.importCollectionFromURL(
+        let pack = await store.importCollectionFromURL(
             "https://next.nexusmods.com/stardewvalley/collections/abc123",
             nexusApiKey: "",
             showModal: { message in modalMessage = message }
-        ) { pack in
-            completed = true
-            SimpleTestFramework.assertTrue(pack == nil, "no API key completes with a nil pack")
-        }
-        SimpleTestFramework.assertTrue(completed, "completion fires synchronously when the API key is missing")
+        )
+        SimpleTestFramework.assertTrue(pack == nil, "no API key resolves to a nil pack")
         SimpleTestFramework.assertTrue(modalMessage != nil, "a missing API key shows a modal message")
     }
 
-    private static func testImportCollectionFromURLFetchesGraph() {
+    private static func testImportCollectionFromURLFetchesGraph() async {
         let (store, stub) = makeStore()
         let graph = LiveNexusAPIClient.CollectionGraph(
             id: 1, slug: "abc123", name: "My Collection", summary: "A summary",
@@ -86,33 +78,24 @@ struct ModPacksStoreTests {
         )
         stub.collectionGraphResult = .success(graph)
 
-        var received: StarHubPack?
-        let exp = DispatchSemaphore(value: 0)
-        store.importCollectionFromURL(
+        let received = await store.importCollectionFromURL(
             "https://next.nexusmods.com/stardewvalley/collections/abc123",
             nexusApiKey: "real-key",
             showModal: { _ in }
-        ) { pack in
-            received = pack
-            exp.signal()
-        }
-        _ = exp.wait(timeout: .now() + 2)
+        )
 
         SimpleTestFramework.assertEqual(received?.packName, "My Collection", "a successful graph fetch produces a pack with the collection's name")
         SimpleTestFramework.assertEqual(received?.author, "Someone", "the pack's author comes from the collection's user")
     }
 
-    private static func testDownloadModFromNexusRequiresAPIKey() {
+    private static func testDownloadModFromNexusRequiresAPIKey() async {
         let (store, _) = makeStore()
-        var result: Bool?
-        store.downloadModFromNexus(
+        let success = await store.downloadModFromNexus(
             nexusId: ModItem.NexusID(rawValue: 1234),
             nexusApiKey: "",
             installModFromZip: { _, completion in completion(true) },
             showModal: { _ in }
-        ) { success in
-            result = success
-        }
-        SimpleTestFramework.assertTrue(result == false, "no API key completes with false")
+        )
+        SimpleTestFramework.assertTrue(success == false, "no API key resolves to false")
     }
 }

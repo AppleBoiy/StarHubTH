@@ -185,7 +185,7 @@ struct ModListView: View {
                 Button {
                     appCoordinator.scanMods()
                     if !appEnvironment.nexusApiKey.isEmpty {
-                        appCoordinator.syncAllTagsFromNexus()
+                        Task { await appCoordinator.syncAllTagsFromNexus() }
                     }
                 } label: {
                     if modsStore.isSyncingAllTags {
@@ -760,7 +760,7 @@ struct ModListRow: View {
                 if let update = pendingUpdate {
                     Button {
                         if !appEnvironment.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
-                            appCoordinator.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId))
+                            Task { await appCoordinator.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId)) }
                         } else if let url = URL(string: update.url) {
                             NSWorkspace.shared.open(url)
                         }
@@ -908,10 +908,11 @@ struct ModListRow: View {
                 if !appEnvironment.nexusApiKey.isEmpty {
                     if let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
                         Button(localizationStore.L(L10n.Settings.nexusEndorse)) {
-                            modsStore.endorseMod(nexusId: nId, version: mod.version, apiKey: appEnvironment.nexusApiKey) { result in
-                                if case .success = result {
+                            Task {
+                                do {
+                                    try await modsStore.endorseMod(nexusId: nId, version: mod.version, apiKey: appEnvironment.nexusApiKey)
                                     alertStore.show(localizationStore.L(L10n.Settings.nexusEndorsed))
-                                } else {
+                                } catch {
                                     alertStore.show("Failed to endorse mod")
                                 }
                             }
@@ -1118,7 +1119,7 @@ struct ModCardView: View {
     private func updateButton(update: ModUpdateInfo) -> some View {
         Button {
             if !appEnvironment.nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let nId = Int(url.lastPathComponent) {
-                appCoordinator.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId))
+                Task { await appCoordinator.downloadAndInstallUpdate(for: update, nexusId: ModItem.NexusID(rawValue: nId)) }
             } else if let url = URL(string: update.url) {
                 NSWorkspace.shared.open(url)
             }

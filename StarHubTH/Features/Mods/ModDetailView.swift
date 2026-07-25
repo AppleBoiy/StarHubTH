@@ -192,7 +192,8 @@ struct ModDetailView: View {
                 if nexusId != nil && !appEnvironment.nexusApiKey.isEmpty {
                     Button {
                         isLoading = true
-                        appCoordinator.syncTagFromNexus(for: mod) { success in
+                        Task {
+                            _ = await appCoordinator.syncTagFromNexus(for: mod)
                             isLoading = false
                         }
                     } label: {
@@ -219,20 +220,19 @@ struct ModDetailView: View {
                 }
             }
         }
-        .onAppear(perform: loadNexusInfo)
+        .onAppear { Task { await loadNexusInfo() } }
     }
-    
-    private func loadNexusInfo() {
+
+    private func loadNexusInfo() async {
         let apiKey = appEnvironment.nexusApiKey
         guard !apiKey.isEmpty, let nId = nexusId else { return }
 
         isLoading = true
-        modsStore.fetchNexusInfo(nexusId: nId, apiKey: apiKey) { coverUrl, description, changelog in
-            self.coverUrl = coverUrl
-            if let description { self.nexusDescription = description }
-            if let changelog { self.nexusChangelog = changelog }
-            self.isLoading = false
-        }
+        let (coverUrl, description, changelog) = await modsStore.fetchNexusInfo(nexusId: nId, apiKey: apiKey)
+        self.coverUrl = coverUrl
+        if let description { self.nexusDescription = description }
+        if let changelog { self.nexusChangelog = changelog }
+        self.isLoading = false
     }
 }
 

@@ -106,28 +106,19 @@ final class ModsStore: ObservableObject {
         refresh()
     }
 
-    func syncTagFromNexus(for mod: ModItem, nexusApiKey: String, shouldRefresh: Bool = true, refresh: @escaping () -> Void, completion: @escaping (Bool) -> Void) {
+    func syncTagFromNexus(for mod: ModItem, nexusApiKey: String, shouldRefresh: Bool = true, refresh: @escaping () -> Void) async -> Bool {
         guard !nexusApiKey.isEmpty, let url = URL(string: mod.nexusUrl), let modId = Int(url.lastPathComponent) else {
-            completion(false)
-            return
+            return false
         }
 
-        nexusAPIClient.getModInfo(modId: modId, apiKey: nexusApiKey) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let info):
-                    if let categoryId = info.categoryId {
-                        let newTag = LiveNexusAPIClient.categoryTag(from: categoryId)
-                        self?.setCustomTag(for: mod.uniqueId, tag: newTag, shouldRefresh: shouldRefresh, refresh: refresh)
-                        completion(true)
-                    } else {
-                        completion(false)
-                    }
-                case .failure:
-                    completion(false)
-                }
-            }
+        guard let info = try? await nexusAPIClient.getModInfo(modId: modId, apiKey: nexusApiKey),
+              let categoryId = info.categoryId else {
+            return false
         }
+
+        let newTag = LiveNexusAPIClient.categoryTag(from: categoryId)
+        setCustomTag(for: mod.uniqueId, tag: newTag, shouldRefresh: shouldRefresh, refresh: refresh)
+        return true
     }
 
     /// Phase 4.9: replaces ModDetailView's direct `LiveNexusAPIClient.shared.getModInfo`/
@@ -135,73 +126,55 @@ final class ModsStore: ObservableObject {
     /// changelog for display.
     func fetchNexusInfo(
         nexusId: Int,
-        apiKey: String,
-        completion: @escaping (_ coverUrl: URL?, _ description: [LiveNexusAPIClient.DescriptionBlock]?, _ changelog: [LiveNexusAPIClient.DescriptionBlock]?) -> Void
-    ) {
-        let dispatchGroup = DispatchGroup()
+        apiKey: String
+    ) async -> (coverUrl: URL?, description: [LiveNexusAPIClient.DescriptionBlock]?, changelog: [LiveNexusAPIClient.DescriptionBlock]?) {
+        async let infoResult = try? nexusAPIClient.getModInfo(modId: nexusId, apiKey: apiKey)
+        async let filesResult = try? nexusAPIClient.getModFiles(modId: nexusId, apiKey: apiKey)
+
         var coverUrl: URL?
         var description: [LiveNexusAPIClient.DescriptionBlock]?
+        if let info = await infoResult {
+            if let pic = info.pictureUrl { coverUrl = URL(string: pic) }
+            description = LiveNexusAPIClient.parseBlocks(info.description)
+        }
+
         var changelog: [LiveNexusAPIClient.DescriptionBlock]?
-
-        dispatchGroup.enter()
-        nexusAPIClient.getModInfo(modId: nexusId, apiKey: apiKey) { result in
-            if case .success(let info) = result {
-                if let pic = info.pictureUrl { coverUrl = URL(string: pic) }
-                description = LiveNexusAPIClient.parseBlocks(info.description)
-            }
-            dispatchGroup.leave()
+        if let files = await filesResult,
+           let latestChangelog = files.files.first(where: { !($0.changelogHtml?.isEmpty ?? true) })?.changelogHtml {
+            changelog = LiveNexusAPIClient.parseBlocks(latestChangelog)
         }
 
-        dispatchGroup.enter()
-        nexusAPIClient.getModFiles(modId: nexusId, apiKey: apiKey) { result in
-            if case .success(let files) = result {
-                if let latestChangelog = files.files.first(where: { !($0.changelogHtml?.isEmpty ?? true) })?.changelogHtml {
-                    changelog = LiveNexusAPIClient.parseBlocks(latestChangelog)
-                }
-            }
-            dispatchGroup.leave()
-        }
-
-        dispatchGroup.notify(queue: .main) {
-            completion(coverUrl, description, changelog)
-        }
+        return (coverUrl, description, changelog)
     }
 
     /// Phase 4.9: replaces ModListView's direct `LiveNexusAPIClient.shared.endorseMod` call.
-    func endorseMod(nexusId: Int, version: String?, apiKey: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        nexusAPIClient.endorseMod(modId: nexusId, version: version, apiKey: apiKey) { result in
-            DispatchQueue.main.async {
-                completion(result)
-            }
-        }
+    func endorseMod(nexusId: Int, version: String?, apiKey: String) async throws {
+        try await nexusAPIClient.endorseMod(modId: nexusId, version: version, apiKey: apiKey)
     }
 
-    func syncAllTagsFromNexus(nexusApiKey: String, refresh: @escaping () -> Void) {
+    /// Sequential, not concurrent — mirrors `ModPacksStore.downloadAllMissing`'s throttling:
+    /// firing every mod's Nexus lookup in parallel risks the same rate-limiting bulk installs
+    /// already hit.
+    func syncAllTagsFromNexus(nexusApiKey: String, refresh: @escaping () -> Void) async {
         guard !nexusApiKey.isEmpty else { return }
 
         isSyncingAllTags = true
         syncAllTagsProgress = 0.0
 
         let modsToSync = mods.filter { !$0.nexusUrl.isEmpty && Int((URL(string: $0.nexusUrl)?.lastPathComponent) ?? "") != nil }
-        var completedCount = 0
 
         guard !modsToSync.isEmpty else {
             isSyncingAllTags = false
             return
         }
 
-        for mod in modsToSync {
-            syncTagFromNexus(for: mod, nexusApiKey: nexusApiKey, shouldRefresh: false, refresh: refresh) { [weak self] _ in
-                DispatchQueue.main.async {
-                    completedCount += 1
-                    self?.syncAllTagsProgress = Double(completedCount) / Double(modsToSync.count)
-                    if completedCount >= modsToSync.count {
-                        self?.isSyncingAllTags = false
-                        refresh()
-                    }
-                }
-            }
+        for (index, mod) in modsToSync.enumerated() {
+            _ = await syncTagFromNexus(for: mod, nexusApiKey: nexusApiKey, shouldRefresh: false, refresh: refresh)
+            syncAllTagsProgress = Double(index + 1) / Double(modsToSync.count)
         }
+
+        isSyncingAllTags = false
+        refresh()
     }
 
     // MARK: - Scanning
@@ -465,29 +438,19 @@ final class ModsStore: ObservableObject {
 
     // MARK: - Nexus Auto-Download
 
-    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: ModItem.NexusID, nexusApiKey: String, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) {
-        DispatchQueue.main.async {
-            self.downloadingMods.insert(mod.name)
-        }
+    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: ModItem.NexusID, nexusApiKey: String, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
+        downloadingMods.insert(mod.name)
 
-        NexusDownloader.downloadUpdate(nexusId: nexusId, apiKey: nexusApiKey) { [weak self] result in
-            guard let self = self else { return }
-
-            switch result {
-            case .success(let zipUrl):
-                DispatchQueue.main.async {
-                    self.downloadingMods.remove(mod.name)
-                    self.installModFromZip(url: zipUrl, gameDir: gameDir, showModal: showModal, log: log)
-                }
-            case .failure(let error):
-                DispatchQueue.main.async {
-                    self.downloadingMods.remove(mod.name)
-                    if case .premiumRequired = error {
-                        showModal(self.localization.L(L10n.VM.nexusPremiumRequired))
-                    } else {
-                        showModal(error.localizedDescription)
-                    }
-                }
+        do {
+            let zipUrl = try await NexusDownloader.downloadUpdate(nexusId: nexusId, apiKey: nexusApiKey)
+            downloadingMods.remove(mod.name)
+            installModFromZip(url: zipUrl, gameDir: gameDir, showModal: showModal, log: log)
+        } catch {
+            downloadingMods.remove(mod.name)
+            if let downloaderError = error as? NexusDownloaderError, case .premiumRequired = downloaderError {
+                showModal(localization.L(L10n.VM.nexusPremiumRequired))
+            } else {
+                showModal(error.localizedDescription)
             }
         }
     }

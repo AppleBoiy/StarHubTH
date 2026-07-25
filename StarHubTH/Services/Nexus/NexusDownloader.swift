@@ -26,65 +26,56 @@ struct NexusDownloader {
     static func downloadUpdate(
         nexusId: ModItem.NexusID,
         apiKey: String,
-        nexusAPIClient: NexusAPIClient = LiveNexusAPIClient.shared,
-        completion: @escaping (Result<URL, NexusDownloaderError>) -> Void
-    ) {
+        nexusAPIClient: NexusAPIClient = LiveNexusAPIClient.shared
+    ) async throws -> URL {
         guard !apiKey.isEmpty else {
-            completion(.failure(.missingAPIKey))
-            return
+            throw NexusDownloaderError.missingAPIKey
         }
 
-        // Step 1: get files list to find latest file ID
-        nexusAPIClient.getModFiles(modId: nexusId.rawValue, apiKey: apiKey) { result in
-            switch result {
-            case .success(let fileList):
-                let mainFiles = fileList.files.filter { $0.categoryId == 1 }
-                let newest = mainFiles.sorted { $0.fileId > $1.fileId }.first
-                let targetFile = newest ?? fileList.files.sorted { $0.fileId > $1.fileId }.first
-                guard let fileId = targetFile?.fileId else {
-                    completion(.failure(.noValidFile))
-                    return
-                }
+        let fileList: LiveNexusAPIClient.ModFileListResponse
+        do {
+            fileList = try await nexusAPIClient.getModFiles(modId: nexusId.rawValue, apiKey: apiKey)
+        } catch {
+            throw NexusDownloaderError.fetchFailed(error.localizedDescription)
+        }
 
-                // Step 2: get download link. No `key`/`expires` here — auto-update isn't
-                // triggered from an `nxm://` link, so this only succeeds for a premium key.
-                nexusAPIClient.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, key: nil, expires: nil, apiKey: apiKey) { linkResult in
-                    switch linkResult {
-                    case .success(let links):
-                        guard let downloadLink = links.first?.URI, let url = URL(string: downloadLink) else {
-                            completion(.failure(.noDownloadLink))
-                            return
-                        }
+        let mainFiles = fileList.files.filter { $0.categoryId == 1 }
+        let newest = mainFiles.sorted { $0.fileId > $1.fileId }.first
+        let targetFile = newest ?? fileList.files.sorted { $0.fileId > $1.fileId }.first
+        guard let fileId = targetFile?.fileId else {
+            throw NexusDownloaderError.noValidFile
+        }
 
-                        // Step 3: download the file
-                        let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".zip")
-                        let task = URLSession.shared.downloadTask(with: url) { localURL, response, error in
-                            if let error = error {
-                                completion(.failure(.downloadFailed(error.localizedDescription)))
-                                return
-                            }
-                            guard let localURL = localURL else { return }
-
-                            do {
-                                try FileManager.default.moveItem(at: localURL, to: tempZipURL)
-                                completion(.success(tempZipURL))
-                            } catch {
-                                completion(.failure(.moveFailed(error.localizedDescription)))
-                            }
-                        }
-                        task.resume()
-
-                    case .failure(let error):
-                        if let nexusError = error as? NexusAPIError, nexusError.isPremiumRequired {
-                            completion(.failure(.premiumRequired))
-                        } else {
-                            completion(.failure(.downloadFailed(error.localizedDescription)))
-                        }
-                    }
-                }
-            case .failure(let error):
-                completion(.failure(.fetchFailed(error.localizedDescription)))
+        // No `key`/`expires` here — auto-update isn't triggered from an `nxm://` link,
+        // so this only succeeds for a premium key.
+        let links: [LiveNexusAPIClient.ModDownloadLink]
+        do {
+            links = try await nexusAPIClient.getDownloadLink(modId: nexusId.rawValue, fileId: fileId, key: nil, expires: nil, apiKey: apiKey)
+        } catch {
+            if let nexusError = error as? NexusAPIError, nexusError.isPremiumRequired {
+                throw NexusDownloaderError.premiumRequired
             }
+            throw NexusDownloaderError.downloadFailed(error.localizedDescription)
         }
+
+        guard let downloadLink = links.first?.URI, let url = URL(string: downloadLink) else {
+            throw NexusDownloaderError.noDownloadLink
+        }
+
+        let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".zip")
+        let (localURL, _): (URL, URLResponse)
+        do {
+            (localURL, _) = try await URLSession.shared.download(for: URLRequest(url: url))
+        } catch {
+            throw NexusDownloaderError.downloadFailed(error.localizedDescription)
+        }
+
+        do {
+            try FileManager.default.moveItem(at: localURL, to: tempZipURL)
+        } catch {
+            throw NexusDownloaderError.moveFailed(error.localizedDescription)
+        }
+
+        return tempZipURL
     }
 }

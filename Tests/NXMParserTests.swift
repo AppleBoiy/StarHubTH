@@ -1,13 +1,13 @@
 import Foundation
 
 class NXMParserTests {
-    static func run() {
+    static func run() async {
         print("Running NXMParserTests...")
         testValidNXMLink()
         testInvalidNXMLink()
         testDifferentCaseNXMLink()
         testNXMLinkWithKeyAndExpires()
-        testNXMDownloadAndInstall()
+        await testNXMDownloadAndInstall()
     }
 
     static func testValidNXMLink() {
@@ -68,53 +68,44 @@ class NXMParserTests {
             SimpleTestFramework.assertTrue(false, "Result should be a mod")
         }
     }
-    static func testNXMDownloadAndInstall() {
+    static func testNXMDownloadAndInstall() async {
         let defaults = UserDefaults(suiteName: "com.appleboiy.StarHubTH")
         let apiKey = defaults?.string(forKey: "nexusApiKey") ?? ""
-        
+
         if apiKey.isEmpty {
             print("⚠️ SKIPPING testNXMDownloadAndInstall: No Nexus API Key found in com.appleboiy.StarHubTH defaults.")
             SimpleTestFramework.assertTrue(true, "Skipped due to missing API key")
             return
         }
-        
+
         // Small mod for testing: Mail Framework Mod (modId: 1536, fileId: 128517, ~50KB)
         let urlString = "nxm://stardewvalley/mods/1536/files/128517"
         let url = URL(string: urlString)!
-        
+
         guard let result = NXMParser.parse(url: url), case .mod(let modId, let fileId, let key, let expires) = result else {
             SimpleTestFramework.assertTrue(false, "Failed to parse test NXM link")
             return
         }
-        
+
         let tempGameDir = FileManager.default.temporaryDirectory.appendingPathComponent("StarHubTH_Test_GameDir_\(UUID().uuidString)")
         let tempModsDir = tempGameDir.appendingPathComponent("Mods")
         try? FileManager.default.createDirectory(at: tempModsDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempGameDir) }
-        
+
         // Step 1: Fetch download link directly from LiveNexusAPIClient
-        let linkSemaphore = DispatchSemaphore(value: 0)
         var downloadURL: URL? = nil
-        
-        LiveNexusAPIClient.shared.getDownloadLink(modId: modId, fileId: fileId, key: key, expires: expires, apiKey: apiKey) { result in
-            switch result {
-            case .success(let links):
-                downloadURL = URL(string: links.first?.URI ?? "")
-                print("Got download URL: \(downloadURL?.absoluteString ?? "nil")")
-            case .failure(let error):
-                print("Failed to get download link: \(error.localizedDescription)")
-            }
-            linkSemaphore.signal()
-        }
-        guard linkSemaphore.wait(timeout: .now() + .seconds(15)) == .success else {
-            SimpleTestFramework.assertTrue(false, "Timed out fetching download link from Nexus API")
-            return
+        do {
+            let links = try await LiveNexusAPIClient.shared.getDownloadLink(modId: modId, fileId: fileId, key: key, expires: expires, apiKey: apiKey)
+            downloadURL = URL(string: links.first?.URI ?? "")
+            print("Got download URL: \(downloadURL?.absoluteString ?? "nil")")
+        } catch {
+            print("Failed to get download link: \(error.localizedDescription)")
         }
         guard let dlURL = downloadURL else {
             SimpleTestFramework.assertTrue(false, "No download URL returned from Nexus API")
             return
         }
-        
+
         // Step 2: Download the zip
         let dlSemaphore = DispatchSemaphore(value: 0)
         var localZipURL: URL? = nil

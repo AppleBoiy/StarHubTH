@@ -48,7 +48,7 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - URL / game dir
 
-    func handleOpenURL(_ url: URL) {
+    func handleOpenURL(_ url: URL) async {
         logStore.log("Opened with URL: \(url.absoluteString)", level: .info)
 
         guard url.scheme?.lowercased() == "nxm" else {
@@ -61,36 +61,27 @@ final class AppCoordinator: ObservableObject {
             return
         }
 
-        if let result = NXMParser.parse(url: url) {
-            switch result {
-            case .mod(let modId, let fileId, let key, let expires):
-                logStore.log("Downloading from NXM: Mod \(modId), File \(fileId)", level: .info)
-                downloadModFromNexus(nexusId: ModItem.NexusID(rawValue: modId), fileId: fileId, key: key, expires: expires) { [weak self] success in
-                    guard let self else { return }
-                    if success {
-                        self.scanMods()
-                        self.alertStore.show(self.localizationStore.L(L10n.VM.nxmDownloadSuccess))
-                    }
-                }
-            case .collection(let slug):
-                logStore.log("Importing collection from NXM: \(slug)", level: .info)
-
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: .switchToTab, object: "ModPacks")
-                }
-                importCollectionFromURL("https://next.nexusmods.com/stardewvalley/collections/\(slug)") { [weak self] pack in
-                    guard let self else { return }
-                    DispatchQueue.main.async {
-                        if let pack {
-                            self.modPacksStore.importedModPack = pack
-                        } else {
-                            self.logStore.log("Import collection returned nil.")
-                        }
-                    }
-                }
-            }
-        } else {
+        guard let result = NXMParser.parse(url: url) else {
             logStore.log("Unsupported or unrecognized NXM link format: \(url.absoluteString)")
+            return
+        }
+
+        switch result {
+        case .mod(let modId, let fileId, let key, let expires):
+            logStore.log("Downloading from NXM: Mod \(modId), File \(fileId)", level: .info)
+            let success = await downloadModFromNexus(nexusId: ModItem.NexusID(rawValue: modId), fileId: fileId, key: key, expires: expires)
+            if success {
+                scanMods()
+                alertStore.show(localizationStore.L(L10n.VM.nxmDownloadSuccess))
+            }
+        case .collection(let slug):
+            logStore.log("Importing collection from NXM: \(slug)", level: .info)
+            NotificationCenter.default.post(name: .switchToTab, object: "ModPacks")
+            if let pack = await importCollectionFromURL("https://next.nexusmods.com/stardewvalley/collections/\(slug)") {
+                modPacksStore.importedModPack = pack
+            } else {
+                logStore.log("Import collection returned nil.")
+            }
         }
     }
 
@@ -136,18 +127,17 @@ final class AppCoordinator: ObservableObject {
         modsStore.resetCustomTag(for: modId, refresh: { [weak self] in self?.refresh() })
     }
 
-    func syncTagFromNexus(for mod: ModItem, shouldRefresh: Bool = true, completion: @escaping (Bool) -> Void) {
-        modsStore.syncTagFromNexus(
+    func syncTagFromNexus(for mod: ModItem, shouldRefresh: Bool = true) async -> Bool {
+        await modsStore.syncTagFromNexus(
             for: mod,
             nexusApiKey: appEnvironment.nexusApiKey,
             shouldRefresh: shouldRefresh,
-            refresh: { [weak self] in self?.refresh() },
-            completion: completion
+            refresh: { [weak self] in self?.refresh() }
         )
     }
 
-    func syncAllTagsFromNexus() {
-        modsStore.syncAllTagsFromNexus(nexusApiKey: appEnvironment.nexusApiKey, refresh: { [weak self] in self?.refresh() })
+    func syncAllTagsFromNexus() async {
+        await modsStore.syncAllTagsFromNexus(nexusApiKey: appEnvironment.nexusApiKey, refresh: { [weak self] in self?.refresh() })
     }
 
     func openInstallModPanel() {
@@ -186,8 +176,8 @@ final class AppCoordinator: ObservableObject {
         )
     }
 
-    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: ModItem.NexusID) {
-        modsStore.downloadAndInstallUpdate(
+    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: ModItem.NexusID) async {
+        await modsStore.downloadAndInstallUpdate(
             for: mod,
             nexusId: nexusId,
             nexusApiKey: appEnvironment.nexusApiKey,
@@ -330,36 +320,33 @@ final class AppCoordinator: ObservableObject {
         )
     }
 
-    func importCollectionFromURL(_ urlString: String, completion: @escaping (StarHubPack?) -> Void) {
-        modPacksStore.importCollectionFromURL(
+    func importCollectionFromURL(_ urlString: String) async -> StarHubPack? {
+        await modPacksStore.importCollectionFromURL(
             urlString,
             nexusApiKey: appEnvironment.nexusApiKey,
-            showModal: { [weak self] message in self?.alertStore.show(message) },
-            completion: completion
+            showModal: { [weak self] message in self?.alertStore.show(message) }
         )
     }
 
-    func downloadModFromNexus(nexusId: ModItem.NexusID, fileId: Int? = nil, key: String? = nil, expires: String? = nil, completion: @escaping (Bool) -> Void) {
-        modPacksStore.downloadModFromNexus(
+    func downloadModFromNexus(nexusId: ModItem.NexusID, fileId: Int? = nil, key: String? = nil, expires: String? = nil) async -> Bool {
+        await modPacksStore.downloadModFromNexus(
             nexusId: nexusId,
             fileId: fileId,
             key: key,
             expires: expires,
             nexusApiKey: appEnvironment.nexusApiKey,
             installModFromZip: { [weak self] url, completion in self?.installModFromZip(url: url, completion: completion) },
-            showModal: { [weak self] message in self?.alertStore.show(message) },
-            completion: completion
+            showModal: { [weak self] message in self?.alertStore.show(message) }
         )
     }
 
-    func downloadAllMissingPackMods(_ pack: StarHubPack, completion: @escaping (_ installed: Int, _ failed: Int) -> Void) {
-        modPacksStore.downloadAllMissing(
+    func downloadAllMissingPackMods(_ pack: StarHubPack) async -> (installed: Int, failed: Int) {
+        await modPacksStore.downloadAllMissing(
             from: pack.mods,
             currentMods: modsStore.mods,
             nexusApiKey: appEnvironment.nexusApiKey,
             installModFromZip: { [weak self] url, completion in self?.installModFromZip(url: url, completion: completion) },
-            showModal: { [weak self] message in self?.alertStore.show(message) },
-            completion: completion
+            showModal: { [weak self] message in self?.alertStore.show(message) }
         )
     }
 }
