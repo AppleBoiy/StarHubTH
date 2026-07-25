@@ -1,35 +1,5 @@
 import SwiftUI
 
-struct ConfigItem: Identifiable {
-    let id = UUID()
-    let keyPath: [String]
-    var key: String { keyPath.joined(separator: " > ") }
-    var boolValue: Bool = false
-    var stringValue: String = ""
-    var numberValue: Double = 0
-    var isInt: Bool = false
-    
-    enum ItemType {
-        case boolean, string, number, other
-    }
-    var type: ItemType
-    var originalValue: Any? // Keep nested arrays/objects unmodified
-}
-
-final class ConfigTreeNode: Identifiable {
-    let id: String
-    let title: String
-    let item: ConfigItem?
-    var children: [ConfigTreeNode]
-    
-    init(id: String, title: String, item: ConfigItem? = nil, children: [ConfigTreeNode] = []) {
-        self.id = id
-        self.title = title
-        self.item = item
-        self.children = children
-    }
-}
-
 struct ModConfigEditorView: View {
     @EnvironmentObject var modsStore: ModsStore
     @EnvironmentObject var appEnvironment: AppEnvironment
@@ -37,31 +7,31 @@ struct ModConfigEditorView: View {
     @EnvironmentObject var alertStore: AlertStore
     @EnvironmentObject var appCoordinator: AppCoordinator
     let mod: Mod
-    
+
     @State private var configText: String = ""
     @State private var originalText: String = ""
     @State private var isInvalidJson: Bool = false
     @State private var selectedTab: Int = 0
     @State private var configItems: [ConfigItem] = []
     @State private var searchText: String = ""
-    
+
     var configPath: String {
         let basePath = (appEnvironment.gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
         let modPath = (basePath as NSString).appendingPathComponent(mod.folderName.rawValue)
         return (modPath as NSString).appendingPathComponent("config.json")
     }
-    
+
     private func buildTree(items: [ConfigItem]) -> [ConfigTreeNode] {
         let root = ConfigTreeNode(id: "root", title: "root")
-        
+
         for item in items {
             var currentNode = root
             var currentPath = ""
-            
+
             for (index, segment) in item.keyPath.enumerated() {
                 currentPath += (currentPath.isEmpty ? "" : " > ") + segment
                 let isLast = index == item.keyPath.count - 1
-                
+
                 if isLast {
                     let leaf = ConfigTreeNode(id: item.id.uuidString, title: segment, item: item)
                     currentNode.children.append(leaf)
@@ -76,10 +46,19 @@ struct ModConfigEditorView: View {
                 }
             }
         }
-        
+
         return root.children
     }
-    
+
+    /// Passed to `ConfigFieldRow`/`ConfigSectionTree` as `onChange` — they don't own
+    /// `configItems`, so they hand back the whole updated item instead of mutating in place.
+    private func updateItem(_ updated: ConfigItem) {
+        if let i = configItems.firstIndex(where: { $0.id == updated.id }) {
+            configItems[i] = updated
+            syncToText()
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if selectedTab == 0 {
@@ -96,7 +75,7 @@ struct ModConfigEditorView: View {
                             let filteredItems = configItems.filter { item in
                                 searchText.isEmpty || item.key.localizedCaseInsensitiveContains(searchText)
                             }
-                            
+
                             if filteredItems.isEmpty && !searchText.isEmpty {
                                 Text(String(format: localizationStore.L(L10n.Settings.configNoSettingsFoundFor), searchText))
                                     .foregroundColor(.secondary)
@@ -105,13 +84,13 @@ struct ModConfigEditorView: View {
                                 let tree = buildTree(items: filteredItems)
                                 let rootLeaves = tree.filter { $0.item != nil }
                                 let rootGroups = tree.filter { $0.item == nil }
-                                
+
                                 if !rootLeaves.isEmpty {
                                     StandardSection(title: localizationStore.L(L10n.Settings.settings)) {
                                         VStack(spacing: 0) {
                                             ForEach(Array(rootLeaves.enumerated()), id: \.element.id) { index, leafNode in
                                                 if let item = leafNode.item {
-                                                    renderItemRow(item: item, label: leafNode.title)
+                                                    ConfigFieldRow(item: item, label: leafNode.title, onChange: updateItem)
                                                         .padding(.vertical, 4)
                                                     if index < rootLeaves.count - 1 {
                                                         Divider()
@@ -121,10 +100,10 @@ struct ModConfigEditorView: View {
                                         }
                                     }
                                 }
-                                
+
                                 ForEach(rootGroups) { groupNode in
                                     StandardSection(title: groupNode.title) {
-                                        renderNodeChildren(nodes: groupNode.children)
+                                        ConfigSectionTree(nodes: groupNode.children, onChange: updateItem)
                                     }
                                 }
                             }
@@ -153,9 +132,9 @@ struct ModConfigEditorView: View {
                 }
                 .padding(30)
             }
-            
+
             Divider()
-            
+
             // Footer Action Bar
             HStack {
                 Menu {
@@ -173,16 +152,16 @@ struct ModConfigEditorView: View {
                     Label(localizationStore.L(L10n.Settings.configBackupAndRestore), systemImage: "ellipsis.circle")
                 }
                 .menuStyle(.borderedButton)
-                
+
                 if isInvalidJson {
                     Text(localizationStore.L(L10n.Settings.configInvalidJson))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.red)
                         .padding(.leading, 8)
                 }
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     configText = originalText
                     isInvalidJson = false
@@ -192,7 +171,7 @@ struct ModConfigEditorView: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(configText == originalText)
-                
+
                 Button(localizationStore.L(L10n.Saves.saveChanges)) {
                     if saveConfig() {
                         modsStore.editingModConfig = nil
@@ -219,7 +198,7 @@ struct ModConfigEditorView: View {
         .background(Color(nsColor: .controlBackgroundColor))
         .onAppear(perform: loadConfig)
     }
-    
+
     private func loadConfig() {
         if FileManager.default.fileExists(atPath: configPath) {
             do {
@@ -237,7 +216,7 @@ struct ModConfigEditorView: View {
             parseToVisual()
         }
     }
-    
+
     private func validateJson(_ text: String) {
         if text.isEmpty {
             isInvalidJson = false
@@ -252,15 +231,15 @@ struct ModConfigEditorView: View {
             }
         }
     }
-    
+
     private func parseToVisual() {
         guard let data = configText.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data, options: []) else {
             return
         }
-        
+
         var newItems: [ConfigItem] = []
-        
+
         func extractItems(from value: Any, parentPath: [String]) {
             if let dict = value as? [String: Any] {
                 for key in dict.keys.sorted() {
@@ -287,18 +266,18 @@ struct ModConfigEditorView: View {
                 }
             }
         }
-        
+
         extractItems(from: json, parentPath: [])
         configItems = newItems
     }
-    
+
     private func syncToText() {
         guard let data = configText.data(using: .utf8),
               var json = try? JSONSerialization.jsonObject(with: data, options: []) else { return }
-        
+
         func setValue(in container: inout Any, path: [String], value: Any) {
             guard let first = path.first else { return }
-            
+
             if path.count == 1 {
                 if first.hasPrefix("[") && first.hasSuffix("]"),
                    let idxStr = String(first.dropFirst().dropLast()) as String?,
@@ -326,7 +305,7 @@ struct ModConfigEditorView: View {
                 }
             }
         }
-        
+
         for item in configItems {
             let valToSet: Any
             switch item.type {
@@ -343,7 +322,7 @@ struct ModConfigEditorView: View {
             }
             setValue(in: &json, path: item.keyPath, value: valToSet)
         }
-        
+
         if let newJsonData = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]),
            let str = String(data: newJsonData, encoding: .utf8) {
             let cleanedCurrent = configText.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "\n", with: "")
@@ -353,7 +332,7 @@ struct ModConfigEditorView: View {
             }
         }
     }
-    
+
     private func saveConfig() -> Bool {
         do {
             let backupPath = configPath + ".bak"
@@ -372,7 +351,7 @@ struct ModConfigEditorView: View {
             return false
         }
     }
-    
+
     private func restoreConfigBackup() {
         let backupPath = configPath + ".bak"
         if FileManager.default.fileExists(atPath: backupPath) {
@@ -389,7 +368,7 @@ struct ModConfigEditorView: View {
                 alertStore.show("Failed to restore config.json.bak: \(error.localizedDescription)")
             }
         }
-        
+
         let panel = NSOpenPanel()
         panel.title = "Select Config Backup (.json)"
         panel.allowedContentTypes = [.json]
@@ -407,122 +386,5 @@ struct ModConfigEditorView: View {
                 alertStore.show("Failed to load config: \(error.localizedDescription)")
             }
         }
-    }
-    
-    @ViewBuilder
-    private func renderNodeChildren(nodes: [ConfigTreeNode]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(nodes.enumerated()), id: \.element.id) { index, node in
-                if let item = node.item {
-                    renderItemRow(item: item, label: node.title)
-                        .padding(.vertical, 4)
-                    if index < nodes.count - 1 {
-                        Divider()
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(node.title)
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.secondary)
-                            .padding(.top, 12)
-                            .padding(.bottom, 4)
-                        
-                        AnyView(renderNodeChildren(nodes: node.children))
-                            .padding(.leading, 12)
-                    }
-                    if index < nodes.count - 1 {
-                        Divider()
-                    }
-                }
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private func renderItemRow(item: ConfigItem, label: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.system(size: 13))
-                .foregroundColor(.primary)
-            Spacer()
-            
-            switch item.type {
-            case .boolean:
-                Toggle("", isOn: Binding(
-                    get: { item.boolValue },
-                    set: { newValue in
-                        if let i = configItems.firstIndex(where: { $0.id == item.id }) {
-                            configItems[i].boolValue = newValue
-                            syncToText()
-                        }
-                    }
-                ))
-                .toggleStyle(SwitchToggleStyle(tint: .blue))
-                .controlSize(.small)
-                .labelsHidden()
-                
-            case .number:
-                if item.isInt {
-                    HStack(spacing: 6) {
-                        TextField("", value: Binding(
-                            get: { Int(item.numberValue) },
-                            set: { newValue in
-                                if let i = configItems.firstIndex(where: { $0.id == item.id }) {
-                                    configItems[i].numberValue = Double(newValue)
-                                    syncToText()
-                                }
-                            }
-                        ), formatter: NumberFormatter())
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 70)
-                        
-                        Stepper("", onIncrement: {
-                            if let i = configItems.firstIndex(where: { $0.id == item.id }) {
-                                configItems[i].numberValue += 1
-                                syncToText()
-                            }
-                        }, onDecrement: {
-                            if let i = configItems.firstIndex(where: { $0.id == item.id }) {
-                                configItems[i].numberValue -= 1
-                                syncToText()
-                            }
-                        })
-                        .labelsHidden()
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        TextField("", value: Binding(
-                            get: { item.numberValue },
-                            set: { newValue in
-                                if let i = configItems.firstIndex(where: { $0.id == item.id }) {
-                                    configItems[i].numberValue = newValue
-                                    syncToText()
-                                }
-                            }
-                        ), formatter: NumberFormatter())
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 70)
-                        
-                        Stepper("", onIncrement: {
-                            if let i = configItems.firstIndex(where: { $0.id == item.id }) {
-                                configItems[i].numberValue += 0.5
-                                syncToText()
-                            }
-                        }, onDecrement: {
-                            if let i = configItems.firstIndex(where: { $0.id == item.id }) {
-                                configItems[i].numberValue -= 0.5
-                                syncToText()
-                            }
-                        })
-                        .labelsHidden()
-                    }
-                }
-            default:
-                EmptyView()
-            }
-        }
-        .padding(.vertical, 8)
     }
 }
