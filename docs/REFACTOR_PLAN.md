@@ -60,7 +60,7 @@
 - [x] 4.4 `ProfilesStore` — first store with real multi-protocol DI (ProfileStoring + LocalizationStore). Needs mods/gameDir like ThaiHubStore; one method (applyProfileToFilesystem) needs mods re-read after triggering scanMods(), so it takes a `modsProvider: () -> [ModItem]` closure rather than a snapshot value — a snapshot would miss scanMods()'s effect.
 - [x] 4.5 `ModPacksStore` — real DI with NexusAPIClient/LocalizationStore/LogStore. importedModPack only mutates via the exposed setter (not internally), so — unlike 4.2/4.3/4.4 — a manual objectWillChange.send() in the setter is enough, no Combine subscription needed. Test-writing lesson: a stub-backed test still deadlocks if it blocks the main thread waiting on a completion the store wraps in DispatchQueue.main.async — needs the same background-queue + RunLoop-pump pattern as the existing NXM/NexusCollection/ModUpdate tests in Tests/main.swift.
 - [x] 4.6 `SavesStore` — first store needing zero parameter/closure workarounds: every dependency (SaveStoring, SaveNoteStoring, FilePicking, LocalizationStore) is a real Phase 3.1 protocol, injected directly. backupAllMods/backupMod deliberately left on the ViewModel — they touch the Mods directory, not Saves, so they're ModsStore's (4.7).
-- [ ] 4.7 `ModsStore`
+- [x] 4.7 `ModsStore` — the plan's own largest/riskiest store. Real DI: ModScanning, ModInstalling, NexusAPIClient, FilePicking, PreferenceStoring, LocalizationStore. gameDir/chainToggleDependencies/showModal/log/refresh still come from the ViewModel as parameters/closures (AppEnvironment territory, 4.8). ViewModel is down to ~800 lines from 2,102.
 - [ ] 4.8 `AppEnvironment`
 - [ ] 4.9 Delete `StarHubTHViewModel`
 - [ ] 5.1 `NexusAPIClient` → `async throws`
