@@ -64,15 +64,12 @@ struct ModProfilesView: View {
                             // opening each missing mod's Nexus page for a manual download
                             // is the correct behavior here, not a stand-in for a real
                             // download that got cut — the message says so explicitly.
-                            profilesStore.missingNexusIds(in: collection, currentMods: modsStore.mods, nexusApiKey: appEnvironment.nexusApiKey) { missingIds in
-                                DispatchQueue.main.async {
-                                    if !missingIds.isEmpty {
-                                        alertStore.show(String(format: localizationStore.L(L10n.VM.collectionImportedMissing), missingIds.count))
-                                        openMissingModPages(missingIds)
-                                    } else {
-                                        alertStore.show(localizationStore.L(L10n.VM.collectionImported))
-                                    }
-                                }
+                            let missingIds = profilesStore.missingNexusIds(in: collection, currentMods: modsStore.mods, nexusApiKey: appEnvironment.nexusApiKey)
+                            if !missingIds.isEmpty {
+                                alertStore.show(String(format: localizationStore.L(L10n.VM.collectionImportedMissing), missingIds.count))
+                                openMissingModPages(missingIds)
+                            } else {
+                                alertStore.show(localizationStore.L(L10n.VM.collectionImported))
                             }
                         } catch {
                             alertStore.show(String(format: localizationStore.L(L10n.VM.collectionImportFailed), error.localizedDescription))
@@ -119,13 +116,14 @@ struct ModProfilesView: View {
     /// Opens each missing mod's Nexus page with a short stagger between them, instead of
     /// firing every NSWorkspace.shared.open call in one tight loop — a dozen-plus tabs
     /// opening at once reads as a popup storm, not a helpful "here's what to grab."
-    private func openMissingModPages(_ missingIds: [String], index: Int = 0) {
-        guard index < missingIds.count else { return }
-        if let url = URL(string: "https://www.nexusmods.com/stardewvalley/mods/\(missingIds[index])") {
-            NSWorkspace.shared.open(url)
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            openMissingModPages(missingIds, index: index + 1)
+    private func openMissingModPages(_ missingIds: [String]) {
+        Task {
+            for id in missingIds {
+                if let url = URL(string: "https://www.nexusmods.com/stardewvalley/mods/\(id)") {
+                    NSWorkspace.shared.open(url)
+                }
+                try? await Task.sleep(nanoseconds: 400_000_000)
+            }
         }
     }
 }

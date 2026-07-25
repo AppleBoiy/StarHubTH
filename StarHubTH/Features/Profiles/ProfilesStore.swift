@@ -157,8 +157,8 @@ final class ProfilesStore: ObservableObject {
     /// direct API download for a non-premium account (see `NXMParser`'s doc comment),
     /// so the caller opens each missing mod's Nexus page for a manual download rather
     /// than downloading automatically.
-    func missingNexusIds(in collection: ModCollection, currentMods: [ModItem], nexusApiKey: String, completion: @escaping ([String]) -> Void) {
-        CollectionInstaller.shared.install(collection: collection, currentMods: currentMods, nexusApiKey: nexusApiKey, onMissingQueue: completion)
+    func missingNexusIds(in collection: ModCollection, currentMods: [ModItem], nexusApiKey: String) -> [String] {
+        CollectionInstaller.shared.install(collection: collection, currentMods: currentMods, nexusApiKey: nexusApiKey)
     }
 
     /// Call this after any toggleMod so the profile stays up to date.
