@@ -196,7 +196,7 @@ struct ThaiModDetailView: View {
                                 }
                                 Spacer()
                                 
-                                Button(action: { Task { await appCoordinator.installThaiTranslation(mod: mod) } }) {
+                                Button(action: { Task { await appCoordinator.installThaiTranslation(mod) } }) {
                                     Text(localizationStore.L(mod.isInstalled ? L10n.ThaiHub.reinstall : L10n.ThaiHub.install))
                                         .font(.system(size: 12))
                                         .padding(.horizontal, 12)

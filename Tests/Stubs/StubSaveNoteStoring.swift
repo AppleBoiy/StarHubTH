@@ -7,7 +7,7 @@ final class StubSaveNoteStoring: SaveNoteStoring {
         notes[folderName] ?? SaveNote(tag: "", note: "", customIconPath: nil)
     }
 
-    func setNote(for folderName: String, tag: String, note: String, customIconPath: String?) {
+    func setNote(_ note: String, tag: String, forSave folderName: String, customIconPath: String?) {
         notes[folderName] = SaveNote(tag: tag, note: note, customIconPath: customIconPath)
     }
 }

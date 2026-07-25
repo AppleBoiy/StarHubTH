@@ -17,7 +17,7 @@ final class SaveNotesStore {
         cache[folderName] ?? SaveNote(tag: "", note: "", customIconPath: nil)
     }
 
-    func setNote(for folderName: String, tag: String, note: String, customIconPath: String? = nil) {
+    func setNote(_ note: String, tag: String, forSave folderName: String, customIconPath: String? = nil) {
         cache[folderName] = SaveNote(tag: tag, note: note, customIconPath: customIconPath)
         save()
     }

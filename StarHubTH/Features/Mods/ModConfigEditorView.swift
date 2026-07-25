@@ -159,10 +159,10 @@ struct ModConfigEditorView: View {
             // Footer Action Bar
             HStack {
                 Menu {
-                    Button(action: { Task { await appCoordinator.backupMod(mod: mod) } }) {
+                    Button(action: { Task { await appCoordinator.backUp(mod) } }) {
                         Label(localizationStore.L(L10n.Settings.configBackupMod), systemImage: "arrow.down.doc")
                     }
-                    Button(action: { Task { await appCoordinator.restoreModZip(mod: mod) } }) {
+                    Button(action: { Task { await appCoordinator.restore(mod) } }) {
                         Label(localizationStore.L(L10n.Settings.configRestoreMod), systemImage: "arrow.up.doc")
                     }
                     Divider()

@@ -184,7 +184,7 @@ struct BackupRow: View {
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                         
                         Button(localizationStore.L(L10n.Profiles.save)) {
-                            savesStore.setNote(for: backup.folderPath.lastPathComponent, tag: noteTag, note: noteText)
+                            savesStore.setNote(noteText, tag: noteTag, forSave: backup.folderPath.lastPathComponent)
                             isEditingNote = false
                         }
                         .buttonStyle(.borderedProminent)

@@ -484,7 +484,7 @@ final class ModsStore: ObservableObject {
     }
 
     /// Runs a zip/unzip `Process` off the calling actor and resumes once it exits — the
-    /// shared plumbing behind `backupMod`/`restoreModZip`.
+    /// shared plumbing behind `backUp`/`restore`.
     private func runProcess(executable: String, arguments: [String], currentDirectory: URL? = nil) async throws -> Int32 {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
@@ -503,7 +503,7 @@ final class ModsStore: ObservableObject {
         }
     }
 
-    func backupMod(mod: ModItem, gameDir: String, showModal: @escaping (String) -> Void) async {
+    func backUp(_ mod: ModItem, gameDir: String, showModal: @escaping (String) -> Void) async {
         guard !gameDir.isEmpty else {
             showModal(localization.L(L10n.Settings.gameDirNotSet))
             return
@@ -533,7 +533,7 @@ final class ModsStore: ObservableObject {
         }
     }
 
-    func restoreModZip(mod: ModItem, gameDir: String, showModal: @escaping (String) -> Void) async {
+    func restore(_ mod: ModItem, gameDir: String, showModal: @escaping (String) -> Void) async {
         guard !gameDir.isEmpty else {
             showModal(localization.L(L10n.Settings.gameDirNotSet))
             return

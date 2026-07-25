@@ -101,7 +101,7 @@ struct SavesStoreTests {
     private static func testSavesHierarchyFiltersByTag() {
         let (store, _, noteStoring, _) = makeStore(saves: [save("Farm1"), save("Farm2")])
         store.reloadSaves()
-        noteStoring.setNote(for: "Farm1", tag: "star", note: "", customIconPath: nil)
+        noteStoring.setNote("", tag: "star", forSave: "Farm1", customIconPath: nil)
 
         store.saveFilterTag = "star"
         let roots = store.savesHierarchy
@@ -112,7 +112,7 @@ struct SavesStoreTests {
     private static func testAvailableFilterTags() {
         let (store, _, noteStoring, _) = makeStore(saves: [save("Farm1"), save("Farm2")])
         store.reloadSaves()
-        noteStoring.setNote(for: "Farm1", tag: "star", note: "", customIconPath: nil)
+        noteStoring.setNote("", tag: "star", forSave: "Farm1", customIconPath: nil)
 
         SimpleTestFramework.assertEqual(store.availableFilterTags, ["star"], "availableFilterTags collects distinct non-empty tags across saves")
     }

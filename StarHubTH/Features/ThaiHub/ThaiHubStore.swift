@@ -127,8 +127,8 @@ final class ThaiHubStore: ObservableObject {
         }
     }
 
-    func installThaiTranslation(
-        mod: ThaiTranslationMod,
+    func install(
+        _ mod: ThaiTranslationMod,
         gameDir: String,
         showModal: @escaping (String) -> Void,
         onInstalled: @escaping () -> Void

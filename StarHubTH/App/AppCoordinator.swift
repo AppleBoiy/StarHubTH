@@ -194,12 +194,12 @@ final class AppCoordinator: ObservableObject {
         modsStore.backupAllMods(gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
-    func backupMod(mod: ModItem) async {
-        await modsStore.backupMod(mod: mod, gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
+    func backUp(_ mod: ModItem) async {
+        await modsStore.backUp(mod, gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
-    func restoreModZip(mod: ModItem) async {
-        await modsStore.restoreModZip(mod: mod, gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
+    func restore(_ mod: ModItem) async {
+        await modsStore.restore(mod, gameDir: appEnvironment.gameDir, showModal: { [weak self] message in self?.alertStore.show(message) })
     }
 
     func cleanDisabledMods() {
@@ -267,9 +267,9 @@ final class AppCoordinator: ObservableObject {
         thaiHubStore.evaluateThaiTranslationStatus(gameDir: appEnvironment.gameDir, mods: modsStore.mods)
     }
 
-    func installThaiTranslation(mod: ThaiTranslationMod) async {
-        await thaiHubStore.installThaiTranslation(
-            mod: mod,
+    func installThaiTranslation(_ mod: ThaiTranslationMod) async {
+        await thaiHubStore.install(
+            mod,
             gameDir: appEnvironment.gameDir,
             showModal: { [weak self] message in self?.alertStore.show(message) },
             onInstalled: { [weak self] in self?.evaluateThaiTranslationStatus() }

@@ -789,7 +789,7 @@ struct SaveEditorView: View {
                     let newQi = Int(qiGemsStr) ?? save.qiGems
                     let newClub = Int(clubCoinsStr) ?? save.clubCoins
                     
-                    savesStore.setNote(for: save.folderName, tag: noteTag, note: noteText)
+                    savesStore.setNote(noteText, tag: noteTag, forSave: save.folderName)
                     appCoordinator.editSave(info: save, newName: name, newFarm: farm, newFav: fav, newMoney: newMoney, newTotalMoneyEarned: newTotalMoneyEarned, newMaxHealth: newHealth, newMaxStamina: newStam, newGoldenWalnuts: newWalnuts, newQiGems: newQi, newClubCoins: newClub, newSpouse: spouse)
                     savesStore.editingSave = nil
                 }

@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 protocol SaveNoteStoring {
     func note(for folderName: String) -> SaveNote
-    func setNote(for folderName: String, tag: String, note: String, customIconPath: String?)
+    func setNote(_ note: String, tag: String, forSave folderName: String, customIconPath: String?)
 }
 
 extension SaveNotesStore: SaveNoteStoring {}

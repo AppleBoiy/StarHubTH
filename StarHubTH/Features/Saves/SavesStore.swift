@@ -158,8 +158,8 @@ final class SavesStore: ObservableObject {
     }
 
     func setAvatar(forSave folderName: String, iconPath: String) {
-        let note = saveNoteStoring.note(for: folderName)
-        saveNoteStoring.setNote(for: folderName, tag: note.tag, note: note.note, customIconPath: iconPath)
+        let existing = saveNoteStoring.note(for: folderName)
+        saveNoteStoring.setNote(existing.note, tag: existing.tag, forSave: folderName, customIconPath: iconPath)
         objectWillChange.send()
     }
 
@@ -237,10 +237,10 @@ final class SavesStore: ObservableObject {
         saveNoteStoring.note(for: folderName)
     }
 
-    func setNote(for folderName: String, tag: String, note: String) {
+    func setNote(_ note: String, tag: String, forSave folderName: String) {
         // Preserve existing customIconPath
         let existing = saveNoteStoring.note(for: folderName)
-        saveNoteStoring.setNote(for: folderName, tag: tag, note: note, customIconPath: existing.customIconPath)
+        saveNoteStoring.setNote(note, tag: tag, forSave: folderName, customIconPath: existing.customIconPath)
         objectWillChange.send()
     }
 
