@@ -1,29 +1,18 @@
 import Foundation
 
-class SmapiInstallerTests {
+/// Live integration test: real, unauthenticated call to api.github.com. Unlike the Nexus
+/// integration tests, there's no API key to gate on — this one only had the
+/// STARHUB_SKIP_LIVE_TESTS gate to rely on, and used to have neither (see docs/QOC_PLAN.md
+/// Phase A) — it ran unconditionally, including in CI, with no way to skip it.
+class SmapiInstallerIntegrationTests {
     static func run() async {
-        print("Running SmapiInstallerTests...")
-        testLastMeaningfulLine()
+        print("Running SmapiInstallerIntegrationTests...")
         await testResolveLatestSmapiInstallerURL()
     }
-    
-    static func testLastMeaningfulLine() {
-        // Normal error message
-        let errorOutput = """
-        Extracting install files...
-        Unhandled exception: System.Exception: failed to find the payload
-          at SMAPI.Installer.Program.Main()
-        """
-        let msg = SmapiInstaller.lastMeaningfulLine(of: errorOutput)
-        SimpleTestFramework.assertTrue(msg.contains("failed to find the payload"), "Should extract the exception line")
-        
-        // Single line output
-        let singleLine = "unknown error occurred"
-        let msg2 = SmapiInstaller.lastMeaningfulLine(of: singleLine)
-        SimpleTestFramework.assertEqual(msg2, "unknown error occurred", "Should return the only line")
-    }
-    
+
     static func testResolveLatestSmapiInstallerURL() async {
+        guard !LiveTestGate.skipIfNeeded("testResolveLatestSmapiInstallerURL") else { return }
+
         do {
             let (url, version) = try await SmapiInstaller.resolveLatestSmapiInstallerURL()
             SimpleTestFramework.assertTrue(url.absoluteString.contains("SMAPI-"), "URL should contain SMAPI-")

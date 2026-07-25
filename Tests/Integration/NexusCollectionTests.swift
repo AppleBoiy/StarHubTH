@@ -7,6 +7,8 @@ class NexusCollectionTests {
     }
 
     static func testFetchCollectionWithRealData() async {
+        guard !LiveTestGate.skipIfNeeded("testFetchCollectionWithRealData") else { return }
+
         let defaults = UserDefaults(suiteName: "com.appleboiy.StarHubTH")
         let apiKey = defaults?.string(forKey: "nexusApiKey") ?? ""
 

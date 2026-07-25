@@ -250,19 +250,35 @@ StarHubTH/
 Tests/
 ├── main.swift                  keep — entry point
 ├── TestRunner.swift            keep
-├── Stubs/                      NEW (Phase 3.2) — one Stub per protocol
-│   ├── StubNexusAPIClient.swift
-│   ├── StubSaveStoring.swift
-│   ├── StubProfileStoring.swift
-│   ├── StubFilePicking.swift
-│   └── StubPreferenceStoring.swift
-├── Models/                     ModTagInferenceTests, ModUpdateTests
-├── Services/                   NXMParserTests, SmapiLogParserTests, ModManifestParserTests,
-│                               SaveFileParserTests, NexusCollectionTests, SmapiInstallerTests
-└── Features/                   NEW — one suite per store, added as each is extracted
+├── Stubs/                      one Stub per protocol (Phase 3.2)
+│   ├── StubNexusAPIClient.swift, StubSaveStoring.swift, StubProfileStoring.swift,
+│   └── StubFilePicking.swift, StubPreferenceStoring.swift, StubModInstalling.swift,
+│       StubModScanning.swift, StubSaveNoteStoring.swift, StubError.swift
+├── Models/                     ModTagInferenceTests, ModGraphTests, ModListFilterTests
+├── Services/                   NXMParserTests, SmapiInstallerTests, SmapiLogParserTests,
+│                               ModManifestParserTests, SaveFileParserTests, SaveManagerTests
+├── Features/                   one suite per store: LocalizationStoreTests, LogStoreTests,
+│                               ProfilesStoreTests, SavesStoreTests, AppEnvironmentTests,
+│                               ModPacksStoreTests, ModsStoreTests
+└── Integration/                real network calls (Nexus API / GitHub API), gated behind
+                                 STARHUB_SKIP_LIVE_TESTS (LiveTestGate.swift) — CI sets it,
+                                 a local run with a real Nexus API key exercises them for real.
+                                 NXMDownloadIntegrationTests, SmapiInstallerIntegrationTests,
+                                 ModUpdateTests, NexusCollectionTests
 ```
 
 Reorganising `Tests/` into subfolders is safe: `run_tests.py` walks `Tests/` recursively.
+
+**Why `Integration/` exists (QoC audit, see `docs/QOC_PLAN.md`):** `NXMParserTests` and
+`SmapiInstallerTests` each used to mix pure logic (parsing, string handling — fast,
+deterministic, no external dependency) with one method that makes a real network call. That
+made "is this test suite fast and deterministic" a per-method question, not a per-file one,
+and `SmapiInstallerTests`'s live GitHub check had no skip gate at all — it ran unconditionally,
+including in CI. The fix: split the live method out into `Integration/`, leaving the pure
+logic in `Services/` under its original name. Every file in `Integration/` uses the same
+`LiveTestGate.skipIfNeeded(_:)` check, so there's one mechanism (`STARHUB_SKIP_LIVE_TESTS`),
+not an inconsistent mix of an implicit "skip if no API key" check on some files and nothing
+on others.
 
 ---
 

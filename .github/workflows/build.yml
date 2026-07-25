@@ -22,4 +22,6 @@ jobs:
         run: python3 build_app.py
 
       - name: Test
+        env:
+          STARHUB_SKIP_LIVE_TESTS: "1"
         run: python3 run_tests.py

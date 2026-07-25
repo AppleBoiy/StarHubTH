@@ -7,6 +7,8 @@ class ModUpdateTests {
     }
 
     static func testAutoUpdateFlow() async {
+        guard !LiveTestGate.skipIfNeeded("testAutoUpdateFlow") else { return }
+
         let defaults = UserDefaults(suiteName: "com.appleboiy.StarHubTH")
         let apiKey = defaults?.string(forKey: "nexusApiKey") ?? ""
 
@@ -78,7 +80,7 @@ class ModUpdateTests {
             SimpleTestFramework.assertTrue(false, "Update zip download failed")
             return
         }
-        
+
         // Step 4: Install the update
         var installSuccess = false
         do {
@@ -90,7 +92,7 @@ class ModUpdateTests {
         }
 
         SimpleTestFramework.assertTrue(installSuccess, "Auto-update mod download and install should succeed")
-        
+
         let contents = (try? FileManager.default.contentsOfDirectory(atPath: tempModsDir.path)) ?? []
         SimpleTestFramework.assertTrue(contents.count > 0, "Mods directory should contain the updated mod")
     }

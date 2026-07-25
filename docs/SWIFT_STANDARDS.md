@@ -533,16 +533,25 @@ Apply `private(set)` to every store property that views only read. That single c
 
 ## 10. Testing
 
-**Rule.** Every new service protocol ships with a stub implementation and at least one test. Pure functions (parsers, filters, sorters, dependency resolution) are tested directly.
+**Rule.** Every new service protocol ships with a stub implementation and at least one test. Pure functions (parsers, filters, sorters, dependency resolution) are tested directly. Every store extracted from the old ViewModel arrives with tests — that's the acceptance criterion for adding it, not a follow-up.
 
-**Today.** 10 files, 597 lines, driven by a hand-rolled `TestRunner` (not XCTest) via `run_tests.py`. Coverage is confined to the pure value types — `NXMParser`, `SmapiLogParser`, `ModManifestParser`, `SaveFileParser`, mod-update comparison, tag inference, Nexus collections. Nothing touching the ViewModel is tested, because nothing touching the ViewModel is testable.
+**Today.** 32 files, driven by a hand-rolled `TestRunner`/`SimpleTestFramework` (not XCTest) via `run_tests.py`, 200+ assertions. Every store is tested through its injected `Stub*` protocol doubles — no store test reaches for a real singleton or a live network/filesystem call.
+
+**Test taxonomy — four categories, one per `Tests/` subfolder:**
+
+| Folder | What it covers | Isolation |
+|---|---|---|
+| `Models/` | Pure value-type logic: dependency graphs, filters, tag inference | No I/O at all |
+| `Services/` | Parsers, plus `SaveManagerTests` (real filesystem, but a fresh `temporaryDirectory()` per test, cleaned up via `defer`) | Deterministic — real I/O confined to a sandbox, never touches production paths |
+| `Features/` | One suite per store, built with 100% injected `Stub*` doubles via a `makeStore()`-style factory | Fully isolated — no real singleton, no real network |
+| `Integration/` | Tests of the `Live*` implementations themselves against the real Nexus Mods API / GitHub API | **Not deterministic** — real network, real rate limits |
+
+`Integration/` is a different kind of test on purpose (verifying the real HTTP/parsing contract, not a DI consumer), not a lapse in stub discipline. Every file in it goes through the same `LiveTestGate.skipIfNeeded(_:)` check (`Tests/Integration/LiveTestGate.swift`) — set `STARHUB_SKIP_LIVE_TESTS=1` to skip all of them at once; CI does this by default. A few also separately no-op if no real Nexus API key is configured locally. If a test needs a live external call, it goes in `Integration/` with that gate — never bare in `Services/`/`Features/` with no way to skip it.
 
 `run_tests.py` compiles every file under `StarHubTH/` **except `StarHubTHApp.swift`** (matched by filename, not path) plus everything under `Tests/`. So:
 
 - Extracting types into new folders is test-safe.
 - Extracting `AppDelegate`/`URLDispatcher` out of `StarHubTHApp.swift` puts them **into** the test binary. That's fine (no `@main`), but keep `@main` in `StarHubTHApp.swift` and keep that filename.
-
-Each store extracted in the refactor must arrive with tests. That's the acceptance criterion for the phase, not a follow-up.
 
 ---
 
