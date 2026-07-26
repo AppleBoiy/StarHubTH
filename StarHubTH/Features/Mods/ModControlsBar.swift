@@ -182,6 +182,7 @@ struct ModControlsBar: View {
             .buttonStyle(PlainButtonStyle())
             .pointingHandCursor()
             .help(localizationStore.L(L10n.Mods.installDropHint))
+            .accessibilityIdentifier("install-mod-button")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

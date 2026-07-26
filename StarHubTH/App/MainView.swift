@@ -31,7 +31,12 @@ struct MainView: View {
     @AppStorage("launchProfile") private var launchProfile: String = "SMAPI"
 
     init() {
-        let container = DependencyContainer()
+        let container: DependencyContainer
+        if let fixture = UITestFixture.current {
+            container = DependencyContainer(filePicking: fixture.filePicking, preferenceStoring: fixture.preferenceStoring)
+        } else {
+            container = DependencyContainer()
+        }
         let localizationStore = LocalizationStore()
         let logStore = LogStore()
         let appEnvironment = AppEnvironment(preferenceStoring: container.preferenceStoring, localization: localizationStore)

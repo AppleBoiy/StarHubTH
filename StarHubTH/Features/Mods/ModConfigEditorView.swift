@@ -180,6 +180,7 @@ struct ModConfigEditorView: View {
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
                 .disabled(configText == originalText || isInvalidJson)
+                .accessibilityIdentifier("config-save-button")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)

@@ -84,7 +84,14 @@ final class LogStore: ObservableObject {
     /// `DispatchSourceFileSystemObject` to wake on writes rather than polling — the standard
     /// "tail -f" pattern. `startOffset` is the byte offset already consumed (by the initial
     /// load, or a previous call), so only genuinely new bytes are read and yielded.
-    private func tailSmapiLog(from startOffset: UInt64) -> AsyncStream<String> {
+    /// `nonisolated` deliberately: its `DispatchSourceFileSystemObject` event handler runs on
+    /// a raw GCD callback thread, never the main actor. Left `@MainActor`-inferred (the
+    /// default for a closure lexically nested in this class), calling `continuation.yield`
+    /// from that thread trips a hard `dispatch_assert_queue` runtime crash under strict
+    /// concurrency — the compiler statically assumes main-actor isolation this closure can
+    /// never actually satisfy at runtime. `nonisolated` makes the declared isolation match
+    /// what's true anyway, since neither this function nor its closures touch `self`.
+    nonisolated private func tailSmapiLog(from startOffset: UInt64) -> AsyncStream<String> {
         let path = smapiLogPath
         return AsyncStream { continuation in
             guard FileManager.default.fileExists(atPath: path) else {
@@ -118,9 +125,8 @@ final class LogStore: ObservableObject {
                 let newData = handle.readDataToEndOfFile()
                 guard !newData.isEmpty else { return }
                 offset += UInt64(newData.count)
-                if let text = String(data: newData, encoding: .utf8) {
-                    continuation.yield(text)
-                }
+                guard let text = String(data: newData, encoding: .utf8) else { return }
+                continuation.yield(text)
             }
             source.setCancelHandler {
                 close(fileDescriptor)
@@ -188,7 +194,13 @@ final class LogStore: ObservableObject {
         }
     }
 
-    private var smapiLogPath: String {
+    /// `STARHUB_UITEST_SMAPI_LOG_PATH` lets a UI test point this at an isolated temp file
+    /// instead of the real, shared, per-user SMAPI log — never set outside `StarHubTHUITests`.
+    /// `nonisolated`: read by `tailSmapiLog`, which must itself be `nonisolated` (see there).
+    nonisolated private var smapiLogPath: String {
+        if let override = ProcessInfo.processInfo.environment["STARHUB_UITEST_SMAPI_LOG_PATH"] {
+            return override
+        }
         let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
         return (homeDir as NSString).appendingPathComponent(
             ".config/StardewValley/ErrorLogs/SMAPI-latest.txt"

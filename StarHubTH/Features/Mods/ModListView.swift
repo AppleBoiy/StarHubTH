@@ -178,7 +178,6 @@ struct ModListView: View {
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .searchable(text: $searchText, prompt: Text(localizationStore.L(L10n.Mods.searchMods)))
-        .accessibilityIdentifier("mods-search-field")
         .toolbar {
             ToolbarItem {
                 Button {

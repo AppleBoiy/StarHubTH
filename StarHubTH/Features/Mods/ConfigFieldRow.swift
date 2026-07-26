@@ -28,6 +28,7 @@ struct ConfigFieldRow: View {
                 .toggleStyle(SwitchToggleStyle(tint: .blue))
                 .controlSize(.small)
                 .labelsHidden()
+                .accessibilityIdentifier("config-field-\(item.keyPath.joined(separator: "."))")
 
             case .number:
                 if item.isInt {
