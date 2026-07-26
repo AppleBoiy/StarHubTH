@@ -1,0 +1,218 @@
+{
+  "$comment": "Canonical inventory of screenshot-worthy app states — see docs/RELEASE_SCREENSHOTS_PLAN.md Phase 1. Consumed by the Phase 3 capture script and the Phase 3.2 coverage check (diffs sidebar-tab-*/major-state identifiers found in source against the 'navigation' entries here, to catch new features that never got added).",
+  "version": 1,
+  "screens": [
+    {
+      "id": "home",
+      "feature": "Home",
+      "description": "Home dashboard — avatar header, app info, game folder, SMAPI status",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Home" }
+      ]
+    },
+    {
+      "id": "updates",
+      "feature": "Updates",
+      "description": "Software Update / System Alerts screen",
+      "tier": "core",
+      "precondition": "At least one out-of-date mod or SMAPI error must exist — this row is only visible when alertCount > 0.",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Updates" }
+      ]
+    },
+    {
+      "id": "saves-list",
+      "feature": "Saves",
+      "description": "Saves — Finder-style list/tree view",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Saves" }
+      ]
+    },
+    {
+      "id": "saves-grid",
+      "feature": "Saves",
+      "description": "Saves — grid view",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Saves" },
+        { "action": "click", "identifier": "saves-view-mode-grid" }
+      ]
+    },
+    {
+      "id": "save-editor",
+      "feature": "Saves",
+      "description": "Save Editor — avatar, notes, character info, inventory",
+      "tier": "core",
+      "precondition": "At least one save file must exist in the fixture gameDir.",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Saves" },
+        { "action": "click", "identifier": "save-row-menu-<folderName>", "note": "folderName is the target save's on-disk folder name" },
+        { "action": "click", "label": "L10n.Saves.saveManagement", "note": "native macOS menu item, addressed by localized label text, not an identifier" }
+      ]
+    },
+    {
+      "id": "save-timeline",
+      "feature": "Saves",
+      "description": "Save Timeline — backup list",
+      "tier": "core",
+      "precondition": "At least one save file must exist.",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Saves" },
+        { "action": "click", "identifier": "save-row-menu-<folderName>" },
+        { "action": "click", "label": "L10n.Saves.timeline" }
+      ]
+    },
+    {
+      "id": "mods-list",
+      "feature": "Mods",
+      "description": "Mods — list view, enabled/disabled sections",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Mods" }
+      ]
+    },
+    {
+      "id": "mods-grid",
+      "feature": "Mods",
+      "description": "Mods — grid view (ModCardView)",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Mods" },
+        { "action": "click", "identifier": "mods-view-mode-picker", "note": "segmented control; select the grid segment (SF Symbol square.grid.2x2)" }
+      ]
+    },
+    {
+      "id": "mods-group-expanded",
+      "feature": "Mods",
+      "description": "Mods — group row expanded (multi-file mod, missing-dependency warning)",
+      "tier": "core",
+      "precondition": "A multi-file/group mod with a missing dependency must exist in the fixture Mods folder.",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Mods" },
+        { "action": "click", "identifier": "mod-row-<groupFolderName>", "note": "clicking the group row itself toggles expansion" }
+      ]
+    },
+    {
+      "id": "mod-detail-description",
+      "feature": "Mods",
+      "description": "Mod Detail — Description tab",
+      "tier": "core",
+      "precondition": "Target mod's manifest UpdateKeys must resolve to a real Nexus mod for real cover/description data (see UILive fixtures).",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Mods" },
+        { "action": "click", "identifier": "mod-row-info-button-<folderName>" }
+      ]
+    },
+    {
+      "id": "mod-detail-dependencies",
+      "feature": "Mods",
+      "description": "Mod Detail — Dependencies tab (dependency graph)",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Mods" },
+        { "action": "click", "identifier": "mod-row-info-button-<folderName>" },
+        { "action": "click", "identifier": "mod-detail-tab-picker", "note": "select the Dependencies segment (tag 2)" }
+      ]
+    },
+    {
+      "id": "mod-config-editor",
+      "feature": "Mods",
+      "description": "Mod Config Editor — Visual tab (grouped settings tree)",
+      "tier": "core",
+      "precondition": "Target mod must have a config.json.",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Mods" },
+        { "action": "click", "compound": "identifier == 'mod-row-<folderName>' AND label == 'gearshape'", "note": "ModListRow's config-gear button has no identifier of its own — SWIFT_STANDARDS.md §10 documents why (row identifier clobbers descendant identifiers); locate it the same way ModConfigEditRoundTripUITests does." }
+      ]
+    },
+    {
+      "id": "profiles-list",
+      "feature": "Profiles",
+      "description": "Profiles — populated list",
+      "tier": "core",
+      "precondition": "At least one mod profile must exist.",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Profiles" }
+      ]
+    },
+    {
+      "id": "profile-detail",
+      "feature": "Profiles",
+      "description": "Profile Detail sheet",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Profiles" },
+        { "action": "click", "identifier": "profile-row-info-button-<profileId>" }
+      ]
+    },
+    {
+      "id": "modpacks-empty",
+      "feature": "ModPacks",
+      "description": "ModPacks — empty drop-zone / URL import prompt",
+      "tier": "core",
+      "precondition": "No collection currently imported.",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-ModPacks" }
+      ]
+    },
+    {
+      "id": "modpacks-imported",
+      "feature": "ModPacks",
+      "description": "ModPacks — imported collection banner + per-mod rows",
+      "tier": "core",
+      "precondition": "A real Nexus Collection must already be imported — data precondition, not a navigation gap.",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-ModPacks" }
+      ]
+    },
+    {
+      "id": "settings",
+      "feature": "Settings",
+      "description": "Settings — full page",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Settings" }
+      ]
+    },
+    {
+      "id": "logs",
+      "feature": "Logs",
+      "description": "Logs — main list",
+      "tier": "core",
+      "precondition": "Only visible when @AppStorage(\"showDeveloperLogs\") is true — enable it in Settings first.",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-Logs" }
+      ]
+    },
+    {
+      "id": "changelog",
+      "feature": "Changelog",
+      "description": "App Changelog — rendered CHANGELOG.md",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-AppChangelog" }
+      ]
+    },
+    {
+      "id": "thaihub-list",
+      "feature": "ThaiHub",
+      "description": "ThaiHub — mod list",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-ThaiHub" }
+      ]
+    },
+    {
+      "id": "thaihub-detail",
+      "feature": "ThaiHub",
+      "description": "ThaiHub — mod detail",
+      "tier": "core",
+      "navigation": [
+        { "action": "click", "identifier": "sidebar-tab-ThaiHub" },
+        { "action": "click", "identifier": "thaihub-row-<modName>", "note": "ThaiTranslationMod.id is its name" }
+      ]
+    }
+  ]
+}
