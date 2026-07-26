@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.6] - 2026-07-26
+
+### Changed
+- **Internal — Migrated the build/test pipeline to a real Xcode project**: Replaced the script-based build (`build_app.py`, `run_tests.py`) with `StarHubTH.xcodeproj` (generated from `project.yml` via XcodeGen), keeping the "new files need no build-script change" guarantee via Xcode's File System Synchronized Groups. The custom 200-assertion test runner is now a real XCTest target (`StarHubTHTests`), and a new `StarHubTHUITests` target drives the real app end-to-end via `XCUIApplication`. CI (`build.yml`/`release.yml`) and `release.py` now build/test via `xcodebuild`. No user-facing behavior change — same app, same features.
+
 ## [1.1.5] - 2026-07-26
 
 ### Fixed
