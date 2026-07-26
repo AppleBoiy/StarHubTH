@@ -28,7 +28,8 @@
         "ModInfoIntegrationTests",
         "ModUpdateWiringIntegrationTests",
         "NXMOpenURLIntegrationTests",
-        "SyncTagIntegrationTests"
+        "SyncTagIntegrationTests",
+        "NexusEndorseIntegrationTests"
       ]
     }
   ],
