@@ -6,6 +6,7 @@ import XCTest
 /// `XCUIApplication()` resolves to it — no more launching an externally-built `.app` by
 /// path, which the pre-migration spike needed since Xcode didn't build the app itself.
 enum AppLauncher {
+    @MainActor
     static func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launch()
