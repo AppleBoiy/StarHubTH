@@ -11,6 +11,7 @@ import XCTest
 /// `TestPlans/ScreenshotCapture.xctestplan`, and even then only fires with
 /// `STARHUB_SCREENSHOT_OUTPUT_DIR` explicitly set, so it can never trigger by accident.
 /// See `docs/RELEASING.md`'s screenshot-refresh step and `scripts/screenshot_manifest.json`.
+@MainActor
 final class ScreenshotCaptureTool: XCTestCase {
     func testCaptureCoreScreens() throws {
         guard let outputDir = ProcessInfo.processInfo.environment["STARHUB_SCREENSHOT_OUTPUT_DIR"] else {
