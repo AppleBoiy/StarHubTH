@@ -39,6 +39,14 @@ struct SmapiLogParser {
                             updates.append(ModUpdateInfo(name: name, version: version, url: url))
                         }
                     }
+                } else if line.trimmingCharacters(in: .whitespaces).isEmpty {
+                    // Real SMAPI output interleaves a blank line between each "ALERT SMAPI"
+                    // entry in this block — treating any non-matching line as "end of block"
+                    // meant the blank line immediately after "You can update N mods:" ended
+                    // parsing before a single real entry was ever read, so outOfDateMods was
+                    // silently empty for every real log with more than one mod update
+                    // available. Blank lines inside the block don't end it; anything else does.
+                    continue
                 } else if !line.contains("ALERT SMAPI") {
                     // Reached end of alert block
                     isParsingUpdates = false

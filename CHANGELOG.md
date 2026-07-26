@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Software Update screen never showed available mod updates**: SMAPI's real update-check output interleaves a blank line between each "you can update" entry — `SmapiLogParser` treated any non-matching line as the end of that block, so the blank line right after "You can update N mods:" silently ended parsing before a single real entry was ever read. Confirmed against a real, 122K-line SMAPI log with 4 genuinely out-of-date mods, none of which ever showed up. The existing unit test never caught this because its sample log had no blank lines between entries — unlike real SMAPI output.
+
 ## [1.1.8] - 2026-07-26
 
 ### Fixed
