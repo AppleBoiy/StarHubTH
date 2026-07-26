@@ -44,3 +44,8 @@ update_json.py
 
 # Xcode per-user state (StarHubTH.xcodeproj itself is committed — see docs/XCODE_MIGRATION_PLAN.md)
 xcuserdata/
+
+# Screenshot capture targets — names real saves/mods/profiles from the maintainer's own
+# gameDir, not fixture data (see scripts/screenshot_targets.example.json for the template)
+screenshot_targets.local.json
+screenshots_captured/

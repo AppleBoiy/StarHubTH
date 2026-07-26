@@ -101,3 +101,4 @@ schemes:
         - path: TestPlans/Integration.xctestplan
         - path: TestPlans/UI.xctestplan
         - path: TestPlans/UILive.xctestplan
+        - path: TestPlans/ScreenshotCapture.xctestplan

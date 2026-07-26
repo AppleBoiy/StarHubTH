@@ -1,0 +1,29 @@
+{
+  "configurations": [
+    {
+      "id": "2C9F38AF-836C-423E-A437-914971FCCCD7",
+      "name": "ScreenshotCapture",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "targetForVariableExpansion": {
+      "containerPath": "container:StarHubTH.xcodeproj",
+      "identifier": "562E52E4707A9F0EF6685AD6",
+      "name": "StarHubTH"
+    }
+  },
+  "testTargets": [
+    {
+      "target": {
+        "containerPath": "container:StarHubTH.xcodeproj",
+        "identifier": "F81B09DE149B14DE06EBAFAF",
+        "name": "StarHubTHUITests"
+      },
+      "selectedTests": [
+        "ScreenshotCaptureTool"
+      ]
+    }
+  ],
+  "version": 1
+}

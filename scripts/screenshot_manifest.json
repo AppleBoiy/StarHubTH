@@ -1,5 +1,5 @@
 {
-  "$comment": "Canonical inventory of screenshot-worthy app states — see docs/RELEASE_SCREENSHOTS_PLAN.md Phase 1. Consumed by the Phase 3 capture script and the Phase 3.2 coverage check (diffs sidebar-tab-*/major-state identifiers found in source against the 'navigation' entries here, to catch new features that never got added).",
+  "$comment": "Canonical inventory of screenshot-worthy app states — see docs/RELEASE_SCREENSHOTS_PLAN.md Phase 1. Consumed by StarHubTHUITests/Sources/ScreenshotCapture/ScreenshotCaptureTool.swift (Phase 3.1) and scripts/check_screenshot_coverage.py (Phase 3.2, diffs sidebar-tab-* identifiers found in source against 'navigation' entries here, to catch new features that never got added). Tokens like <folderName> in an 'identifier' are resolved at capture time from a local, gitignored targets file — see scripts/screenshot_targets.example.json.",
   "version": 1,
   "screens": [
     {
@@ -45,11 +45,11 @@
       "feature": "Saves",
       "description": "Save Editor — avatar, notes, character info, inventory",
       "tier": "core",
-      "precondition": "At least one save file must exist in the fixture gameDir.",
+      "precondition": "targets.folderName must name a real save in the maintainer's gameDir.",
+      "placeholders": ["folderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Saves" },
-        { "action": "click", "identifier": "save-row-menu-<folderName>", "note": "folderName is the target save's on-disk folder name" },
-        { "action": "click", "label": "L10n.Saves.saveManagement", "note": "native macOS menu item, addressed by localized label text, not an identifier" }
+        { "action": "clickMenuItem", "menuIdentifier": "save-row-menu-<folderName>", "index": 0, "note": "index 0 is 'Save Management' — see SaveRow.swift's Menu item order" }
       ]
     },
     {
@@ -57,11 +57,11 @@
       "feature": "Saves",
       "description": "Save Timeline — backup list",
       "tier": "core",
-      "precondition": "At least one save file must exist.",
+      "precondition": "targets.folderName must name a real save with at least one backup.",
+      "placeholders": ["folderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Saves" },
-        { "action": "click", "identifier": "save-row-menu-<folderName>" },
-        { "action": "click", "label": "L10n.Saves.timeline" }
+        { "action": "clickMenuItem", "menuIdentifier": "save-row-menu-<folderName>", "index": 1, "note": "index 1 is 'Timeline' — see SaveRow.swift's Menu item order" }
       ]
     },
     {
@@ -80,7 +80,7 @@
       "tier": "core",
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
-        { "action": "click", "identifier": "mods-view-mode-picker", "note": "segmented control; select the grid segment (SF Symbol square.grid.2x2)" }
+        { "action": "clickSegment", "identifier": "mods-view-mode-picker", "segmentLabel": "square.grid.2x2" }
       ]
     },
     {
@@ -88,7 +88,8 @@
       "feature": "Mods",
       "description": "Mods — group row expanded (multi-file mod, missing-dependency warning)",
       "tier": "core",
-      "precondition": "A multi-file/group mod with a missing dependency must exist in the fixture Mods folder.",
+      "precondition": "targets.groupFolderName must name a real multi-file/group mod with a missing dependency.",
+      "placeholders": ["groupFolderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
         { "action": "click", "identifier": "mod-row-<groupFolderName>", "note": "clicking the group row itself toggles expansion" }
@@ -99,7 +100,8 @@
       "feature": "Mods",
       "description": "Mod Detail — Description tab",
       "tier": "core",
-      "precondition": "Target mod's manifest UpdateKeys must resolve to a real Nexus mod for real cover/description data (see UILive fixtures).",
+      "precondition": "targets.folderName's manifest UpdateKeys must resolve to a real Nexus mod for real cover/description data.",
+      "placeholders": ["folderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
         { "action": "click", "identifier": "mod-row-info-button-<folderName>" }
@@ -110,10 +112,11 @@
       "feature": "Mods",
       "description": "Mod Detail — Dependencies tab (dependency graph)",
       "tier": "core",
+      "placeholders": ["folderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
         { "action": "click", "identifier": "mod-row-info-button-<folderName>" },
-        { "action": "click", "identifier": "mod-detail-tab-picker", "note": "select the Dependencies segment (tag 2)" }
+        { "action": "clickSegment", "identifier": "mod-detail-tab-picker", "segmentIndex": 2 }
       ]
     },
     {
@@ -121,10 +124,11 @@
       "feature": "Mods",
       "description": "Mod Config Editor — Visual tab (grouped settings tree)",
       "tier": "core",
-      "precondition": "Target mod must have a config.json.",
+      "precondition": "targets.folderName must have a config.json.",
+      "placeholders": ["folderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
-        { "action": "click", "compound": "identifier == 'mod-row-<folderName>' AND label == 'gearshape'", "note": "ModListRow's config-gear button has no identifier of its own — SWIFT_STANDARDS.md §10 documents why (row identifier clobbers descendant identifiers); locate it the same way ModConfigEditRoundTripUITests does." }
+        { "action": "clickDescendant", "rowIdentifier": "mod-row-<folderName>", "descendantLabel": "gearshape", "note": "ModListRow's config-gear button has no identifier of its own — SWIFT_STANDARDS.md §10 documents why (row identifier clobbers descendant identifiers); same lookup ModConfigEditRoundTripUITests already uses." }
       ]
     },
     {
@@ -142,6 +146,7 @@
       "feature": "Profiles",
       "description": "Profile Detail sheet",
       "tier": "core",
+      "placeholders": ["profileId"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Profiles" },
         { "action": "click", "identifier": "profile-row-info-button-<profileId>" }
@@ -209,6 +214,7 @@
       "feature": "ThaiHub",
       "description": "ThaiHub — mod detail",
       "tier": "core",
+      "placeholders": ["modName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-ThaiHub" },
         { "action": "click", "identifier": "thaihub-row-<modName>", "note": "ThaiTranslationMod.id is its name" }

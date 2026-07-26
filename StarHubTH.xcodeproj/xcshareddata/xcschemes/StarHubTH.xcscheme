@@ -74,6 +74,9 @@
          <TestPlanReference
             reference = "container:TestPlans/UILive.xctestplan">
          </TestPlanReference>
+         <TestPlanReference
+            reference = "container:TestPlans/ScreenshotCapture.xctestplan">
+         </TestPlanReference>
       </TestPlans>
       <MacroExpansion>
          <BuildableReference
