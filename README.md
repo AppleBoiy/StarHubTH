@@ -61,7 +61,7 @@
 
 ### ความต้องการของระบบ (Requirements)
 *   macOS 13.0 (Ventura) หรือใหม่กว่า
-*   Xcode 16.0 หรือใหม่กว่า
+*   Xcode 16.0 หรือใหม่กว่า — Swift 6 (โค้ดเบสใช้ typed `throws(ErrorType)` ซึ่ง Swift 5.x parse ไม่ได้ และ Xcode 16+ ยังจำเป็นสำหรับ File System Synchronized Groups ของโปรเจกต์ด้วย)
 
 ### วิธีการรันโปรเจกต์
 เปิดไฟล์ `StarHubTH.xcodeproj` ด้วย Xcode ได้โดยตรง หรือคอมไพล์ผ่าน Terminal:

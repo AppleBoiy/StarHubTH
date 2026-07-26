@@ -104,6 +104,10 @@ final class LogStore: ObservableObject {
                 eventMask: .write,
                 queue: DispatchQueue.global(qos: .utility)
             )
+            // DispatchSourceFileSystemObject isn't Sendable, but `cancel()` is documented
+            // safe from any queue. Box it so `onTermination`'s @Sendable closure can hold it —
+            // that capture is also what keeps `source` alive for the stream's lifetime.
+            let sourceBox = DispatchSourceBox(source)
 
             source.setEventHandler {
                 guard let handle = FileHandle(forReadingAtPath: path) else { return }
@@ -120,7 +124,7 @@ final class LogStore: ObservableObject {
                 close(fileDescriptor)
             }
             continuation.onTermination = { _ in
-                source.cancel()
+                sourceBox.source.cancel()
             }
 
             source.resume()
@@ -187,5 +191,14 @@ final class LogStore: ObservableObject {
         return (homeDir as NSString).appendingPathComponent(
             ".config/StardewValley/ErrorLogs/SMAPI-latest.txt"
         )
+    }
+}
+
+/// Lets a non-`Sendable` `DispatchSourceFileSystemObject` cross into a `@Sendable` closure.
+/// Safe because `cancel()` is documented callable from any queue.
+private final class DispatchSourceBox: @unchecked Sendable {
+    let source: DispatchSourceFileSystemObject
+    init(_ source: DispatchSourceFileSystemObject) {
+        self.source = source
     }
 }

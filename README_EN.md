@@ -55,7 +55,7 @@ This app is built with **Swift** and **SwiftUI** as a native macOS application.
 
 ### Requirements
 *   macOS 13.0 (Ventura) or later
-*   Xcode 16.0 or later
+*   Xcode 16.0 or later — Swift 6 (the codebase uses typed `throws(ErrorType)`, which Swift 5.x can't parse; Xcode 16+ is also required for the project's File System Synchronized Groups)
 
 ### Running the Project
 Open `StarHubTH.xcodeproj` directly in Xcode, or build from Terminal:
