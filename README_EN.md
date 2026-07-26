@@ -31,16 +31,17 @@
 
 |   |   |
 | :---: | :---: |
-| <img src="screenshots/en/home.png" width="400"> | <img src="screenshots/en/mods-list.png" width="400"> |
-| <img src="screenshots/en/mods-grid.png" width="400"> | <img src="screenshots/en/mods-group-expanded.png" width="400"> |
-| <img src="screenshots/en/mod-detail-description.png" width="400"> | <img src="screenshots/en/mod-detail-dependencies.png" width="400"> |
-| <img src="screenshots/en/mod-config-editor.png" width="400"> | <img src="screenshots/en/saves-list.png" width="400"> |
-| <img src="screenshots/en/saves-grid.png" width="400"> | <img src="screenshots/en/save-editor.png" width="400"> |
-| <img src="screenshots/en/save-timeline.png" width="400"> | <img src="screenshots/en/profiles-list.png" width="400"> |
-| <img src="screenshots/en/profile-detail.png" width="400"> | <img src="screenshots/en/modpacks-empty.png" width="400"> |
-| <img src="screenshots/en/modpacks-imported.png" width="400"> | <img src="screenshots/en/settings.png" width="400"> |
-| <img src="screenshots/en/logs.png" width="400"> | <img src="screenshots/en/changelog.png" width="400"> |
-| <img src="screenshots/en/thaihub-list.png" width="400"> | <img src="screenshots/en/thaihub-detail.png" width="400"> |
+| <img src="screenshots/en/home.png" width="400"> | <img src="screenshots/en/updates.png" width="400"> |
+| <img src="screenshots/en/mods-list.png" width="400"> | <img src="screenshots/en/mods-grid.png" width="400"> |
+| <img src="screenshots/en/mods-group-expanded.png" width="400"> | <img src="screenshots/en/mod-detail-description.png" width="400"> |
+| <img src="screenshots/en/mod-detail-dependencies.png" width="400"> | <img src="screenshots/en/mod-config-editor.png" width="400"> |
+| <img src="screenshots/en/saves-list.png" width="400"> | <img src="screenshots/en/saves-grid.png" width="400"> |
+| <img src="screenshots/en/save-editor.png" width="400"> | <img src="screenshots/en/save-timeline.png" width="400"> |
+| <img src="screenshots/en/profiles-list.png" width="400"> | <img src="screenshots/en/profile-detail.png" width="400"> |
+| <img src="screenshots/en/modpacks-empty.png" width="400"> | <img src="screenshots/en/modpacks-imported.png" width="400"> |
+| <img src="screenshots/en/settings.png" width="400"> | <img src="screenshots/en/logs.png" width="400"> |
+| <img src="screenshots/en/changelog.png" width="400"> | <img src="screenshots/en/thaihub-list.png" width="400"> |
+| <img src="screenshots/en/thaihub-detail.png" width="400"> |
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/AppleBoiy/stardew-thai-translations/main/banners/install_banner.png" alt="Installation" width="300">
