@@ -34,14 +34,17 @@
 
 |   |   |
 | :---: | :---: |
-| <img src="screenshots/th/1.png" width="400"> | <img src="screenshots/th/2.png" width="400"> |
-| <img src="screenshots/th/3.png" width="400"> | <img src="screenshots/th/4.png" width="400"> |
-| <img src="screenshots/th/5.png" width="400"> | <img src="screenshots/th/6.png" width="400"> |
-| <img src="screenshots/th/7.png" width="400"> | <img src="screenshots/th/8.png" width="400"> |
-| <img src="screenshots/th/9.png" width="400"> | <img src="screenshots/th/10.png" width="400"> |
-| <img src="screenshots/th/11.png" width="400"> | <img src="screenshots/th/12.png" width="400"> |
-| <img src="screenshots/th/13.png" width="400"> | <img src="screenshots/th/14.png" width="400"> |
-| <img src="screenshots/th/15.png" width="400"> | |
+| <img src="screenshots/th/home.png" width="400"> | <img src="screenshots/th/updates.png" width="400"> |
+| <img src="screenshots/th/mods-list.png" width="400"> | <img src="screenshots/th/mods-grid.png" width="400"> |
+| <img src="screenshots/th/mods-group-expanded.png" width="400"> | <img src="screenshots/th/mod-detail-description.png" width="400"> |
+| <img src="screenshots/th/mod-detail-dependencies.png" width="400"> | <img src="screenshots/th/mod-config-editor.png" width="400"> |
+| <img src="screenshots/th/saves-list.png" width="400"> | <img src="screenshots/th/saves-grid.png" width="400"> |
+| <img src="screenshots/th/save-editor.png" width="400"> | <img src="screenshots/th/save-timeline.png" width="400"> |
+| <img src="screenshots/th/profiles-list.png" width="400"> | <img src="screenshots/th/profile-detail.png" width="400"> |
+| <img src="screenshots/th/modpacks-empty.png" width="400"> | <img src="screenshots/th/modpacks-imported.png" width="400"> |
+| <img src="screenshots/th/settings.png" width="400"> | <img src="screenshots/th/logs.png" width="400"> |
+| <img src="screenshots/th/changelog.png" width="400"> | <img src="screenshots/th/thaihub-list.png" width="400"> |
+| <img src="screenshots/th/thaihub-detail.png" width="400"> |
 
 
 <p align="center">
