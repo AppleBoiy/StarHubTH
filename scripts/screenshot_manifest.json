@@ -45,12 +45,11 @@
       "feature": "Saves",
       "description": "Save Editor — avatar, notes, character info, inventory",
       "tier": "core",
-      "precondition": "targets.saveFolderName must name a real save in the maintainer's gameDir; targets.saveSearchQuery must be a substring of that save's real playerName/farmName.",
-      "placeholders": ["saveFolderName", "saveSearchQuery"],
+      "precondition": "targets.saveFolderName must name a real save in the maintainer's gameDir, visible without scrolling — Saves search matches playerName/farmName, not the on-disk folder, so it can't help locate an arbitrary save and isn't attempted.",
+      "placeholders": ["saveFolderName"],
       "navigation": [
-        { "action": "toggleLanguage", "note": "Reported real-machine workaround: real save/mod data doesn't reliably show up in the Mods/Saves lists until the language is changed once after launch." },
         { "action": "click", "identifier": "sidebar-tab-Saves" },
-        { "action": "search", "text": "<saveSearchQuery>", "note": "Saves search matches playerName/farmName, not the on-disk folder — see SavesView.swift. Filtering to one match avoids relying on scroll-into-view for a save that isn't near the top." },
+        { "action": "click", "identifier": "saves-view-mode-list", "note": "savesStore.saveViewMode is a store-level @Published property, not per-view @State — it leaks across entries. A prior saves-grid entry running before this one left the view in grid mode, where SaveCardView (not SaveRow) renders — save-row-menu-<folder> only exists in list mode. Confirmed via a debug screenshot at the failure point showing the grid, not the list." },
         { "action": "clickMenuItem", "menuIdentifier": "save-row-menu-<saveFolderName>", "index": 0, "note": "index 0 is 'Save Management' — see SaveRow.swift's Menu item order" }
       ]
     },
@@ -59,12 +58,11 @@
       "feature": "Saves",
       "description": "Save Timeline — backup list",
       "tier": "core",
-      "precondition": "targets.saveFolderName must name a real save with at least one backup; targets.saveSearchQuery must be a substring of that save's real playerName/farmName.",
-      "placeholders": ["saveFolderName", "saveSearchQuery"],
+      "precondition": "targets.saveFolderName must name a real save with at least one backup, visible without scrolling.",
+      "placeholders": ["saveFolderName"],
       "navigation": [
-        { "action": "toggleLanguage" },
         { "action": "click", "identifier": "sidebar-tab-Saves" },
-        { "action": "search", "text": "<saveSearchQuery>" },
+        { "action": "click", "identifier": "saves-view-mode-list" },
         { "action": "clickMenuItem", "menuIdentifier": "save-row-menu-<saveFolderName>", "index": 1, "note": "index 1 is 'Timeline' — see SaveRow.swift's Menu item order" }
       ]
     },
@@ -84,7 +82,7 @@
       "tier": "core",
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
-        { "action": "clickSegment", "identifier": "mods-view-mode-picker", "segmentIndex": 1, "note": "list.bullet is segment 0, square.grid.2x2 is segment 1 — see ModControlsBar.swift's Picker" }
+        { "action": "clickSegment", "identifier": "mods-view-mode-picker", "segmentIndex": 1, "segmentCount": 2, "note": "list.bullet is segment 0, square.grid.2x2 is segment 1 — see ModControlsBar.swift's Picker" }
       ]
     },
     {
@@ -96,6 +94,7 @@
       "placeholders": ["groupFolderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
+        { "action": "clickSegment", "identifier": "mods-view-mode-picker", "segmentIndex": 0, "segmentCount": 2, "note": "modListViewMode is an @AppStorage value — it persists across the whole app session, not just this entry, so a prior mods-grid entry leaves it in grid mode where mod-row-<folder> doesn't exist at all (ModCardView, not ModListRow). Force list mode back explicitly rather than assume." },
         { "action": "click", "identifier": "mod-row-<groupFolderName>", "note": "clicking the group row itself toggles expansion" }
       ]
     },
@@ -107,10 +106,10 @@
       "precondition": "targets.modFolderName's manifest UpdateKeys must resolve to a real Nexus mod for real cover/description data; targets.modSearchQuery must be a substring of that mod's real name/uniqueId/author.",
       "placeholders": ["modFolderName", "modSearchQuery"],
       "navigation": [
-        { "action": "toggleLanguage", "note": "Reported real-machine workaround: real save/mod data doesn't reliably show up in the Mods/Saves lists until the language is changed once after launch." },
         { "action": "click", "identifier": "sidebar-tab-Mods" },
+        { "action": "clickSegment", "identifier": "mods-view-mode-picker", "segmentIndex": 0, "segmentCount": 2, "note": "modListViewMode is an @AppStorage value — persists across the whole session, so a prior mods-grid entry can leave this on grid mode." },
         { "action": "search", "text": "<modSearchQuery>", "note": "Mods search matches name/uniqueId/author (ModListFilter.swift), not the on-disk folder — filtering to one match avoids relying on scroll-into-view against a 100+-mod real library." },
-        { "action": "clickDescendant", "rowIdentifier": "mod-row-<modFolderName>", "descendantLabel": "info.circle", "note": "mod-row-info-button-<folder>'s own identifier is silently clobbered by the row's mod-row-<folder> identifier — same documented issue as the config-gear button (SWIFT_STANDARDS.md §10). Locate it the same way: row identifier + the button's own SF Symbol label." }
+        { "action": "clickDescendant", "rowIdentifier": "mod-row-<modFolderName>", "descendantLabel": "mod-info-button", "note": "mod-row-info-button-<folder>'s own identifier is silently clobbered by the row's mod-row-<folder> identifier — same issue as the config-gear button (SWIFT_STANDARDS.md §10). Located via an explicit .accessibilityLabel(\"mod-info-button\") on the button itself, not the SF Symbol name (info.circle's default auto-generated accessibility label turned out not to be the literal string \"info.circle\" — confirmed by a debug screenshot showing the button clearly present and clickable while this lookup still failed)." }
       ]
     },
     {
@@ -120,11 +119,11 @@
       "tier": "core",
       "placeholders": ["modFolderName", "modSearchQuery"],
       "navigation": [
-        { "action": "toggleLanguage" },
         { "action": "click", "identifier": "sidebar-tab-Mods" },
+        { "action": "clickSegment", "identifier": "mods-view-mode-picker", "segmentIndex": 0, "segmentCount": 2 },
         { "action": "search", "text": "<modSearchQuery>" },
-        { "action": "clickDescendant", "rowIdentifier": "mod-row-<modFolderName>", "descendantLabel": "info.circle" },
-        { "action": "clickSegment", "identifier": "mod-detail-tab-picker", "segmentIndex": 2 }
+        { "action": "clickDescendant", "rowIdentifier": "mod-row-<modFolderName>", "descendantLabel": "mod-info-button" },
+        { "action": "clickSegment", "identifier": "mod-detail-tab-picker", "segmentIndex": 2, "segmentCount": 3 }
       ]
     },
     {
@@ -136,6 +135,7 @@
       "placeholders": ["configModFolderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
+        { "action": "clickSegment", "identifier": "mods-view-mode-picker", "segmentIndex": 0, "segmentCount": 2, "note": "modListViewMode is an @AppStorage value — persists across the whole session, so a prior mods-grid entry can leave this on grid mode." },
         { "action": "clickDescendant", "rowIdentifier": "mod-row-<configModFolderName>", "descendantLabel": "gearshape", "note": "ModListRow's config-gear button has no identifier of its own — SWIFT_STANDARDS.md §10 documents why (row identifier clobbers descendant identifiers); same lookup ModConfigEditRoundTripUITests already uses." }
       ]
     },

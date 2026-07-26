@@ -40,6 +40,10 @@ final class ScreenshotCaptureTool: XCTestCase {
                 try Self.capture(app: app, id: entry.id, outputDir: outputDir)
             } catch {
                 failures.append("\(entry.id): \(error)")
+                // Best-effort — a diagnostic screenshot of whatever's actually on screen at
+                // the moment of failure, so a real failure can be looked at directly instead
+                // of guessed at from an "element not found" string alone.
+                try? Self.capture(app: app, id: "\(entry.id)-FAILURE", outputDir: outputDir)
             }
             Self.returnToBaseline(app: app)
         }
@@ -141,10 +145,23 @@ final class ScreenshotCaptureTool: XCTestCase {
                 try guardedClick(app, target, description: row)
 
             case "clickMenuItem":
+                // Deliberately NOT app.menuItems.element(boundBy:) — that matches menu items
+                // app-wide, including the real macOS menu bar, not just the popup this step
+                // just opened. Confirmed hitting this exact bug twice: once via
+                // toggleLanguage (nearly clicked the Apple menu's "System Information..."),
+                // and again here — index 0 happened to resolve correctly by luck, index 1
+                // didn't and hit the same system menu item. Arrow-key navigation (Down
+                // `index + 1` times from no initial selection, then Return) stays scoped to
+                // whatever menu is actually open.
                 guard let menuIdentifier = step.menuIdentifier, let index = step.index else { continue }
                 let resolved = try resolve(menuIdentifier, targets: targets)
                 try guardedClick(app, element(app: app, identifier: resolved), description: resolved)
-                try guardedClick(app, app.menuItems.element(boundBy: index), description: "\(resolved) menu item \(index)", timeout: 5)
+                Thread.sleep(forTimeInterval: 0.3)
+                for _ in 0...index {
+                    app.typeKey(XCUIKeyboardKey.downArrow, modifierFlags: [])
+                }
+                app.typeKey(XCUIKeyboardKey.return, modifierFlags: [])
+                Thread.sleep(forTimeInterval: 0.5)
 
             case "toggleLanguage":
                 // Visits Settings, flips the language picker to the other language and back —
@@ -179,8 +196,16 @@ final class ScreenshotCaptureTool: XCTestCase {
                 guard let identifier = step.identifier else { continue }
                 let picker = element(app: app, identifier: identifier)
                 guard picker.waitForExistence(timeout: 10) else { throw CaptureError.elementNotFound(identifier) }
-                if let segmentIndex = step.segmentIndex {
-                    try guardedClick(app, picker.buttons.element(boundBy: segmentIndex), description: "\(identifier) segment \(segmentIndex)")
+                if let segmentIndex = step.segmentIndex, let segmentCount = step.segmentCount {
+                    // picker.buttons.element(boundBy:) proved unreliable for SwiftUI
+                    // SegmentedPickerStyle controls — confirmed failing for both an
+                    // Image-tagged 2-segment picker and a Text-tagged 3-segment one. A
+                    // normalized-offset coordinate click lands on the segment directly by
+                    // its on-screen position instead of trusting sub-element ordering.
+                    let fraction = (Double(segmentIndex) + 0.5) / Double(segmentCount)
+                    let point = picker.coordinate(withNormalizedOffset: CGVector(dx: fraction, dy: 0.5))
+                    point.click()
+                    Thread.sleep(forTimeInterval: 0.3)
                 } else if let segmentLabel = step.segmentLabel {
                     let segment = picker.descendants(matching: .any).matching(NSPredicate(format: "label == %@", segmentLabel)).firstMatch
                     try guardedClick(app, segment, description: "\(identifier) segment '\(segmentLabel)'")
@@ -211,8 +236,21 @@ final class ScreenshotCaptureTool: XCTestCase {
     /// entry quietly no-ops and each one "succeeds" at capturing the exact same frozen sheet.
     /// Discovered by real captures against this machine's own populated app state producing
     /// six byte-identical PNGs in a row after `profile-detail`.
+    ///
+    /// Bounces through Home before landing on Mods, deliberately: MainView.swift's
+    /// `.onChange(of: currentTab)` is what resets `viewingModDetails`/`editingModConfig`/
+    /// `editingSave`/`viewingThaiMod` back to nil — but `onChange` only fires on an actual
+    /// value change. Clicking `sidebar-tab-Mods` while `currentTab` is already "Mods" (true
+    /// right after `mod-detail-description` opens a mod's detail view, itself reached via
+    /// clicking Mods) is a no-op, so the detail view never clears and every subsequent Mods
+    /// entry silently operates on the wrong screen. Found via a debug failure screenshot
+    /// showing mod-config-editor still stuck on a previous entry's mod detail view.
     private static func returnToBaseline(app: XCUIApplication) {
         app.typeKey(XCUIKeyboardKey.escape, modifierFlags: [])
+        let homeTab = element(app: app, identifier: "sidebar-tab-Home")
+        if homeTab.exists {
+            homeTab.click()
+        }
         let modsTab = element(app: app, identifier: "sidebar-tab-Mods")
         if modsTab.exists {
             modsTab.click()
@@ -241,6 +279,7 @@ private struct NavigationStep: Decodable {
     let index: Int?
     let segmentLabel: String?
     let segmentIndex: Int?
+    let segmentCount: Int?
     let rowIdentifier: String?
     let descendantLabel: String?
     let text: String?
