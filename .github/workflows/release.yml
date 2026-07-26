@@ -36,11 +36,9 @@ jobs:
           fi
 
       - name: Test
-        env:
-          STARHUB_SKIP_LIVE_TESTS: "1"
-        # See build.yml: -parallel-testing-enabled NO avoids a parallel test worker not
-        # reliably inheriting STARHUB_SKIP_LIVE_TESTS.
-        run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests -parallel-testing-enabled NO
+        # See build.yml: live-network Integration tests are skipped via a scheme-level
+        # environment variable (project.yml), not a workflow `env:` block.
+        run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
 
       - name: Build, package, and publish release
         run: python3 release.py --publish

@@ -93,6 +93,8 @@ schemes:
       config: Debug
     test:
       config: Debug
+      environmentVariables:
+        STARHUB_SKIP_LIVE_TESTS: "1"
       targets:
         - StarHubTHTests
         - StarHubTHUITests

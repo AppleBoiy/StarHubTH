@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Internal — CI's live-network-test skip gate now actually works**: The previous fix (v1.1.7's changelog entry) misdiagnosed this as a parallel-test-worker issue. The real cause: `xcodebuild test`'s scheme was configured to use the Run action's (empty) environment variables, so a workflow-level `env:` block never reached the test process at all, in CI or locally — `SmapiInstallerIntegrationTests` always made a real GitHub API call and just usually got lucky. Fixed by declaring `STARHUB_SKIP_LIVE_TESTS` directly in the Xcode scheme via `project.yml`, which XcodeGen wires to the scheme's own environment variables instead of inheriting the Run action's. No user-facing behavior change.
+
 ## [1.1.7] - 2026-07-26
 
 ### Changed
