@@ -30,7 +30,10 @@ final class ModDetailLiveDataUITests: XCTestCase {
         XCTAssertTrue(modsTab.waitForExistence(timeout: 15))
         modsTab.click()
 
-        let infoButton = app.buttons["mod-row-info-button-FixtureMod"]
+        // `mod-row-info-button-<folder>`'s own identifier is silently clobbered by the row's
+        // `mod-row-<folder>` identifier (SWIFT_STANDARDS.md §10) — locate it the same way the
+        // config-gear button already does: row identifier + the button's own SF Symbol label.
+        let infoButton = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'mod-row-FixtureMod' AND label == 'info.circle'")).firstMatch
         XCTAssertTrue(infoButton.waitForExistence(timeout: 15))
         infoButton.click()
 

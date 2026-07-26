@@ -220,7 +220,6 @@ struct ModListRow: View {
                     .buttonStyle(PlainButtonStyle())
                     .help(localizationStore.L(L10n.Settings.nexusModDetails))
                     .pointingHandCursor()
-                    .accessibilityIdentifier("mod-row-info-button-\(mod.folderName.rawValue)")
                 }
             }
             .padding(.trailing, 8)
