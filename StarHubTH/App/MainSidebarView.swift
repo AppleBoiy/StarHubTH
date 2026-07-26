@@ -108,6 +108,7 @@ struct MainSidebarView: View {
                 .buttonStyle(PlainButtonStyle())
                 .onHover { isProfileHovered = $0 }
                 .pointingHandCursor()
+                .accessibilityIdentifier("sidebar-tab-Home")
             }
 
             let alertCount = modsStore.smapiErrors.count + modsStore.outOfDateMods.count
@@ -136,6 +137,7 @@ struct MainSidebarView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
                 .pointingHandCursor()
+                .accessibilityIdentifier("sidebar-tab-Updates")
             }
 
             // Game Section

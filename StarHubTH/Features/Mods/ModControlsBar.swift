@@ -157,6 +157,7 @@ struct ModControlsBar: View {
             .pickerStyle(SegmentedPickerStyle())
             .frame(width: 70)
             .padding(.leading, 8)
+            .accessibilityIdentifier("mods-view-mode-picker")
 
             Divider()
                 .frame(height: 18)

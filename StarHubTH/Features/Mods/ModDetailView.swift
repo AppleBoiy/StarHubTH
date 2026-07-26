@@ -183,6 +183,7 @@ struct ModDetailView: View {
                     Text(localizationStore.L(L10n.Settings.nexusChangelog)).tag(1)
                     Text(localizationStore.L(L10n.Profiles.dependencies)).tag(2)
                 }
+                .accessibilityIdentifier("mod-detail-tab-picker")
                 .pickerStyle(SegmentedPickerStyle())
             }
             .padding(.horizontal, 20)

@@ -67,6 +67,7 @@ struct ThaiTranslationHubView: View {
                                 .onTapGesture {
                                     thaiHubStore.viewingThaiMod = mod
                                 }
+                                .accessibilityIdentifier("thaihub-row-\(mod.id)")
                             
                             if index < filteredMods.count - 1 {
                                 Divider()

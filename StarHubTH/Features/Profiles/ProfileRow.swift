@@ -43,6 +43,7 @@ struct ProfileRow: View {
             }
             .buttonStyle(.plain)
             .help(localizationStore.L(L10n.Profiles.viewDetails))
+            .accessibilityIdentifier("profile-row-info-button-\(profile.id)")
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)

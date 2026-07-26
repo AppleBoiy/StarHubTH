@@ -193,6 +193,7 @@ struct ModConfigEditorView: View {
                     Text(localizationStore.L(L10n.Settings.configCodeEditor)).tag(1)
                 }
                 .pickerStyle(.segmented)
+                .accessibilityIdentifier("mod-config-tab-picker")
             }
         }
         .toolbarBackground(.hidden, for: .automatic)

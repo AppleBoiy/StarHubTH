@@ -91,6 +91,7 @@ struct SaveRow: View {
             }
             .menuStyle(BorderlessButtonMenuStyle())
             .frame(width: 30)
+            .accessibilityIdentifier("save-row-menu-\(save.folderName)")
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 4)

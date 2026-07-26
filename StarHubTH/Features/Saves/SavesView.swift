@@ -31,6 +31,7 @@ struct SavesView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundColor(savesStore.saveViewMode == .list ? .accentColor : .secondary)
+                    .accessibilityIdentifier("saves-view-mode-list")
 
                     Button(action: { withAnimation { savesStore.saveViewMode = .grid } }) {
                         Image(systemName: "square.grid.2x2")
@@ -41,6 +42,7 @@ struct SavesView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundColor(savesStore.saveViewMode == .grid ? .accentColor : .secondary)
+                    .accessibilityIdentifier("saves-view-mode-grid")
                 }
                 .padding(2)
                 .background(Color(nsColor: .controlBackgroundColor))
