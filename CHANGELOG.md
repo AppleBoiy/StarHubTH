@@ -7,8 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.8-preview.1] - 2026-07-26
+
 ### Fixed
 - **Internal — CI's live-network-test skip gate now actually works**: The previous fix (v1.1.7's changelog entry) misdiagnosed this as a parallel-test-worker issue. The real cause: `xcodebuild test`'s scheme was configured to use the Run action's (empty) environment variables, so a workflow-level `env:` block never reached the test process at all, in CI or locally — `SmapiInstallerIntegrationTests` always made a real GitHub API call and just usually got lucky. Fixed by declaring `STARHUB_SKIP_LIVE_TESTS` directly in the Xcode scheme via `project.yml`, which XcodeGen wires to the scheme's own environment variables instead of inheriting the Run action's. No user-facing behavior change.
+- **Internal — `Integration/` tests silently self-skipped on every run**: `UserDefaults(suiteName: "com.appleboiy.StarHubTH")` returns `nil` when read from a process sharing that same bundle ID — true for `StarHubTHTests`, which hosts inside `StarHubTH.app`. Every existing live-Nexus test read the API key this way, so they always no-op'd instead of actually hitting the real API. Fixed by reading via `UserDefaults.standard` instead.
+
+### Added
+- **Internal — Real-Nexus-API test coverage extended to the actual store/coordinator wiring**: previously every live test called `LiveNexusAPIClient` directly; new coverage now goes through `ModsStore`, `AppCoordinator.handleOpenURL` (the real `nxm://` entry point), and `ModsStore.syncTagFromNexus` — the code path a real user's click actually runs, not just the underlying HTTP client. Added an opt-in, separately-gated (`STARHUB_RUN_MUTATING_NEXUS_TESTS=1`) test for `endorseMod`, the one call that mutates a real Nexus account, so it never runs as a side effect of enabling live tests generally. Added `TestPlans/UILive.xctestplan` for the small set of UI tests that need both a real GUI session and a real Nexus API key at once (mod detail loading real cover art, Sync Tag updating from real category data).
+- **Internal — Release screenshot refresh tooling**: `scripts/screenshot_manifest.json` inventories every Core-tier screen the app has (built from the app's own navigation code, not the old screenshot files) so a future feature can't quietly ship without anyone remembering to add a screenshot. A new `/refresh-screenshots` skill drives the real, already-configured app end-to-end (`TestPlans/ScreenshotCapture.xctestplan`) to capture them, checks for drift between the manifest and the app's actual tabs, and reports differences against the checked-in screenshots — never auto-commits. Manual, local-only, same posture as the `Integration`/`UI`/`UILive` test plans.
 
 ## [1.1.7] - 2026-07-26
 
