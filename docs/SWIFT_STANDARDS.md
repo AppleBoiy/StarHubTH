@@ -544,7 +544,7 @@ Apply `private(set)` to every store property that views only read. That single c
 
 **Today.** 32 files, the `StarHubTHTests` XCTest target (`Tests/`, `@testable import StarHubTH`), 79 test methods. Every store is tested through its injected `Stub*` protocol doubles — no store test reaches for a real singleton or a live network/filesystem call. A separate `StarHubTHUITests` target (`StarHubTHUITests/`) drives the real app via `XCUIApplication` for true end-to-end UI checks — not run in CI (needs a GUI session + Accessibility permission).
 
-**Running a subset — `-testPlan`, not `-only-testing`.** Five named Xcode Test Plans (`TestPlans/*.xctestplan`, wired into the `StarHubTH` scheme via `project.yml`) map onto the folders below, so you don't need to run — or wait on — the whole suite for a change scoped to one of them:
+**Running a subset — `-testPlan`, not `-only-testing`.** Six named Xcode Test Plans (`TestPlans/*.xctestplan`, wired into the `StarHubTH` scheme via `project.yml`) map onto the folders below, so you don't need to run — or wait on — the whole suite for a change scoped to one of them:
 
 | Plan | `-testPlan` value | Covers |
 |---|---|---|
@@ -553,8 +553,9 @@ Apply `private(set)` to every store property that views only read. That single c
 | `Integration` | `Integration` | `Integration/` only, against the real Nexus/GitHub APIs — deliberately **not** `STARHUB_SKIP_LIVE_TESTS`-gated at the plan level, so selecting this plan runs them for real |
 | `UI` | `UI` | `StarHubTHUITests` — no real API key required, self-contained fixtures only |
 | `UILive` | `UILive` | `StarHubTHUITests`' real-Nexus-key subset (`*LiveDataUITests`) — needs **both** a GUI session and a real API key at once; kept out of `UI` so a contributor without a key isn't left staring at silent self-skips there by default |
+| `ScreenshotCapture` | `ScreenshotCapture` | `ScreenshotCaptureTool` only — not a correctness test at all, a release tool (`.claude/skills/refresh-screenshots`) piggybacking on the test-plan mechanism because it needs the same GUI-session/Accessibility-permission plumbing every UI test already has. Drives the **real, unfixtured** app against the maintainer's own real `gameDir` — the one plan in this table that's deliberately *not* isolated from production data, since that's the entire point (see `docs/RELEASING.md`) |
 
-Full command shape: `xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan <Fast|Unit|Integration|UI|UILive>`.
+Full command shape: `xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan <Fast|Unit|Integration|UI|UILive|ScreenshotCapture>`.
 
 `Fast`/`Unit` each set `STARHUB_SKIP_LIVE_TESTS=1` in their own `environmentVariableEntries` (not a scheme-wide default) — each plan owns its own environment, so picking `Integration` isn't fighting an inherited skip flag. Adding a new test class to an existing folder means adding its name to the matching plan's `selectedTests` array — a one-line, reviewable JSON diff, not a script edit. CI (`build.yml`/`release.yml`) runs `Unit` on every push/PR/release tag; `Integration`, `UI`, and `UILive` stay local-only by deliberate choice — `Integration`/`UILive` because a scheduled CI job would need a real Nexus API key stored as a repo secret, and `UI`/`UILive` because a GitHub-hosted macOS runner can't reliably hold the one-time Accessibility permission grant across ephemeral runs. Run these yourself with a real Nexus API key / a GUI session before something that touches those paths.
 

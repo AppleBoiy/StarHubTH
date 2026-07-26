@@ -52,3 +52,7 @@ git push && git push --tags
 Pushing the tag is the deliberate, explicit trigger — that's where a human decides "yes, release this," same as any other push. From there, [`.github/workflows/release.yml`](../.github/workflows/release.yml) takes over: it checks the pushed tag matches `Info.plist` (fails loudly if you tagged without bumping), runs `xcodebuild test` (the `StarHubTHTests` unit suite), then `python3 release.py --publish` to build via `xcodebuild`, codesign, zip, and publish the GitHub Release with that version's changelog section as the release notes.
 
 `release.py` still works standalone for a local build — run it without `--publish` and it either prompts (interactive terminal) or just skips the upload (non-interactive, no `--publish`), so it never hangs waiting on input that isn't there.
+
+## Optional: refresh screenshots before a release
+
+`README.md`/`README_EN.md` and the Nexus listing embed real, populated-app screenshots (`screenshots/en/`, `screenshots/th/`). If a release adds or changes something screenshot-worthy, run the `/refresh-screenshots` skill (`.claude/skills/refresh-screenshots/SKILL.md`) — it drives the real app against your own real `gameDir`/mods/saves via `TestPlans/ScreenshotCapture.xctestplan` and `scripts/screenshot_manifest.json`, and reports differences against the checked-in files without ever auto-committing. Same posture as `Integration`/`UI`/`UILive`: manual, local-only, never part of `release.yml`. Not a hard gate — skip it for releases with nothing visually new.
