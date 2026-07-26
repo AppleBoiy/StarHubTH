@@ -21,6 +21,6 @@
 
 - `StarHubTH`'s sources and `StarHubTHTests`'s sources are wired as Xcode File System Synchronized Groups — new subfolders under `StarHubTH/` or `Tests/` are picked up automatically, no project edit needed.
 - `StarHubTHTests` (`Tests/`) is a real XCTest target — every file needs `@testable import StarHubTH`. Keep `@main` in a file named exactly `StarHubTHApp.swift`.
-- `StarHubTHUITests` exists but isn't run in CI (needs a GUI session + Accessibility permission) — use `-only-testing:StarHubTHUITests` to run it locally.
+- `StarHubTHUITests` exists but isn't *run* in CI (needs a GUI session + Accessibility permission) — use `-only-testing:StarHubTHUITests` to run it locally. It still must *compile* cleanly for CI to pass: `xcodebuild test` builds every target in the scheme regardless of `-only-testing`, which only filters what executes.
 - The build **fails** if `assets/en.json` and `assets/th.json` key sets differ. Add every new user-facing string to both files.
 - Never hardcode a user-facing string. Use an `L10n` key.

@@ -25,7 +25,7 @@ python3 release.py       # zip to bundles/ for distribution
 ```
 
 - `StarHubTH`'s sources (`StarHubTH/`) and `StarHubTHTests`'s sources (`Tests/`) are both wired as Xcode File System Synchronized Groups — new subfolders are picked up automatically, same zero-touch guarantee the old `os.walk`-based scripts gave, with no `xcodegen generate` needed for ordinary file adds. Keep `@main` in a file named exactly `StarHubTHApp.swift` — the app target still needs exactly one.
-- `StarHubTHUITests` (real UI-driving tests via `XCUIApplication`) exists but isn't run in CI — it needs a GUI session and one-time Accessibility permission for whatever process drives `xcodebuild test`. Run it locally: add `-only-testing:StarHubTHUITests` instead of `StarHubTHTests` above.
+- `StarHubTHUITests` (real UI-driving tests via `XCUIApplication`) exists but isn't *run* in CI — it needs a GUI session and one-time Accessibility permission for whatever process drives `xcodebuild test`. Run it locally: add `-only-testing:StarHubTHUITests` instead of `StarHubTHTests` above. **It still has to *compile* cleanly for CI to pass** — `-only-testing:StarHubTHTests` only skips running it, `xcodebuild test` builds every target in the scheme's test action regardless. Don't assume changes here are CI-invisible.
 - The build **hard-fails** if `assets/en.json` and `assets/th.json` have mismatched keys (enforced by the "Generate Localizable.strings" Run Script build phase, `scripts/generate_localizable_strings.py`). That's intentional. Add every new user-facing string to both.
 
 ## Non-negotiables for new code

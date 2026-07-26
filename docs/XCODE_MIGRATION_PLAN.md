@@ -19,7 +19,7 @@ Stand up a `project.yml`-driven (XcodeGen) `.xcodeproj` with a single macOS app 
 - [x] 0.5 Confirmed `python3 build_app.py` (succeeds, same warnings as before) and `python3 run_tests.py` (210/210 passed) both still work unchanged.
 - [x] 0.6 Removed the now-superseded standalone `StarHubTHUITests/project.yml`; kept `StarHubTHUITests/Sources/*.swift` on disk unused, for Phase 2 to absorb.
 
-**Open question for a later phase, not decided here**: whether `StarHubTH.xcodeproj` itself gets committed to the repo or gitignored in favor of running `xcodegen generate` as a setup step (like `pod install`) — worth settling explicitly before Phase 4's docs rewrite says which.
+**Resolved during Phase 3**: `StarHubTH.xcodeproj` is committed to the repo (not gitignored) — `.gitignore` documents this decision directly. `xcodegen generate` is a "run this after editing `project.yml`" step, not a required setup step for a fresh checkout.
 
 **File-discovery design choice** (the load-bearing detail every doc repeats as a guarantee): prefer Xcode's native File System Synchronized Groups (Xcode 16+, this repo has 26.6) over XcodeGen-regenerate, since it needs no regeneration step at all — closest match to `os.walk`'s zero-touch behavior. If XcodeGen can't emit one, fall back to a regenerated recursive `sources:` path and say so plainly in the Phase 4 doc rewrite rather than overstating the guarantee.
 
@@ -45,11 +45,17 @@ Convert all 32 files / ~200 assertions in `Tests/`: `SimpleTestFramework.assertE
 
 ## Phase 3 — CI + release.py — DONE
 
-- [x] 3.1 Rewrote `.github/workflows/build.yml`/`release.yml`: `xcodebuild build`/`xcodebuild test -only-testing:StarHubTHTests` replace `build_app.py`/`run_tests.py`. Deliberately scoped CI to the unit-test target only (`StarHubTHUITests` excluded) — UI tests need a GUI session + Accessibility permission (see Phase 2.5) that a fresh CI runner isn't guaranteed to have preconfigured; running them locally/manually for now rather than risking CI flakiness.
+- [x] 3.1 Rewrote `.github/workflows/build.yml`/`release.yml`: `xcodebuild build`/`xcodebuild test -only-testing:StarHubTHTests` replace `build_app.py`/`run_tests.py`. CI only *runs* the unit-test target (`StarHubTHUITests` excluded from execution — needs a GUI session + Accessibility permission, see Phase 2.5, that a fresh CI runner isn't guaranteed to have). **Important nuance found the hard way (see below): `-only-testing:StarHubTHTests` only skips *running* `StarHubTHUITests` — `xcodebuild test` still *builds* every target in the scheme's test action first, so `StarHubTHUITests` must compile cleanly for CI to pass even though it never executes there.** Don't treat that target as CI-exempt when changing it.
 - [x] 3.2 `release.py`'s build step now runs `xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -derivedDataPath build` (Debug, matching what `build_app.py` always produced — it never distinguished Debug/Release) and locates the app at `build/Build/Products/Debug/StarHubTH.app`. Version-read/zip/`gh release` logic unchanged. Verified locally: `python3 release.py` builds, zips, and the archive's `Contents/Resources` (Localizable.strings, CHANGELOG.md, Info.plist) are all present and correct.
 - [x] 3.3 Deleted `build_app.py`/`run_tests.py`. `build_config.py` trimmed to just `APP_NAME`/`APP_DIR` (release.py's only remaining consumer) — `TARGET_TRIPLE` dropped, nothing references it anymore. `scripts/check_standards.py`/`scripts/bump_version.py` verified still work unchanged. Added `build/` (release.py's `-derivedDataPath`) and `xcuserdata/` to `.gitignore`.
 
-**Unverified assumption, flagged not tested**: whether the `macos-14` GitHub Actions runner image has an Xcode version supporting File System Synchronized Groups + Swift 6 language mode preinstalled as its default `xcode-select` target. This can't be verified without an actual CI run — confirm on the first real push, and bump `runs-on:`/add an explicit Xcode version selection step if the default isn't new enough.
+**The "unverified assumption" flagged here originally — resolved, and it mattered.** Whether the `macos-14` runner's default Xcode supports Swift 6 + File System Synchronized Groups turned out to be **no** (confirmed by a separate, parallel fix already on `main` before this branch merged: runners default to Xcode 15.4, with 16.1/16.2 present but not selected — both workflows now glob for `/Applications/Xcode_16*.app` explicitly and fail fast if none exists). That fix was carried over during the merge into this branch.
+
+**Two more real bugs only surfaced once CI actually ran on the true Xcode 16.2 toolchain** — this local dev machine's Xcode/Swift toolchain is unusually new and more lenient, so `xcodebuild test` passing here was not proof of portability:
+1. `SmokeUITests`'s `setUpWithError()`/`tearDownWithError()` overrides touched a `@MainActor`-isolated property from XCTestCase's synchronous, nonisolated override points — a hard Swift 6 error. Fixed by switching to the async `setUp()`/`tearDown()` overrides.
+2. `AppLauncher.launch()` was a plain `static func` on a non-isolated enum calling `XCUIApplication`'s `@MainActor`-isolated APIs — fixed by marking it `@MainActor`.
+
+Both fixed post-merge (commits `5940970`, `1c7d4db`); CI is now green end-to-end on real Xcode 16.2. **Lesson for future Swift 6 concurrency changes in this repo: verify on CI, not just locally, before trusting a green result.**
 
 ## Phase 4 — Docs — DONE
 
