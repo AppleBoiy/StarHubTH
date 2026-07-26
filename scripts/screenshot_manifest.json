@@ -45,10 +45,11 @@
       "feature": "Saves",
       "description": "Save Editor — avatar, notes, character info, inventory",
       "tier": "core",
-      "precondition": "targets.saveFolderName must name a real save in the maintainer's gameDir.",
-      "placeholders": ["saveFolderName"],
+      "precondition": "targets.saveFolderName must name a real save in the maintainer's gameDir; targets.saveSearchQuery must be a substring of that save's real playerName/farmName.",
+      "placeholders": ["saveFolderName", "saveSearchQuery"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Saves" },
+        { "action": "search", "text": "<saveSearchQuery>", "note": "Saves search matches playerName/farmName, not the on-disk folder — see SavesView.swift. Filtering to one match avoids relying on scroll-into-view for a save that isn't near the top." },
         { "action": "clickMenuItem", "menuIdentifier": "save-row-menu-<saveFolderName>", "index": 0, "note": "index 0 is 'Save Management' — see SaveRow.swift's Menu item order" }
       ]
     },
@@ -57,10 +58,11 @@
       "feature": "Saves",
       "description": "Save Timeline — backup list",
       "tier": "core",
-      "precondition": "targets.saveFolderName must name a real save with at least one backup.",
-      "placeholders": ["saveFolderName"],
+      "precondition": "targets.saveFolderName must name a real save with at least one backup; targets.saveSearchQuery must be a substring of that save's real playerName/farmName.",
+      "placeholders": ["saveFolderName", "saveSearchQuery"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Saves" },
+        { "action": "search", "text": "<saveSearchQuery>" },
         { "action": "clickMenuItem", "menuIdentifier": "save-row-menu-<saveFolderName>", "index": 1, "note": "index 1 is 'Timeline' — see SaveRow.swift's Menu item order" }
       ]
     },
@@ -100,11 +102,12 @@
       "feature": "Mods",
       "description": "Mod Detail — Description tab",
       "tier": "core",
-      "precondition": "targets.modFolderName's manifest UpdateKeys must resolve to a real Nexus mod for real cover/description data.",
-      "placeholders": ["modFolderName"],
+      "precondition": "targets.modFolderName's manifest UpdateKeys must resolve to a real Nexus mod for real cover/description data; targets.modSearchQuery must be a substring of that mod's real name/uniqueId/author.",
+      "placeholders": ["modFolderName", "modSearchQuery"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
-        { "action": "click", "identifier": "mod-row-info-button-<modFolderName>" }
+        { "action": "search", "text": "<modSearchQuery>", "note": "Mods search matches name/uniqueId/author (ModListFilter.swift), not the on-disk folder — filtering to one match avoids relying on scroll-into-view against a 100+-mod real library." },
+        { "action": "clickDescendant", "rowIdentifier": "mod-row-<modFolderName>", "descendantLabel": "info.circle", "note": "mod-row-info-button-<folder>'s own identifier is silently clobbered by the row's mod-row-<folder> identifier — same documented issue as the config-gear button (SWIFT_STANDARDS.md §10). Locate it the same way: row identifier + the button's own SF Symbol label." }
       ]
     },
     {
@@ -112,10 +115,11 @@
       "feature": "Mods",
       "description": "Mod Detail — Dependencies tab (dependency graph)",
       "tier": "core",
-      "placeholders": ["modFolderName"],
+      "placeholders": ["modFolderName", "modSearchQuery"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
-        { "action": "click", "identifier": "mod-row-info-button-<modFolderName>" },
+        { "action": "search", "text": "<modSearchQuery>" },
+        { "action": "clickDescendant", "rowIdentifier": "mod-row-<modFolderName>", "descendantLabel": "info.circle" },
         { "action": "clickSegment", "identifier": "mod-detail-tab-picker", "segmentIndex": 2 }
       ]
     },

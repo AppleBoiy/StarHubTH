@@ -82,17 +82,55 @@ final class ScreenshotCaptureTool: XCTestCase {
     /// whole test rather than just failing the one screen being captured. Always checking
     /// `waitForExistence` first and throwing our own `CaptureError` keeps failures scoped to
     /// a single manifest entry.
-    private static func guardedClick(_ target: XCUIElement, description: String, timeout: TimeInterval = 10) throws {
-        guard target.waitForExistence(timeout: timeout) else { throw CaptureError.elementNotFound(description) }
+    ///
+    /// Falls back to `scrollIntoView` when the plain wait fails: Mods/Saves render via
+    /// `ScrollView + LazyVStack`, so a row far below the fold isn't just off-screen, it isn't
+    /// materialized in the accessibility tree at all yet — no amount of waiting finds it,
+    /// only scrolling does. Found capturing against this machine's real 121-mod library.
+    private static func guardedClick(_ app: XCUIApplication, _ target: XCUIElement, description: String, timeout: TimeInterval = 10) throws {
+        if !target.waitForExistence(timeout: timeout) {
+            scrollIntoView(app: app, target: target)
+        }
+        guard target.waitForExistence(timeout: 3) else { throw CaptureError.elementNotFound(description) }
         target.click()
+    }
+
+    /// Scrolls the frontmost scroll area downward in fixed increments until `target` appears
+    /// in the accessibility tree (LazyVStack materializes rows near the viewport, not the
+    /// whole list) or `maxAttempts` is exhausted. Each capture starts its navigation fresh
+    /// from a sidebar click, and switching tabs recreates the destination view (and its scroll
+    /// position) from scratch, so there's no stale-scroll-position state to reset beforehand.
+    private static func scrollIntoView(app: XCUIApplication, target: XCUIElement, maxAttempts: Int = 25) {
+        let scrollArea = app.scrollViews.firstMatch
+        guard scrollArea.waitForExistence(timeout: 3) else { return }
+        var attempts = 0
+        while !target.exists && attempts < maxAttempts {
+            scrollArea.scroll(byDeltaX: 0, deltaY: -400)
+            attempts += 1
+        }
     }
 
     private static func navigate(app: XCUIApplication, steps: [NavigationStep], targets: [String: String]) throws {
         for step in steps {
             switch step.action {
+            case "search":
+                // Mods/Saves search matches name/uniqueId/author or playerName/farmName
+                // (ModListFilter.swift, SavesView.swift) — never the on-disk folder name a
+                // `click` step's identifier is built from, so this needs its own separate
+                // search-query token, not a reuse of the folder-name placeholders. Filtering
+                // to one match is far more reliable than scrollIntoView for a 100+-item real
+                // library: scrolling repeatedly failed to bring some rows into the
+                // accessibility tree at all even after 25 attempts.
+                let resolved = try resolve(step.text ?? "", targets: targets)
+                let searchField = app.searchFields.firstMatch
+                guard searchField.waitForExistence(timeout: 10) else { throw CaptureError.elementNotFound("search field") }
+                searchField.click()
+                searchField.typeText(resolved)
+                Thread.sleep(forTimeInterval: 0.5)
+
             case "click":
                 let resolved = try resolve(step.identifier ?? "", targets: targets)
-                try guardedClick(element(app: app, identifier: resolved), description: resolved)
+                try guardedClick(app, element(app: app, identifier: resolved), description: resolved)
 
             case "clickDescendant":
                 guard let rowIdentifier = step.rowIdentifier, let descendantLabel = step.descendantLabel else { continue }
@@ -100,23 +138,23 @@ final class ScreenshotCaptureTool: XCTestCase {
                 let target = app.descendants(matching: .any).matching(
                     NSPredicate(format: "identifier == %@ AND label == %@", row, descendantLabel)
                 ).firstMatch
-                try guardedClick(target, description: row)
+                try guardedClick(app, target, description: row)
 
             case "clickMenuItem":
                 guard let menuIdentifier = step.menuIdentifier, let index = step.index else { continue }
                 let resolved = try resolve(menuIdentifier, targets: targets)
-                try guardedClick(element(app: app, identifier: resolved), description: resolved)
-                try guardedClick(app.menuItems.element(boundBy: index), description: "\(resolved) menu item \(index)", timeout: 5)
+                try guardedClick(app, element(app: app, identifier: resolved), description: resolved)
+                try guardedClick(app, app.menuItems.element(boundBy: index), description: "\(resolved) menu item \(index)", timeout: 5)
 
             case "clickSegment":
                 guard let identifier = step.identifier else { continue }
                 let picker = element(app: app, identifier: identifier)
                 guard picker.waitForExistence(timeout: 10) else { throw CaptureError.elementNotFound(identifier) }
                 if let segmentIndex = step.segmentIndex {
-                    try guardedClick(picker.buttons.element(boundBy: segmentIndex), description: "\(identifier) segment \(segmentIndex)")
+                    try guardedClick(app, picker.buttons.element(boundBy: segmentIndex), description: "\(identifier) segment \(segmentIndex)")
                 } else if let segmentLabel = step.segmentLabel {
                     let segment = picker.descendants(matching: .any).matching(NSPredicate(format: "label == %@", segmentLabel)).firstMatch
-                    try guardedClick(segment, description: "\(identifier) segment '\(segmentLabel)'")
+                    try guardedClick(app, segment, description: "\(identifier) segment '\(segmentLabel)'")
                 }
 
             default:
@@ -176,6 +214,7 @@ private struct NavigationStep: Decodable {
     let segmentIndex: Int?
     let rowIdentifier: String?
     let descendantLabel: String?
+    let text: String?
     let note: String?
 }
 
