@@ -5,8 +5,7 @@ final class ModUpdateTests: XCTestCase {
     func testAutoUpdateFlow() async throws {
         try XCTSkipIf(LiveTestGate.isSkipped, "STARHUB_SKIP_LIVE_TESTS=1")
 
-        let defaults = UserDefaults(suiteName: "com.appleboiy.StarHubTH")
-        let apiKey = defaults?.string(forKey: "nexusApiKey") ?? ""
+        let apiKey = LiveTestGate.nexusApiKey
         try XCTSkipIf(apiKey.isEmpty, "No Nexus API Key found in com.appleboiy.StarHubTH defaults.")
 
         // Mod to test updating: "Mail Framework Mod" (Nexus ID: 1536)

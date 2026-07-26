@@ -24,7 +24,11 @@
         "NexusCollectionTests",
         "ModUpdateTests",
         "SmapiInstallerIntegrationTests",
-        "NXMDownloadIntegrationTests"
+        "NXMDownloadIntegrationTests",
+        "ModInfoIntegrationTests",
+        "ModUpdateWiringIntegrationTests",
+        "NXMOpenURLIntegrationTests",
+        "SyncTagIntegrationTests"
       ]
     }
   ],

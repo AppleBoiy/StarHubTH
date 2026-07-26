@@ -8,8 +8,7 @@ final class NXMDownloadIntegrationTests: XCTestCase {
     func testNXMDownloadAndInstall() async throws {
         try XCTSkipIf(LiveTestGate.isSkipped, "STARHUB_SKIP_LIVE_TESTS=1")
 
-        let defaults = UserDefaults(suiteName: "com.appleboiy.StarHubTH")
-        let apiKey = defaults?.string(forKey: "nexusApiKey") ?? ""
+        let apiKey = LiveTestGate.nexusApiKey
         try XCTSkipIf(apiKey.isEmpty, "No Nexus API Key found in com.appleboiy.StarHubTH defaults.")
 
         // Small mod for testing: Mail Framework Mod (modId: 1536, fileId: 128517, ~50KB)
