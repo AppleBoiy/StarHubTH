@@ -3,6 +3,14 @@ import Foundation
 /// `savesDir` is a `let`, set once in `init()` and never mutated — a plain `Sendable`
 /// conformance, no actor needed (see Phase 5's Context notes on why `SaveManager` isn't
 /// worth actor-izing: it holds no mutable state for an actor to protect).
+///
+/// Split across SaveManager.swift/SaveManager+Management.swift/SaveManager+Inventory.swift
+/// (§ file-size convention) — this file owns save fetch/backup/field-editing; the other
+/// two own advanced management (delete/duplicate/branch/backup-timeline) and inventory
+/// editing respectively. `replaceFirstTag` is `internal` rather than `private` because
+/// SaveManager+Management.swift's `modifyInternalSaveNames` also calls it — `private` is
+/// file-scoped in Swift, not type-scoped, so a helper shared across the split can't stay
+/// `private`. Every other helper here is used only within this file and stays `private`.
 final class SaveManager: Sendable {
     static let shared = SaveManager()
 
@@ -40,8 +48,6 @@ final class SaveManager: Sendable {
 
         return saves.sorted { $0.playerName < $1.playerName }
     }
-
-
 
     /// Update or remove the <spouse> tag inside the <player> block.
     /// - If newSpouse is non-empty: sets <spouse>newSpouse</spouse>
@@ -216,8 +222,7 @@ final class SaveManager: Sendable {
         return beforeItem + itemBlock + afterItem
     }
 
-
-    private func replaceFirstTag(tag: String, with value: String, in xml: String) -> String {
+    func replaceFirstTag(tag: String, with value: String, in xml: String) -> String {
         let pattern = "(<\(tag)>)([^<]+)(</\(tag)>)"
         // `tag` is always one of this file's own hardcoded literals ("name", "farmName", …),
         // never user input, so the interpolated pattern can't become malformed regex syntax.
@@ -226,12 +231,6 @@ final class SaveManager: Sendable {
 
         // We only want to replace the first occurrence (player data is always at the top)
         if let match = regex.firstMatch(in: xml, options: [], range: range) {
-
-            // wait, stringByReplacingMatches with match.range will only return the replaced SUBSTRING,
-            // no, wait, it returns a new string where the matches within the range are replaced.
-            // Oh, the range param to stringByReplacingMatches specifies the portion of the string to search.
-            // If I restrict the search to match.range, it will only return that small portion.
-            // Better to use mutating String method.
             if let swiftRange = Range(match.range, in: xml) {
                 var modified = xml
                 modified.replaceSubrange(swiftRange, with: "<\(tag)>\(value)</\(tag)>")
@@ -239,315 +238,5 @@ final class SaveManager: Sendable {
             }
         }
         return xml
-    }
-
-    // MARK: - Advanced Management
-
-    func deleteSave(info: SaveGameInfo) throws(SaveStorageError) {
-        let folderPath = info.fileURL.deletingLastPathComponent()
-        do {
-            try FileManager.default.trashItem(at: folderPath, resultingItemURL: nil)
-        } catch {
-            throw .moveFailed(underlying: error)
-        }
-    }
-
-    /// Throws if any file that needed updating couldn't be read or written — callers must
-    /// propagate that instead of reporting overall success, since a duplicated/branched save
-    /// whose internal name silently didn't update still shows the *old* player/farm name
-    /// in-game despite the app confirming the rename worked.
-    private func modifyInternalSaveNames(in folderURL: URL, newSaveName: String, newPlayerName: String, newFarmName: String) throws(SaveStorageError) {
-        let fileManager = FileManager.default
-        let saveGameInfoURL = folderURL.appendingPathComponent("SaveGameInfo")
-        let mainSaveURL = folderURL.appendingPathComponent(newSaveName)
-
-        // Its Bool return isn't a swallowed failure — `succeeded` below is checked at the
-        // end of this function and thrown as `.internalNameUpdateFailed`, so a read/write
-        // failure here does reach the caller, just aggregated across both files first.
-        func updateFile(at url: URL) -> Bool {
-            guard let content = try? String(contentsOf: url, encoding: .utf8) else { return false }
-            var modified = replaceFirstTag(tag: "name", with: newPlayerName, in: content)
-            modified = replaceFirstTag(tag: "farmName", with: newFarmName, in: modified)
-            do {
-                try modified.write(to: url, atomically: true, encoding: .utf8)
-                return true
-            } catch {
-                return false
-            }
-        }
-
-        var succeeded = true
-        if fileManager.fileExists(atPath: saveGameInfoURL.path) {
-            succeeded = updateFile(at: saveGameInfoURL) && succeeded
-        }
-        if fileManager.fileExists(atPath: mainSaveURL.path) {
-            succeeded = updateFile(at: mainSaveURL) && succeeded
-        }
-        guard succeeded else { throw .internalNameUpdateFailed }
-    }
-
-    func duplicateSave(info: SaveGameInfo, newName: String, newFarm: String) throws(SaveStorageError) {
-        let fileManager = FileManager.default
-        let folderPath = info.fileURL.deletingLastPathComponent()
-        let saveName = folderPath.lastPathComponent
-
-        var newSaveName = "\(saveName)_copy"
-        var newFolderPath = folderPath.deletingLastPathComponent().appendingPathComponent(newSaveName)
-
-        var counter = 1
-        while fileManager.fileExists(atPath: newFolderPath.path) {
-            newSaveName = "\(saveName)_copy_\(counter)"
-            newFolderPath = folderPath.deletingLastPathComponent().appendingPathComponent(newSaveName)
-            counter += 1
-        }
-
-        do {
-            try fileManager.copyItem(at: folderPath, to: newFolderPath)
-
-            // Rename internal file
-            let oldFilePath = newFolderPath.appendingPathComponent(saveName)
-            let newFilePath = newFolderPath.appendingPathComponent(newSaveName)
-            if fileManager.fileExists(atPath: oldFilePath.path) {
-                try fileManager.moveItem(at: oldFilePath, to: newFilePath)
-            }
-
-            // Modify name and farm name inside XML files
-            try modifyInternalSaveNames(in: newFolderPath, newSaveName: newSaveName, newPlayerName: newName, newFarmName: newFarm)
-        } catch let error as SaveStorageError {
-            throw error
-        } catch {
-            throw .moveFailed(underlying: error)
-        }
-    }
-
-    // MARK: - Backup Timeline
-
-    func branchFromBackup(backup: SaveBackup, newName: String, newFarm: String) throws(SaveStorageError) {
-        let fileManager = FileManager.default
-        let backupFolderPath = backup.folderPath
-        let originalSaveName = String(backupFolderPath.lastPathComponent.split(separator: ".")[0])
-        let parentDir = backupFolderPath.deletingLastPathComponent()
-
-        var newSaveName = "\(originalSaveName)_branch"
-        var newFolderPath = parentDir.appendingPathComponent(newSaveName)
-
-        var counter = 1
-        while fileManager.fileExists(atPath: newFolderPath.path) {
-            newSaveName = "\(originalSaveName)_branch_\(counter)"
-            newFolderPath = parentDir.appendingPathComponent(newSaveName)
-            counter += 1
-        }
-
-        do {
-            try fileManager.copyItem(at: backupFolderPath, to: newFolderPath)
-
-            // Rename internal file
-            let oldFilePath = newFolderPath.appendingPathComponent(originalSaveName)
-            let newFilePath = newFolderPath.appendingPathComponent(newSaveName)
-            if fileManager.fileExists(atPath: oldFilePath.path) {
-                try fileManager.moveItem(at: oldFilePath, to: newFilePath)
-            }
-
-            // Modify name and farm name inside XML files
-            try modifyInternalSaveNames(in: newFolderPath, newSaveName: newSaveName, newPlayerName: newName, newFarmName: newFarm)
-        } catch let error as SaveStorageError {
-            throw error
-        } catch {
-            throw .moveFailed(underlying: error)
-        }
-    }
-
-    /// List all `.backup_*` sibling folders for a given save
-    func listBackups(for info: SaveGameInfo) throws(SaveStorageError) -> [SaveBackup] {
-        let saveFolder = info.fileURL.deletingLastPathComponent()
-        let parentDir = saveFolder.deletingLastPathComponent()
-        let saveName = saveFolder.lastPathComponent
-
-        let items: [URL]
-        do {
-            items = try FileManager.default.contentsOfDirectory(
-                at: parentDir,
-                includingPropertiesForKeys: [.isDirectoryKey, .creationDateKey],
-                options: .skipsHiddenFiles
-            )
-        } catch {
-            throw .directoryUnreadable(underlying: error)
-        }
-
-        var backups: [SaveBackup] = []
-        for item in items {
-            let name = item.lastPathComponent
-            // Match pattern: saveName.backup_YYYYMMDD_HHMMSS
-            let prefix = "\(saveName).backup_"
-            guard name.hasPrefix(prefix) else { continue }
-
-            let tsString = String(name.dropFirst(prefix.count))
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyyMMdd_HHmmss"
-            let date = formatter.date(from: tsString) ?? Date()
-
-            var isDir: ObjCBool = false
-            if FileManager.default.fileExists(atPath: item.path, isDirectory: &isDir), isDir.boolValue {
-                backups.append(SaveBackup(folderPath: item, timestamp: date, saveFolder: saveName))
-            }
-        }
-        return backups.sorted { $0.timestamp > $1.timestamp }
-    }
-
-    /// Restore a backup: backup current save first, then swap
-    func restoreBackup(backup: SaveBackup, info: SaveGameInfo) throws(SaveStorageError) {
-        let fileManager = FileManager.default
-        let saveFolder = info.fileURL.deletingLastPathComponent()
-
-        // 1. First backup the current state before restoring
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd_HHmmss"
-        let timestamp = formatter.string(from: Date())
-        let preRestoreBackupPath = saveFolder
-            .deletingLastPathComponent()
-            .appendingPathComponent("\(saveFolder.lastPathComponent).backup_\(timestamp)")
-
-        let tempTrash = saveFolder.deletingLastPathComponent()
-            .appendingPathComponent("\(saveFolder.lastPathComponent)_RESTORING_TEMP")
-
-        do {
-            // Backup current state
-            try fileManager.copyItem(at: saveFolder, to: preRestoreBackupPath)
-
-            // Move current save folder to temporary staging
-            try fileManager.moveItem(at: saveFolder, to: tempTrash)
-
-            do {
-                // Copy backup into place
-                try fileManager.copyItem(at: backup.folderPath, to: saveFolder)
-                // Best-effort: the restore itself already succeeded once we reach this line,
-                // so a failure trashing the now-unneeded temp copy isn't worth reporting as
-                // an overall restore failure.
-                try? fileManager.trashItem(at: tempTrash, resultingItemURL: nil)
-            } catch {
-                // Rollback: restore original save from tempTrash. Best-effort — we're
-                // already in the failure path of the primary operation, and there's no
-                // further fallback if the rollback itself fails; the `.moveFailed` thrown
-                // below is the only signal the caller gets either way.
-                if fileManager.fileExists(atPath: tempTrash.path) && !fileManager.fileExists(atPath: saveFolder.path) {
-                    try? fileManager.moveItem(at: tempTrash, to: saveFolder)
-                }
-                throw error
-            }
-        } catch {
-            throw .moveFailed(underlying: error)
-        }
-    }
-
-    /// Delete a single backup folder
-    func deleteBackup(_ backup: SaveBackup) throws(SaveStorageError) {
-        do {
-            try FileManager.default.trashItem(at: backup.folderPath, resultingItemURL: nil)
-        } catch {
-            throw .moveFailed(underlying: error)
-        }
-    }
-    // MARK: - Inventory Editing
-
-    func fetchInventory(for info: SaveGameInfo) throws(SaveStorageError) -> [InventoryItem] {
-        // No `.documentTidyXML` — that's libxml's HTML-tidy-style repair mode for
-        // malformed input, and it can reformat/normalize content it considers invalid.
-        // Stardew's save XML is always well-formed (produced by .NET's XmlSerializer),
-        // so plain parsing avoids passing SMAPI mods' own <modData> content through a
-        // "repair" pass it was never meant for.
-        guard let data = try? Data(contentsOf: info.fileURL),
-              let document = try? XMLDocument(data: data, options: []),
-              let root = document.rootElement() else {
-            throw .inventoryUnreadable
-        }
-
-        var inventory: [InventoryItem] = []
-
-        // Find /SaveGame/player/items
-        let player = root.elements(forName: "player").first
-        let itemsElement = player?.elements(forName: "items").first
-
-        guard let itemsNode = itemsElement else { throw .inventoryUnreadable }
-
-        let itemNodes = itemsNode.elements(forName: "Item")
-
-        for (index, itemNode) in itemNodes.enumerated() {
-            let xsiType = itemNode.attribute(forName: "xsi:type")?.stringValue ?? ""
-
-            if xsiType == "Object" {
-                let name = itemNode.elements(forName: "name").first?.stringValue ?? "Unknown"
-                let itemId = itemNode.elements(forName: "itemId").first?.stringValue ?? "Unknown"
-                let stack = Int(itemNode.elements(forName: "stack").first?.stringValue ?? "1") ?? 1
-
-                inventory.append(InventoryItem(slotIndex: index, itemId: itemId, name: name, stack: stack, isObject: true))
-            } else if itemNode.attribute(forName: "xsi:nil")?.stringValue == "true" {
-                // Empty slot
-                inventory.append(InventoryItem.empty(slot: index))
-            } else {
-                // Other items like weapons, rings, etc.
-                let name = itemNode.elements(forName: "name").first?.stringValue ?? xsiType
-                let itemId = itemNode.elements(forName: "itemId").first?.stringValue ?? ""
-                let displayName = name.isEmpty ? (xsiType.isEmpty ? "Unknown Item" : xsiType) : name
-                inventory.append(InventoryItem(slotIndex: index, itemId: itemId, name: displayName, stack: 1, isObject: false))
-            }
-        }
-
-        return inventory
-    }
-
-    func updateInventory(info: SaveGameInfo, items: [InventoryItem]) throws(SaveStorageError) {
-        // Backup first
-        try backupSave(info: info)
-
-        // Same reasoning as `fetchInventory`: no `.documentTidyXML` on the way in.
-        guard let data = try? Data(contentsOf: info.fileURL),
-              let document = try? XMLDocument(data: data, options: []),
-              let root = document.rootElement() else {
-            throw .inventoryUnreadable
-        }
-
-        // Find /SaveGame/player/items
-        guard let player = root.elements(forName: "player").first,
-              let itemsElement = player.elements(forName: "items").first else {
-            throw .inventoryUnreadable
-        }
-
-        let itemNodes = itemsElement.elements(forName: "Item")
-
-        for updatedItem in items {
-            guard updatedItem.slotIndex >= 0 && updatedItem.slotIndex < itemNodes.count else { continue }
-            let nodeToUpdate = itemNodes[updatedItem.slotIndex]
-
-            // Only update if it's an Object
-            if updatedItem.isObject {
-                // Stack
-                if let stackNode = nodeToUpdate.elements(forName: "stack").first {
-                    stackNode.stringValue = "\(updatedItem.stack)"
-                } else {
-                    let newStack = XMLElement(name: "stack", stringValue: "\(updatedItem.stack)")
-                    nodeToUpdate.addChild(newStack)
-                }
-
-                // Item ID (if needed, but usually we just update stack for safety)
-                if let idNode = nodeToUpdate.elements(forName: "itemId").first {
-                    idNode.stringValue = updatedItem.itemId
-                }
-            } else if updatedItem.name.isEmpty {
-                // Delete the item (make it an empty slot)
-                nodeToUpdate.setChildren(nil)
-                if let nilAttr = XMLNode.attribute(withName: "xsi:nil", stringValue: "true") as? XMLNode {
-                    nodeToUpdate.attributes = [nilAttr]
-                }
-            }
-        }
-
-        do {
-            // No `.nodePrettyPrint` — that reformats the entire document's whitespace,
-            // not just the nodes this function actually changed.
-            let updatedXMLData = document.xmlData
-            try updatedXMLData.write(to: info.fileURL, options: .atomic)
-        } catch {
-            throw .fileWriteFailed(underlying: error)
-        }
     }
 }
