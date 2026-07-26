@@ -1,11 +1,10 @@
 import Foundation
 
-/// No stored properties, pure computation — a plain `Sendable` conformance, no actor needed.
-final class CollectionInstaller: Sendable {
-    static let shared = CollectionInstaller()
-    private init() {}
-    
-    func install(collection: ModCollection, currentMods: [Mod], nexusApiKey: String) -> [String] {
+/// Pure computation, no stored state — a namespace of `static` functions like `ModGraph`,
+/// not a singleton (§4.2: `.shared` is for injectable I/O boundaries, not stateless
+/// queries that never need a stub).
+enum CollectionInstaller {
+    static func install(collection: ModCollection, currentMods: [Mod], nexusApiKey: String) -> [String] {
         let allMods = currentMods.flatMap { $0.allMods }
         var missingNexusIds: [String] = []
 

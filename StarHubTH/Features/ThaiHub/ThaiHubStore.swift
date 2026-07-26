@@ -9,8 +9,8 @@ import Foundation
 /// ViewModel's forwarding methods are the only thing that needs to change.
 @MainActor
 final class ThaiHubStore: ObservableObject {
-    @Published var thaiTranslations: [ThaiTranslationMod] = []
-    @Published var viewingThaiMod: ThaiTranslationMod?
+    @Published private(set) var thaiTranslations: [ThaiTranslationMod] = []
+    @Published var viewingThaiMod: ThaiTranslationMod? // STANDARDS-EXCEPTION: §8 — ThaiTranslationHubView/MainView write it directly (open/close details sheet)
 
     private let localization: LocalizationStore
 
@@ -203,6 +203,8 @@ final class ThaiHubStore: ObservableObject {
 
         do {
             let status: Int32 = try await withCheckedThrowingContinuation { continuation in
+                // Process.run()/waitUntilExit() are synchronous-blocking with no async form —
+                // off-load to a background queue so the caller's actor isn't blocked.
                 DispatchQueue.global(qos: .userInitiated).async {
                     do {
                         try process.run()

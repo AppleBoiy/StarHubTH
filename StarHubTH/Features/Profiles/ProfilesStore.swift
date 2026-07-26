@@ -10,8 +10,8 @@ import Foundation
 /// filesystem scan, so those take a `modsProvider` closure instead of a snapshot value.
 @MainActor
 final class ProfilesStore: ObservableObject {
-    @Published var modProfiles: [ModProfile] = []
-    @Published var activeProfileId: UUID?
+    @Published var modProfiles: [ModProfile] = [] // STANDARDS-EXCEPTION: §8 — ModProfilesView appends a new profile directly
+    @Published private(set) var activeProfileId: UUID?
 
     private let profileStoring: ProfileStoring
     private let localization: LocalizationStore
@@ -151,7 +151,7 @@ final class ProfilesStore: ObservableObject {
     // MARK: - Local collection import/export
 
     /// Phase 4.9: routes what `ModProfilesView` used to call directly on
-    /// `ProfileManager.shared`/`CollectionInstaller.shared` through this store instead.
+    /// `ProfileManager.shared`/`CollectionInstaller` through this store instead.
     func importProfile(from url: URL) throws -> (ModCollection, ModProfile) {
         try profileStoring.importProfile(from: url)
     }
@@ -166,7 +166,7 @@ final class ProfilesStore: ObservableObject {
     /// so the caller opens each missing mod's Nexus page for a manual download rather
     /// than downloading automatically.
     func missingNexusIds(in collection: ModCollection, currentMods: [Mod], nexusApiKey: String) -> [String] {
-        CollectionInstaller.shared.install(collection: collection, currentMods: currentMods, nexusApiKey: nexusApiKey)
+        CollectionInstaller.install(collection: collection, currentMods: currentMods, nexusApiKey: nexusApiKey)
     }
 
     /// Call this after any toggleMod so the profile stays up to date.

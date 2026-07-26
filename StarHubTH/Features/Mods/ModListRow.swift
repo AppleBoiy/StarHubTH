@@ -229,7 +229,8 @@ struct ModListRow: View {
                     get: { localIsOn ?? mod.isEnabled },
                     set: { newValue in
                         localIsOn = newValue
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(300))
                             if newValue != mod.isEnabled {
                                 appCoordinator.toggleMod(mod)
                             }

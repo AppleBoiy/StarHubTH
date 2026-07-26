@@ -16,6 +16,13 @@ current state, not just newly introduced violations. Per the plan, it starts
 as a warnings-only report (exit 0). Pass --strict (or set
 STARHUB_STANDARDS_STRICT=1) to make any finding exit 1, once the codebase is
 actually clean enough for that to be worth enforcing.
+
+Any finding can be silenced with a one-line `// STANDARDS-EXCEPTION: <rule id>
+— <reason>` comment on the flagged line or the two lines before it (see
+docs/SWIFT_STANDARDS.md §0, .agents/AGENTS.md) — a human-reviewed, documented
+exception, not a silent skip. This is a real escape hatch, not a way to mute
+a category wholesale: it's checked per finding, so it only silences the exact
+lines it's placed near.
 """
 import argparse
 import os
@@ -23,6 +30,16 @@ import re
 import sys
 
 SOURCE_ROOT = "StarHubTH"
+EXCEPTION_MARKER = "STANDARDS-EXCEPTION"
+
+
+def has_exception_nearby(lines, lineno):
+    """True if a `// STANDARDS-EXCEPTION` comment sits on the flagged line or
+    either of the two lines before it — same lookback window as the
+    dispatch-queue "nearby comment" check, for one consistent rule."""
+    window_start = max(0, lineno - 3)
+    window = lines[window_start:lineno]
+    return any(EXCEPTION_MARKER in w for w in window)
 
 # Framework singletons that are the correct call, not the anti-pattern.
 # `.shared` on an app-owned type outside App/ is what this check is for.
@@ -49,6 +66,8 @@ def iter_swift_files(root):
 def check_get_prefix(path, lines, findings):
     for lineno, line in enumerate(lines, start=1):
         for match in GET_PREFIX_RE.finditer(line):
+            if has_exception_nearby(lines, lineno):
+                continue
             findings.append((path, lineno, "get-prefix", f"`{match.group(1)}` should drop the `get` prefix (§1.1)"))
 
 
@@ -56,6 +75,8 @@ def check_non_final_class(path, lines, findings):
     for lineno, line in enumerate(lines, start=1):
         match = CLASS_DECL_RE.match(line)
         if match and match.group(1) is None:
+            if has_exception_nearby(lines, lineno):
+                continue
             findings.append((path, lineno, "non-final-class", f"`class {match.group(2)}` is missing `final` (§2.2)"))
 
 
@@ -69,6 +90,8 @@ def check_shared_outside_app(path, lines, findings):
         for match in SHARED_RE.finditer(line):
             receiver = match.group(1)
             if receiver in ALLOWED_SHARED_RECEIVERS:
+                continue
+            if has_exception_nearby(lines, lineno):
                 continue
             findings.append((
                 path, lineno, "shared-outside-app",
@@ -93,6 +116,8 @@ def check_dispatch_queue(path, lines, findings):
 def check_file_length(path, lines, findings):
     count = len(lines)
     if count > 400:
+        if any(EXCEPTION_MARKER in line for line in lines[:5]):
+            return
         findings.append((path, count, "file-length", f"{count} lines — split it (§ file-size convention)"))
 
 
@@ -100,6 +125,8 @@ def check_published_private_set(path, lines, findings):
     for lineno, line in enumerate(lines, start=1):
         match = PUBLISHED_RE.search(line)
         if match and not match.group(1):
+            if has_exception_nearby(lines, lineno):
+                continue
             findings.append((
                 path, lineno, "published-private-set",
                 f"`@Published var {match.group(2)}` has no `private(set)` — confirm views don't just read it (§8)",

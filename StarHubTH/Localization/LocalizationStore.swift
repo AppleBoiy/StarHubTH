@@ -17,7 +17,7 @@ final class LocalizationStore: ObservableObject {
 
     private let preferenceStoring: PreferenceStoring
 
-    @Published var currentLanguage: String {
+    @Published var currentLanguage: String { // STANDARDS-EXCEPTION: §8 — SettingsView's language Picker needs a two-way Binding
         didSet {
             if !Self.supportedLanguages.contains(currentLanguage) {
                 currentLanguage = "en"

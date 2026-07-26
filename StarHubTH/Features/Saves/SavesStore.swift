@@ -15,12 +15,12 @@ import UniformTypeIdentifiers
 /// otherwise observed by this store's @Published properties.
 @MainActor
 final class SavesStore: ObservableObject {
-    @Published var saveViewMode: SaveViewMode = .list
-    @Published var saveSortOption: SaveSortOption = .lastPlayed
-    @Published var saveFilterTag: String = ""
+    @Published var saveViewMode: SaveViewMode = .list // STANDARDS-EXCEPTION: §8 — SavesView writes it directly (list/grid toggle buttons)
+    @Published var saveSortOption: SaveSortOption = .lastPlayed // STANDARDS-EXCEPTION: §8 — SavesView writes it directly (sort menu)
+    @Published var saveFilterTag: String = "" // STANDARDS-EXCEPTION: §8 — SavesView writes it directly (tag filter); ModsStoreTests-style tests also set it directly
 
-    @Published var saves: [SaveGameInfo] = []
-    @Published var editingSave: SaveGameInfo? {
+    @Published private(set) var saves: [SaveGameInfo] = []
+    @Published var editingSave: SaveGameInfo? { // STANDARDS-EXCEPTION: §8 — many Save views write it directly (open/close editor sheet)
         didSet {
             guard let save = editingSave else {
                 inventoryToEdit = []
@@ -31,10 +31,10 @@ final class SavesStore: ObservableObject {
             inventoryToEdit = (try? saveStoring.fetchInventory(for: save)) ?? []
         }
     }
-    @Published var inventoryToEdit: [InventoryItem] = []
-    @Published var viewingSaveTimeline: SaveGameInfo?
-    @Published var saveToDuplicate: SaveGameInfo?
-    @Published var backupToBranch: SaveBackup?
+    @Published var inventoryToEdit: [InventoryItem] = [] // STANDARDS-EXCEPTION: §8 — SaveEditorView binds into it directly ($savesStore.inventoryToEdit[index].stack)
+    @Published var viewingSaveTimeline: SaveGameInfo? // STANDARDS-EXCEPTION: §8 — several Save views write it directly (open/close timeline sheet)
+    @Published var saveToDuplicate: SaveGameInfo? // STANDARDS-EXCEPTION: §8 — .sheet(item:) needs a two-way Binding; Save views also write it directly
+    @Published var backupToBranch: SaveBackup? // STANDARDS-EXCEPTION: §8 — .sheet(item:) needs a two-way Binding; SaveTimelineView also writes it directly
 
     private let saveStoring: SaveStoring
     private let saveNoteStoring: SaveNoteStoring

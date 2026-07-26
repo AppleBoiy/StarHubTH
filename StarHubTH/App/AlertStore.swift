@@ -7,7 +7,7 @@ import Foundation
 @MainActor
 final class AlertStore: ObservableObject {
     @Published private(set) var message: String = ""
-    @Published var isPresented: Bool = false
+    @Published var isPresented: Bool = false // STANDARDS-EXCEPTION: §8 — SwiftUI's .alert(isPresented:) needs a two-way Binding to reset this to false on dismiss
 
     func show(_ message: String) {
         self.message = message

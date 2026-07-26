@@ -3,9 +3,9 @@ import Foundation
 /// Phase 4.2. Owns the in-app log feed (LogsView) and SMAPI-latest.txt tailing.
 @MainActor
 final class LogStore: ObservableObject {
-    @Published var logOutput: String = ""
-    @Published var logEntries: [LogLine] = []
-    @Published var isReadingSMAPILog: Bool = false
+    @Published var logOutput: String = "" // STANDARDS-EXCEPTION: §8 — LogsView's "Clear" button resets this directly
+    @Published var logEntries: [LogLine] = [] // STANDARDS-EXCEPTION: §8 — LogsView's "Clear"/filter actions call .removeAll() on it directly
+    @Published private(set) var isReadingSMAPILog: Bool = false
 
     private var tailTask: Task<Void, Never>?
 
@@ -99,10 +99,12 @@ final class LogStore: ObservableObject {
             }
 
             var offset = startOffset
+            // DispatchSource has no async/await form — the queue: parameter is required by
+            // this API itself, not a DispatchQueue used by choice.
             let source = DispatchSource.makeFileSystemObjectSource(
                 fileDescriptor: fileDescriptor,
                 eventMask: .write,
-                queue: DispatchQueue.global(qos: .utility)
+                queue: DispatchQueue.global(qos: .utility) // required by DispatchSource, not a free choice
             )
             // DispatchSourceFileSystemObject isn't Sendable, but `cancel()` is documented
             // safe from any queue. Box it so `onTermination`'s @Sendable closure can hold it —

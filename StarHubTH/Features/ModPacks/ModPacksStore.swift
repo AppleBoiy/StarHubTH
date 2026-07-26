@@ -16,7 +16,7 @@ import UniformTypeIdentifiers
 /// forwarding setter is enough.
 @MainActor
 final class ModPacksStore: ObservableObject {
-    @Published var importedModPack: StarHubPack?
+    @Published var importedModPack: StarHubPack? // STANDARDS-EXCEPTION: §8 — AppCoordinator/ModPacksView write it directly (import flow, dismiss action)
 
     private let nexusAPIClient: NexusAPIClient
     private let localization: LocalizationStore

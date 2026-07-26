@@ -4,14 +4,14 @@ import Foundation
 /// Steam identity, and SMAPI's installed-version status.
 @MainActor
 final class AppEnvironment: ObservableObject {
-    @Published var gameDir: String {
+    @Published var gameDir: String { // STANDARDS-EXCEPTION: §8 — written directly by AppCoordinator (folder-picker flow)
         didSet {
             preferenceStoring.set(gameDir, forKey: "gameDir")
         }
     }
-    @Published var steamUsername: String = ""
-    @Published var steamAvatarPath: String?
-    @Published var smapiInstalledVersion: String?   // nil = not installed
+    @Published var steamUsername: String = "" // STANDARDS-EXCEPTION: §8 — MainView writes a default farmer name when Steam detection is empty
+    @Published private(set) var steamAvatarPath: String?
+    @Published var smapiInstalledVersion: String?   // nil = not installed — STANDARDS-EXCEPTION: §8 — AppEnvironmentTests writes it directly to set up test state
 
     let smapiInstaller = SmapiInstaller()
 

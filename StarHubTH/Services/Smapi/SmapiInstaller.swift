@@ -27,9 +27,9 @@ struct SmapiReleaseLookupError: Error {
 /// one already computed.
 @MainActor
 final class SmapiInstaller: ObservableObject {
-    @Published var isInstalling = false
-    @Published var statusMessage = ""   // holds an L10n key, translated by the caller via LocalizationStore.L()
-    @Published var progress: Double = 0.0
+    @Published private(set) var isInstalling = false
+    @Published private(set) var statusMessage = ""   // holds an L10n key, translated by the caller via LocalizationStore.L()
+    @Published private(set) var progress: Double = 0.0
 
     /// File `install()` writes on success, holding the plain version string
     /// (e.g. "4.5.2") of the release it just installed — see
@@ -293,6 +293,8 @@ final class SmapiInstaller: ObservableObject {
     /// behind the unzip/xattr steps above.
     private func runProcess(executable: String, arguments: [String]) async throws -> Int32 {
         try await withCheckedThrowingContinuation { continuation in
+            // Process.run()/waitUntilExit() are synchronous-blocking with no async form —
+            // off-load to a background queue so the caller's actor isn't blocked.
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: executable)
@@ -334,6 +336,8 @@ final class SmapiInstaller: ObservableObject {
     /// app records what it just installed instead of guessing later.
     private func runOfficialInstaller(at installerPath: String, version: String, gameDir: String, action: InstallerAction) async -> SmapiInstallOutcome {
         await withCheckedContinuation { continuation in
+            // Process.run()/waitUntilExit() are synchronous-blocking with no async form —
+            // off-load to a background queue so the caller's actor isn't blocked.
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: installerPath)

@@ -11,34 +11,34 @@ import UniformTypeIdentifiers
 /// `syncActiveProfileIds` (ProfilesStore's) is threaded through `toggleMod` the same way.
 @MainActor
 final class ModsStore: ObservableObject {
-    @Published var mods: [Mod] = []
+    @Published var mods: [Mod] = [] // STANDARDS-EXCEPTION: §8 — ModsStoreTests seeds fixture state directly
 
-    @Published var modFilterStatus: ModFilterStatus = .all
-    @Published var modFilterTag: String = ""
-    @Published var modFilterDate: ModFilterDate = .all
-    @Published var modSortOption: ModSortOption = .name
+    @Published var modFilterStatus: ModFilterStatus = .all // STANDARDS-EXCEPTION: §8 — StatusFilterPills writes it directly (filter pill taps)
+    @Published var modFilterTag: String = "" // STANDARDS-EXCEPTION: §8 — ModControlsBar writes it directly (tag filter menu)
+    @Published var modFilterDate: ModFilterDate = .all // STANDARDS-EXCEPTION: §8 — ModControlsBar writes it directly (date filter menu)
+    @Published var modSortOption: ModSortOption = .name // STANDARDS-EXCEPTION: §8 — ModControlsBar writes it directly (sort menu)
 
-    @Published var outOfDateMods: [ModUpdateInfo] = []
-    @Published var smapiErrors: [String] = []
-    @Published var isThaiTranslationInstalled: Bool = false
+    @Published private(set) var outOfDateMods: [ModUpdateInfo] = []
+    @Published private(set) var smapiErrors: [String] = []
+    @Published private(set) var isThaiTranslationInstalled: Bool = false
 
-    @Published var isSyncingAllTags = false
-    @Published var syncAllTagsProgress: Double = 0.0
+    @Published private(set) var isSyncingAllTags = false
+    @Published private(set) var syncAllTagsProgress: Double = 0.0
 
-    @Published var editingModConfig: Mod?
-    @Published var viewingModDetails: Mod?
+    @Published var editingModConfig: Mod? // STANDARDS-EXCEPTION: §8 — ModCardView/ModListRow/MainView write it directly (open/close config editor sheet)
+    @Published var viewingModDetails: Mod? // STANDARDS-EXCEPTION: §8 — ModCardView/ModListRow/MainView write it directly (open/close details sheet)
 
-    @Published var downloadingMods: Set<String> = []
-    @Published var isInstallingMod: Bool = false
+    @Published private(set) var downloadingMods: Set<String> = []
+    @Published private(set) var isInstallingMod: Bool = false
 
-    @Published var selectedMod: Mod? {
+    @Published private(set) var selectedMod: Mod? {
         didSet {
             if let mod = selectedMod, selectedModID != mod.folderName {
                 selectedModID = mod.folderName
             }
         }
     }
-    @Published var selectedModID: Mod.FolderName? {
+    @Published var selectedModID: Mod.FolderName? { // STANDARDS-EXCEPTION: §8 — MainView writes it directly (sidebar selection)
         didSet {
             if let id = selectedModID, selectedMod?.folderName != id {
                 selectedMod = mods.first { $0.folderName == id }
@@ -445,7 +445,7 @@ final class ModsStore: ObservableObject {
 
         let zipUrl: URL
         do {
-            zipUrl = try await NexusDownloader.downloadUpdate(nexusId: nexusId, apiKey: nexusApiKey)
+            zipUrl = try await NexusDownloader.downloadUpdate(nexusId: nexusId, apiKey: nexusApiKey, nexusAPIClient: nexusAPIClient)
         } catch {
             downloadingMods.remove(mod.name)
             if let downloaderError = error as? NexusDownloaderError, case .premiumRequired = downloaderError {
@@ -495,6 +495,8 @@ final class ModsStore: ObservableObject {
     /// shared plumbing behind `backUp`/`restore`.
     private func runProcess(executable: String, arguments: [String], currentDirectory: URL? = nil) async throws -> Int32 {
         try await withCheckedThrowingContinuation { continuation in
+            // Process.run()/waitUntilExit() are synchronous-blocking with no async form —
+            // off-load to a background queue so the caller's actor isn't blocked.
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: executable)

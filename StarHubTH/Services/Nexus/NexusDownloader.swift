@@ -26,7 +26,7 @@ struct NexusDownloader {
     static func downloadUpdate(
         nexusId: Mod.NexusID,
         apiKey: String,
-        nexusAPIClient: NexusAPIClient = LiveNexusAPIClient.shared
+        nexusAPIClient: NexusAPIClient
     ) async throws -> URL {
         guard !apiKey.isEmpty else {
             throw NexusDownloaderError.missingAPIKey

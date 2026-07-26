@@ -7,5 +7,5 @@ import Foundation
 @MainActor
 final class URLDispatcher: ObservableObject {
     static let shared = URLDispatcher()
-    @Published var openedURL: URL? = nil
+    @Published var openedURL: URL? = nil // STANDARDS-EXCEPTION: §8 — AppDelegate writes the incoming URL; MainView clears it after handling
 }
