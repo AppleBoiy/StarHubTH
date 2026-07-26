@@ -146,6 +146,35 @@ final class ScreenshotCaptureTool: XCTestCase {
                 try guardedClick(app, element(app: app, identifier: resolved), description: resolved)
                 try guardedClick(app, app.menuItems.element(boundBy: index), description: "\(resolved) menu item \(index)", timeout: 5)
 
+            case "toggleLanguage":
+                // Visits Settings, flips the language picker to the other language and back —
+                // a workaround for real (not fixture) mod/save data reported to not show up
+                // correctly in the Mods/Saves lists until the language is changed once. Ends
+                // back on Mods (matching where most affected entries start their own
+                // navigation from) so this can be inserted as a single step without the
+                // manifest needing to re-navigate back afterward.
+                let settingsTab = element(app: app, identifier: "sidebar-tab-Settings")
+                try guardedClick(app, settingsTab, description: "sidebar-tab-Settings")
+                let picker = element(app: app, identifier: "settings-language-picker")
+                guard picker.waitForExistence(timeout: 10) else { throw CaptureError.elementNotFound("settings-language-picker") }
+                // Deliberately NOT app.menuItems.element(boundBy:) — that matches menu items
+                // app-wide, including the real macOS menu bar, not just this popup's two
+                // options. A first attempt did exactly that and nearly clicked the Apple
+                // menu's "System Information..." item. Arrow-key navigation stays scoped to
+                // whatever popup is actually open, so it can't reach unrelated menus.
+                try guardedClick(app, picker, description: "settings-language-picker")
+                Thread.sleep(forTimeInterval: 0.3)
+                app.typeKey(XCUIKeyboardKey.upArrow, modifierFlags: [])
+                app.typeKey(XCUIKeyboardKey.return, modifierFlags: [])
+                Thread.sleep(forTimeInterval: 0.5)
+                try guardedClick(app, picker, description: "settings-language-picker")
+                Thread.sleep(forTimeInterval: 0.3)
+                app.typeKey(XCUIKeyboardKey.downArrow, modifierFlags: [])
+                app.typeKey(XCUIKeyboardKey.return, modifierFlags: [])
+                Thread.sleep(forTimeInterval: 0.5)
+                let modsTab = element(app: app, identifier: "sidebar-tab-Mods")
+                try guardedClick(app, modsTab, description: "sidebar-tab-Mods")
+
             case "clickSegment":
                 guard let identifier = step.identifier else { continue }
                 let picker = element(app: app, identifier: identifier)

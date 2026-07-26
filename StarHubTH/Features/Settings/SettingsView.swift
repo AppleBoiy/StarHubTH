@@ -32,6 +32,7 @@ struct SettingsView: View {
                         }
                         .pickerStyle(MenuPickerStyle())
                         .fixedSize()
+                        .accessibilityIdentifier("settings-language-picker")
                         
                         InfoPopoverButton(text: localizationStore.L(L10n.Settings.selectLanguage))
                     }
