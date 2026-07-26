@@ -33,6 +33,10 @@ final class ScreenshotCaptureTool: XCTestCase {
         for entry in coreScreens {
             do {
                 try Self.navigate(app: app, steps: entry.navigation, targets: targets)
+                // Navigation's last click can return before SwiftUI finishes animating the
+                // resulting transition — a fixed settle delay, not another waitForExistence,
+                // since what changed varies per screen and there's no one element to wait on.
+                Thread.sleep(forTimeInterval: 0.5)
                 try Self.capture(app: app, id: entry.id, outputDir: outputDir)
             } catch {
                 failures.append("\(entry.id): \(error)")
@@ -72,14 +76,23 @@ final class ScreenshotCaptureTool: XCTestCase {
         app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@", identifier)).firstMatch
     }
 
+    /// Every click in this file goes through here — `XCUIElement.click()` has no `throws`
+    /// marker, so calling it on an element that doesn't exist raises a hard, uncatchable
+    /// XCTest failure instead of something a Swift `do`/`catch` can intercept, aborting the
+    /// whole test rather than just failing the one screen being captured. Always checking
+    /// `waitForExistence` first and throwing our own `CaptureError` keeps failures scoped to
+    /// a single manifest entry.
+    private static func guardedClick(_ target: XCUIElement, description: String, timeout: TimeInterval = 10) throws {
+        guard target.waitForExistence(timeout: timeout) else { throw CaptureError.elementNotFound(description) }
+        target.click()
+    }
+
     private static func navigate(app: XCUIApplication, steps: [NavigationStep], targets: [String: String]) throws {
         for step in steps {
             switch step.action {
             case "click":
                 let resolved = try resolve(step.identifier ?? "", targets: targets)
-                let target = element(app: app, identifier: resolved)
-                guard target.waitForExistence(timeout: 10) else { throw CaptureError.elementNotFound(resolved) }
-                target.click()
+                try guardedClick(element(app: app, identifier: resolved), description: resolved)
 
             case "clickDescendant":
                 guard let rowIdentifier = step.rowIdentifier, let descendantLabel = step.descendantLabel else { continue }
@@ -87,27 +100,23 @@ final class ScreenshotCaptureTool: XCTestCase {
                 let target = app.descendants(matching: .any).matching(
                     NSPredicate(format: "identifier == %@ AND label == %@", row, descendantLabel)
                 ).firstMatch
-                guard target.waitForExistence(timeout: 10) else { throw CaptureError.elementNotFound(row) }
-                target.click()
+                try guardedClick(target, description: row)
 
             case "clickMenuItem":
                 guard let menuIdentifier = step.menuIdentifier, let index = step.index else { continue }
                 let resolved = try resolve(menuIdentifier, targets: targets)
-                let menu = element(app: app, identifier: resolved)
-                guard menu.waitForExistence(timeout: 10) else { throw CaptureError.elementNotFound(resolved) }
-                menu.click()
-                let item = app.menuItems.element(boundBy: index)
-                guard item.waitForExistence(timeout: 5) else { throw CaptureError.elementNotFound("\(resolved) menu item \(index)") }
-                item.click()
+                try guardedClick(element(app: app, identifier: resolved), description: resolved)
+                try guardedClick(app.menuItems.element(boundBy: index), description: "\(resolved) menu item \(index)", timeout: 5)
 
             case "clickSegment":
                 guard let identifier = step.identifier else { continue }
                 let picker = element(app: app, identifier: identifier)
                 guard picker.waitForExistence(timeout: 10) else { throw CaptureError.elementNotFound(identifier) }
                 if let segmentIndex = step.segmentIndex {
-                    picker.buttons.element(boundBy: segmentIndex).click()
+                    try guardedClick(picker.buttons.element(boundBy: segmentIndex), description: "\(identifier) segment \(segmentIndex)")
                 } else if let segmentLabel = step.segmentLabel {
-                    picker.descendants(matching: .any).matching(NSPredicate(format: "label == %@", segmentLabel)).firstMatch.click()
+                    let segment = picker.descendants(matching: .any).matching(NSPredicate(format: "label == %@", segmentLabel)).firstMatch
+                    try guardedClick(segment, description: "\(identifier) segment '\(segmentLabel)'")
                 }
 
             default:
@@ -128,7 +137,15 @@ final class ScreenshotCaptureTool: XCTestCase {
     /// tracking exact undo steps for every navigation path above — every Core entry's
     /// navigation starts from a sidebar click, so this is enough to avoid one entry's
     /// leftover state (an open detail view, an open menu) bleeding into the next capture.
+    ///
+    /// Escape first, always: a `.sheet` (e.g. Profile Detail) sits on top of and blocks the
+    /// sidebar entirely — clicking `sidebar-tab-Mods` while one is open is silently absorbed
+    /// by the sheet, not routed to the sidebar underneath, so navigation for every subsequent
+    /// entry quietly no-ops and each one "succeeds" at capturing the exact same frozen sheet.
+    /// Discovered by real captures against this machine's own populated app state producing
+    /// six byte-identical PNGs in a row after `profile-detail`.
     private static func returnToBaseline(app: XCUIApplication) {
+        app.typeKey(XCUIKeyboardKey.escape, modifierFlags: [])
         let modsTab = element(app: app, identifier: "sidebar-tab-Mods")
         if modsTab.exists {
             modsTab.click()

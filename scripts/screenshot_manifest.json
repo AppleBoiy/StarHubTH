@@ -80,7 +80,7 @@
       "tier": "core",
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
-        { "action": "clickSegment", "identifier": "mods-view-mode-picker", "segmentLabel": "square.grid.2x2" }
+        { "action": "clickSegment", "identifier": "mods-view-mode-picker", "segmentIndex": 1, "note": "list.bullet is segment 0, square.grid.2x2 is segment 1 — see ModControlsBar.swift's Picker" }
       ]
     },
     {
@@ -124,11 +124,11 @@
       "feature": "Mods",
       "description": "Mod Config Editor — Visual tab (grouped settings tree)",
       "tier": "core",
-      "precondition": "targets.modFolderName must have a config.json.",
-      "placeholders": ["modFolderName"],
+      "precondition": "targets.configModFolderName must have a config.json — deliberately a separate token from modFolderName: the mod chosen to demonstrate real Nexus description data often isn't the same real mod that happens to ship a config.json.",
+      "placeholders": ["configModFolderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
-        { "action": "clickDescendant", "rowIdentifier": "mod-row-<modFolderName>", "descendantLabel": "gearshape", "note": "ModListRow's config-gear button has no identifier of its own — SWIFT_STANDARDS.md §10 documents why (row identifier clobbers descendant identifiers); same lookup ModConfigEditRoundTripUITests already uses." }
+        { "action": "clickDescendant", "rowIdentifier": "mod-row-<configModFolderName>", "descendantLabel": "gearshape", "note": "ModListRow's config-gear button has no identifier of its own — SWIFT_STANDARDS.md §10 documents why (row identifier clobbers descendant identifiers); same lookup ModConfigEditRoundTripUITests already uses." }
       ]
     },
     {
