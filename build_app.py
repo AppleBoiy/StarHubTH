@@ -121,11 +121,11 @@ def create_app_bundle():
     # 1. Clean old build
     if os.path.exists(APP_DIR):
         shutil.rmtree(APP_DIR)
-        
+
     # 2. Create directories
     os.makedirs(MACOS_DIR, exist_ok=True)
     os.makedirs(RESOURCES_DIR, exist_ok=True)
-    
+
     # 3. Copy Info.plist and Generate Custom Assets
     if not os.path.exists("Info.plist"):
         print("[ERROR] Info.plist not found — cannot build without it.")
@@ -171,14 +171,14 @@ def create_app_bundle():
     app_executable = os.path.join(MACOS_DIR, APP_NAME)
     module_cache_dir = os.path.join(".build", "module-cache")
     os.makedirs(module_cache_dir, exist_ok=True)
-    
+
     # Find all Swift files recursively under StarHubTH
     swift_files = []
     for root, dirs, files in os.walk("StarHubTH"):
         for file in files:
             if file.endswith(".swift"):
                 swift_files.append(os.path.join(root, file))
-                
+
     if not swift_files:
         print("[ERROR] No Swift source files (.swift) found.")
         return 1
