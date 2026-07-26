@@ -24,7 +24,8 @@
         "SmokeUITests",
         "ModInstallRoundTripUITests",
         "ModConfigEditRoundTripUITests",
-        "LogObserverRoundTripUITests"
+        "LogObserverRoundTripUITests",
+        "ModToggleRoundTripUITests"
       ]
     }
   ],
