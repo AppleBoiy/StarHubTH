@@ -82,6 +82,12 @@ targets:
         CODE_SIGNING_REQUIRED: NO
         CODE_SIGNING_ALLOWED: YES
         TEST_TARGET_NAME: StarHubTH
+        # Xcode's UI Testing Bundle template App-Sandboxes the runner by default
+        # (com.apple.security.app-sandbox = true, read-only outside its own container) —
+        # fine for every other StarHubTHUITests suite, which only ever touches paths inside
+        # UITestFixture's isolated temp workspace, but ScreenshotCaptureTool writes real PNGs
+        # to a maintainer-chosen output directory. Disabling sandboxing for this target only.
+        CODE_SIGN_ENTITLEMENTS: StarHubTHUITests/StarHubTHUITests.entitlements
 
 schemes:
   StarHubTH:
