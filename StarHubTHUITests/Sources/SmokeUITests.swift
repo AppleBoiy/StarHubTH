@@ -1,18 +1,24 @@
 import XCTest
 
-/// Spike smoke tests proving the launch-and-drive mechanism works end-to-end against the
-/// real app `build_app.py` produces — not a claim of full workflow coverage. See
-/// docs/UI_TESTING.md for what this layer is and isn't for.
+/// Smoke tests proving the launch-and-drive mechanism works end-to-end against the real
+/// app the StarHubTH scheme builds — not a claim of full workflow coverage.
+///
+/// Uses the async `setUp()`/`tearDown()` override points, not `setUpWithError()`/
+/// `tearDownWithError()` — those are synchronous, nonisolated XCTestCase methods, so
+/// overriding them in a `@MainActor` subclass and touching `app` (a MainActor-isolated
+/// property) inside them is a hard Swift 6 concurrency error. It didn't surface locally
+/// under this machine's (unusually new) Xcode/Swift toolchain, only under the Xcode 16.2
+/// CI actually runs — a reminder that local toolchain leniency isn't proof of portability.
 @MainActor
 final class SmokeUITests: XCTestCase {
     private var app: XCUIApplication!
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         continueAfterFailure = false
         app = AppLauncher.launch()
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         app.terminate()
     }
 
