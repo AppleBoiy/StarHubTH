@@ -55,7 +55,7 @@ This app is built with **Swift** and **SwiftUI** as a native macOS application.
 
 ### Requirements
 *   macOS 13.0 (Ventura) or later
-*   Xcode 15.0 or later (for compiling from source)
+*   Xcode 16.0 or later — Swift 6 (for compiling from source; the codebase uses typed `throws(ErrorType)`, which Swift 5.x can't parse)
 
 ### Running the Project
 You can open the project in Xcode or compile via Terminal using the build script:
