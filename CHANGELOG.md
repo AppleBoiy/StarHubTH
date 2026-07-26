@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- **Internal — Migrated the build/test pipeline to a real Xcode project**: Replaced the script-based build (`build_app.py`, `run_tests.py`) with `StarHubTH.xcodeproj` (generated from `project.yml` via XcodeGen). The custom 200-assertion test runner is now a real XCTest target (`StarHubTHTests`), and a new `StarHubTHUITests` target drives the real app end-to-end. CI and `release.py` now build/test via `xcodebuild`. No user-facing behavior change — same app, same features.
+## [1.1.5] - 2026-07-26
+
+### Fixed
+- **Internal — Mods/Mod Packs backup and export panels now go through the app's file-picking abstraction**: `ModsStore`'s mod backup/restore and `ModPacksStore`'s mod-pack export used to construct save/open panels directly instead of using the same injectable file-picking layer as the rest of the app. No user-visible behavior change.
 
 ## [1.1.4] - 2026-07-26
 
