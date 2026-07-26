@@ -1,6 +1,7 @@
 {
   "$comment": "Template for scripts/screenshot_targets.local.json — copy this file, rename it, and fill in real entity names from your own gameDir/profiles/Nexus data. screenshot_targets.local.json is gitignored on purpose: these values name your real saves/mods/profiles, not fixture data, and have no reason to be committed.",
-  "folderName": "YourSaveOrModFolderName",
+  "saveFolderName": "YourSaveFolderName",
+  "modFolderName": "YourModFolderName",
   "groupFolderName": "YourMultiFileModFolderName",
   "profileId": "your-profile-uuid",
   "modName": "A Thai Translation Mod's Name"

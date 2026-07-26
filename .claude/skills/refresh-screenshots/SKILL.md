@@ -13,7 +13,7 @@ This drives the **real** `StarHubTH.app` against the **real** `gameDir` already 
 
 ## Steps
 
-1. **Confirm/create the targets file.** `scripts/screenshot_targets.local.json` (gitignored — see `scripts/screenshot_targets.example.json` for the shape) names which of the maintainer's real saves/mods/profiles/Thai mods to open for entries that need one (`folderName`, `groupFolderName`, `profileId`, `modName`). If it doesn't exist yet, ask the maintainer which real entities to use rather than guessing — a wrong guess means captured screenshots of the wrong mod/save.
+1. **Confirm/create the targets file.** `scripts/screenshot_targets.local.json` (gitignored — see `scripts/screenshot_targets.example.json` for the shape) names which of the maintainer's real saves/mods/profiles/Thai mods to open for entries that need one (`saveFolderName`, `modFolderName`, `groupFolderName`, `profileId`, `modName`). If it doesn't exist yet, ask the maintainer which real entities to use rather than guessing — a wrong guess means captured screenshots of the wrong mod/save.
 
 2. **Build the app fresh:**
    ```bash

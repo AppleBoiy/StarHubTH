@@ -45,11 +45,11 @@
       "feature": "Saves",
       "description": "Save Editor — avatar, notes, character info, inventory",
       "tier": "core",
-      "precondition": "targets.folderName must name a real save in the maintainer's gameDir.",
-      "placeholders": ["folderName"],
+      "precondition": "targets.saveFolderName must name a real save in the maintainer's gameDir.",
+      "placeholders": ["saveFolderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Saves" },
-        { "action": "clickMenuItem", "menuIdentifier": "save-row-menu-<folderName>", "index": 0, "note": "index 0 is 'Save Management' — see SaveRow.swift's Menu item order" }
+        { "action": "clickMenuItem", "menuIdentifier": "save-row-menu-<saveFolderName>", "index": 0, "note": "index 0 is 'Save Management' — see SaveRow.swift's Menu item order" }
       ]
     },
     {
@@ -57,11 +57,11 @@
       "feature": "Saves",
       "description": "Save Timeline — backup list",
       "tier": "core",
-      "precondition": "targets.folderName must name a real save with at least one backup.",
-      "placeholders": ["folderName"],
+      "precondition": "targets.saveFolderName must name a real save with at least one backup.",
+      "placeholders": ["saveFolderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Saves" },
-        { "action": "clickMenuItem", "menuIdentifier": "save-row-menu-<folderName>", "index": 1, "note": "index 1 is 'Timeline' — see SaveRow.swift's Menu item order" }
+        { "action": "clickMenuItem", "menuIdentifier": "save-row-menu-<saveFolderName>", "index": 1, "note": "index 1 is 'Timeline' — see SaveRow.swift's Menu item order" }
       ]
     },
     {
@@ -100,11 +100,11 @@
       "feature": "Mods",
       "description": "Mod Detail — Description tab",
       "tier": "core",
-      "precondition": "targets.folderName's manifest UpdateKeys must resolve to a real Nexus mod for real cover/description data.",
-      "placeholders": ["folderName"],
+      "precondition": "targets.modFolderName's manifest UpdateKeys must resolve to a real Nexus mod for real cover/description data.",
+      "placeholders": ["modFolderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
-        { "action": "click", "identifier": "mod-row-info-button-<folderName>" }
+        { "action": "click", "identifier": "mod-row-info-button-<modFolderName>" }
       ]
     },
     {
@@ -112,10 +112,10 @@
       "feature": "Mods",
       "description": "Mod Detail — Dependencies tab (dependency graph)",
       "tier": "core",
-      "placeholders": ["folderName"],
+      "placeholders": ["modFolderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
-        { "action": "click", "identifier": "mod-row-info-button-<folderName>" },
+        { "action": "click", "identifier": "mod-row-info-button-<modFolderName>" },
         { "action": "clickSegment", "identifier": "mod-detail-tab-picker", "segmentIndex": 2 }
       ]
     },
@@ -124,11 +124,11 @@
       "feature": "Mods",
       "description": "Mod Config Editor — Visual tab (grouped settings tree)",
       "tier": "core",
-      "precondition": "targets.folderName must have a config.json.",
-      "placeholders": ["folderName"],
+      "precondition": "targets.modFolderName must have a config.json.",
+      "placeholders": ["modFolderName"],
       "navigation": [
         { "action": "click", "identifier": "sidebar-tab-Mods" },
-        { "action": "clickDescendant", "rowIdentifier": "mod-row-<folderName>", "descendantLabel": "gearshape", "note": "ModListRow's config-gear button has no identifier of its own — SWIFT_STANDARDS.md §10 documents why (row identifier clobbers descendant identifiers); same lookup ModConfigEditRoundTripUITests already uses." }
+        { "action": "clickDescendant", "rowIdentifier": "mod-row-<modFolderName>", "descendantLabel": "gearshape", "note": "ModListRow's config-gear button has no identifier of its own — SWIFT_STANDARDS.md §10 documents why (row identifier clobbers descendant identifiers); same lookup ModConfigEditRoundTripUITests already uses." }
       ]
     },
     {
