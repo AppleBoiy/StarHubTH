@@ -19,13 +19,14 @@ macOS app (SwiftUI + AppKit) for managing Stardew Valley mods, saves, and Thai t
 ```bash
 xcodegen generate        # only after editing project.yml — regenerates StarHubTH.xcodeproj
 xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug     # required after ANY Swift change
-xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
+xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan Unit
 open StarHubTH.xcodeproj # or: open StarHubTH.app once built
 python3 release.py       # zip to bundles/ for distribution
 ```
 
 - `StarHubTH`'s sources (`StarHubTH/`) and `StarHubTHTests`'s sources (`Tests/`) are both wired as Xcode File System Synchronized Groups — new subfolders are picked up automatically, same zero-touch guarantee the old `os.walk`-based scripts gave, with no `xcodegen generate` needed for ordinary file adds. Keep `@main` in a file named exactly `StarHubTHApp.swift` — the app target still needs exactly one.
-- `StarHubTHUITests` (real UI-driving tests via `XCUIApplication`) exists but isn't *run* in CI — it needs a GUI session and one-time Accessibility permission for whatever process drives `xcodebuild test`. Run it locally: add `-only-testing:StarHubTHUITests` instead of `StarHubTHTests` above. **It still has to *compile* cleanly for CI to pass** — `-only-testing:StarHubTHTests` only skips running it, `xcodebuild test` builds every target in the scheme's test action regardless. Don't assume changes here are CI-invisible.
+- **Test runs are scoped by named Test Plan, not `-only-testing`.** Swap `-testPlan Unit` above for `-testPlan Fast` (just `Models/`+`Services/`, fastest), `-testPlan Integration` (real Nexus/GitHub network calls, local-only), or `-testPlan UI` (`StarHubTHUITests`, local-only) depending on what you changed — see `SWIFT_STANDARDS.md` §10 for the full group table and rationale. `Unit` is the scheme's default plan and is what CI runs on every push/PR/release; a new test class needs adding to the matching `TestPlans/*.xctestplan`'s `selectedTests` array or it won't run anywhere.
+- `StarHubTHUITests` (real UI-driving tests via `XCUIApplication`) exists but isn't *run* in CI — it needs a GUI session and one-time Accessibility permission for whatever process drives `xcodebuild test`. Run it locally with `-testPlan UI`. **It still has to *compile* cleanly for CI to pass** — CI's `-testPlan Unit` only skips running it, `xcodebuild test` builds every target in the scheme's test action regardless. Don't assume changes here are CI-invisible.
 - The build **hard-fails** if `assets/en.json` and `assets/th.json` have mismatched keys (enforced by the "Generate Localizable.strings" Run Script build phase, `scripts/generate_localizable_strings.py`). That's intentional. Add every new user-facing string to both.
 
 ## Non-negotiables for new code

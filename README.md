@@ -80,7 +80,7 @@ python3 release.py
 
 ### การรันเทส (Tests)
 ```bash
-xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
+xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan Unit
 ```
 
 ### เอกสารสำหรับนักพัฒนา (Developer Docs)

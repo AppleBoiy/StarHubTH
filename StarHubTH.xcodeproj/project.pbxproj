@@ -11,11 +11,9 @@
 		1A4716B8267FCD5A2C4D6667 /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 25043FD28E49AF4ACA76AACC /* en.lproj */; };
 		1C1BB5C41BB5E7E022A94A3D /* wood_button.png in Resources */ = {isa = PBXBuildFile; fileRef = 66E8F7F8D4CC76E47927B2E5 /* wood_button.png */; };
 		2E9B0A117ACEBE583709624E /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = C7A6F8EA720A32BD0C656450 /* AppIcon.icns */; };
-		44358448C706897F2281E095 /* SmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22C382A4240FED998B17FDD2 /* SmokeUITests.swift */; };
 		A3F6CE9A6F75851F79570C54 /* green_button.png in Resources */ = {isa = PBXBuildFile; fileRef = 8AF96503714D8627DE089171 /* green_button.png */; };
 		BCCAE9A8FA637F06AA970A2D /* th.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 18969A284E2F529588D494BE /* th.lproj */; };
 		C9984029ED1727B9E28406CD /* wood_panel.png in Resources */ = {isa = PBXBuildFile; fileRef = B5C75FEEA75522567F355427 /* wood_panel.png */; };
-		F1FC77DFF184A152126BDF51 /* AppLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0C2F8397CE6F6D6C8FA09B /* AppLauncher.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,9 +36,7 @@
 /* Begin PBXFileReference section */
 		18969A284E2F529588D494BE /* th.lproj */ = {isa = PBXFileReference; path = th.lproj; sourceTree = "<group>"; };
 		1A791901B85DD22221EFE938 /* StarHubTHUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StarHubTHUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		22C382A4240FED998B17FDD2 /* SmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeUITests.swift; sourceTree = "<group>"; };
 		25043FD28E49AF4ACA76AACC /* en.lproj */ = {isa = PBXFileReference; path = en.lproj; sourceTree = "<group>"; };
-		4C0C2F8397CE6F6D6C8FA09B /* AppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncher.swift; sourceTree = "<group>"; };
 		66E8F7F8D4CC76E47927B2E5 /* wood_button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = wood_button.png; sourceTree = "<group>"; };
 		8AF96503714D8627DE089171 /* green_button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = green_button.png; sourceTree = "<group>"; };
 		976C7D35B2AD172B0F47CA52 /* StarHubTH.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StarHubTH.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -60,6 +56,16 @@
 			path = Tests;
 			sourceTree = "<group>";
 		};
+		BB9E9B4FD94BA3D0EA3CE61C /* Sources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			name = Sources;
+			path = Sources;
+			sourceTree = "<group>";
+		};
 		EA6A7DB70F2013C61DBE706E /* StarHubTH */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			explicitFileTypes = {
@@ -72,15 +78,6 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXGroup section */
-		3CB7B9D4E7194727A50433D2 /* Sources */ = {
-			isa = PBXGroup;
-			children = (
-				4C0C2F8397CE6F6D6C8FA09B /* AppLauncher.swift */,
-				22C382A4240FED998B17FDD2 /* SmokeUITests.swift */,
-			);
-			path = Sources;
-			sourceTree = "<group>";
-		};
 		4B560B03DA1AC9972ADCD6F2 = {
 			isa = PBXGroup;
 			children = (
@@ -96,7 +93,7 @@
 		668FB3171A179EE4FF2146C8 /* StarHubTHUITests */ = {
 			isa = PBXGroup;
 			children = (
-				3CB7B9D4E7194727A50433D2 /* Sources */,
+				BB9E9B4FD94BA3D0EA3CE61C /* Sources */,
 			);
 			path = StarHubTHUITests;
 			sourceTree = "<group>";
@@ -184,11 +181,15 @@
 			buildConfigurationList = 9B3F17EBE721B593CD5C4804 /* Build configuration list for PBXNativeTarget "StarHubTHUITests" */;
 			buildPhases = (
 				F0B81C6596E46189345CE41A /* Sources */,
+				4CE33BDC0109984D55F64259 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				ACC7F83D1AD217A1EBD69597 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				BB9E9B4FD94BA3D0EA3CE61C /* Sources */,
 			);
 			name = StarHubTHUITests;
 			packageProductDependencies = (
@@ -240,6 +241,13 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		4CE33BDC0109984D55F64259 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		80D551D03EE653BB0AAFD4ED /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -304,8 +312,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F1FC77DFF184A152126BDF51 /* AppLauncher.swift in Sources */,
-				44358448C706897F2281E095 /* SmokeUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

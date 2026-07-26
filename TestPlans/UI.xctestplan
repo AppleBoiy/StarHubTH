@@ -1,0 +1,32 @@
+{
+  "configurations": [
+    {
+      "id": "5E44F608-95A6-46E0-B87E-24F944ECC3F9",
+      "name": "UI",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "targetForVariableExpansion": {
+      "containerPath": "container:StarHubTH.xcodeproj",
+      "identifier": "562E52E4707A9F0EF6685AD6",
+      "name": "StarHubTH"
+    }
+  },
+  "testTargets": [
+    {
+      "target": {
+        "containerPath": "container:StarHubTH.xcodeproj",
+        "identifier": "F81B09DE149B14DE06EBAFAF",
+        "name": "StarHubTHUITests"
+      },
+      "selectedTests": [
+        "SmokeUITests",
+        "ModInstallRoundTripUITests",
+        "ModConfigEditRoundTripUITests",
+        "LogObserverRoundTripUITests"
+      ]
+    }
+  ],
+  "version": 1
+}

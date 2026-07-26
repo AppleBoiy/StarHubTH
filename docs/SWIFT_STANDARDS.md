@@ -542,7 +542,20 @@ Apply `private(set)` to every store property that views only read. That single c
 
 **Rule.** Every new service protocol ships with a stub implementation and at least one test. Pure functions (parsers, filters, sorters, dependency resolution) are tested directly. Every store extracted from the old ViewModel arrives with tests — that's the acceptance criterion for adding it, not a follow-up.
 
-**Today.** 32 files, the `StarHubTHTests` XCTest target (`Tests/`, `@testable import StarHubTH`), 79 test methods. Every store is tested through its injected `Stub*` protocol doubles — no store test reaches for a real singleton or a live network/filesystem call. A separate `StarHubTHUITests` target (`StarHubTHUITests/`) drives the real app via `XCUIApplication` for true end-to-end UI checks — not run in CI (needs a GUI session + Accessibility permission), run it locally with `-only-testing:StarHubTHUITests`.
+**Today.** 32 files, the `StarHubTHTests` XCTest target (`Tests/`, `@testable import StarHubTH`), 79 test methods. Every store is tested through its injected `Stub*` protocol doubles — no store test reaches for a real singleton or a live network/filesystem call. A separate `StarHubTHUITests` target (`StarHubTHUITests/`) drives the real app via `XCUIApplication` for true end-to-end UI checks — not run in CI (needs a GUI session + Accessibility permission).
+
+**Running a subset — `-testPlan`, not `-only-testing`.** Four named Xcode Test Plans (`TestPlans/*.xctestplan`, wired into the `StarHubTH` scheme via `project.yml`) map onto the four folders below, so you don't need to run — or wait on — the whole suite for a change scoped to one of them:
+
+| Plan | `-testPlan` value | Covers |
+|---|---|---|
+| `Fast` | `Fast` | `Models/` + `Services/` — no I/O beyond a sandboxed temp dir |
+| `Unit` (default) | `Unit` | `Fast` + `Features/` — everything except live network. Plain `xcodebuild test`/`Cmd+U` with no `-testPlan` runs this. |
+| `Integration` | `Integration` | `Integration/` only, against the real Nexus/GitHub APIs — deliberately **not** `STARHUB_SKIP_LIVE_TESTS`-gated at the plan level, so selecting this plan runs them for real |
+| `UI` | `UI` | `StarHubTHUITests` |
+
+Full command shape: `xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan <Fast|Unit|Integration|UI>`.
+
+`Fast`/`Unit` each set `STARHUB_SKIP_LIVE_TESTS=1` in their own `environmentVariableEntries` (not a scheme-wide default) — each plan owns its own environment, so picking `Integration` isn't fighting an inherited skip flag. Adding a new test class to an existing folder means adding its name to the matching plan's `selectedTests` array — a one-line, reviewable JSON diff, not a script edit. CI (`build.yml`/`release.yml`) runs `Unit` on every push/PR/release tag; `Integration` and `UI` stay local-only by deliberate choice — `Integration` because a scheduled CI job would need a real Nexus API key stored as a repo secret, and `UI` because a GitHub-hosted macOS runner can't reliably hold the one-time Accessibility permission grant across ephemeral runs. Run both yourself with a real Nexus API key / a GUI session before something that touches those paths.
 
 **Test taxonomy — four categories, one per `Tests/` subfolder:**
 
@@ -622,7 +635,7 @@ Copy into every PR description. An agent making changes states its answers expli
 
 **Verification**
 - [ ] `xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug` succeeds with no new warnings
-- [ ] `xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests` passes
+- [ ] `xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan Unit` passes (or `-testPlan Fast`/`Integration`/`UI` if the change is scoped to just that group — see §10)
 - [ ] New service protocols have a stub + at least one test
 - [ ] Localization keys exist in **both** `assets/en.json` and `assets/th.json` (the build fails otherwise — by design)
 

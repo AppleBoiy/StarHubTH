@@ -74,7 +74,7 @@ Release files will be saved in the `bundles/` folder.
 
 ### Running Tests
 ```bash
-xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
+xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan Unit
 ```
 
 ### Developer Docs

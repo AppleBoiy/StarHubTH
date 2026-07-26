@@ -13,7 +13,7 @@
 
 - Always run `xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug` to build the StarHubTH application when compiling or verifying application changes.
 - Automatically run that build after modifying Swift view files, view models, or project resources to verify the build passes cleanly.
-- Run `xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests` after any change to models, services, or stores.
+- Run `xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan Unit` after any change to models, services, or stores. Use `-testPlan Fast`/`Integration`/`UI` instead when the change is scoped to just that group — see `docs/SWIFT_STANDARDS.md` §10.
 - Report the warning count. A change that adds warnings is not done.
 - Only run `xcodegen generate` after editing `project.yml` itself — not needed for ordinary Swift file changes.
 
@@ -21,6 +21,6 @@
 
 - `StarHubTH`'s sources and `StarHubTHTests`'s sources are wired as Xcode File System Synchronized Groups — new subfolders under `StarHubTH/` or `Tests/` are picked up automatically, no project edit needed.
 - `StarHubTHTests` (`Tests/`) is a real XCTest target — every file needs `@testable import StarHubTH`. Keep `@main` in a file named exactly `StarHubTHApp.swift`.
-- `StarHubTHUITests` exists but isn't *run* in CI (needs a GUI session + Accessibility permission) — use `-only-testing:StarHubTHUITests` to run it locally. It still must *compile* cleanly for CI to pass: `xcodebuild test` builds every target in the scheme regardless of `-only-testing`, which only filters what executes.
+- `StarHubTHUITests` exists but isn't *run* in CI (needs a GUI session + Accessibility permission) — use `-testPlan UI` to run it locally. It still must *compile* cleanly for CI to pass: `xcodebuild test` builds every target in the scheme regardless of which test plan runs.
 - The build **fails** if `assets/en.json` and `assets/th.json` key sets differ. Add every new user-facing string to both files.
 - Never hardcode a user-facing string. Use an `L10n` key.

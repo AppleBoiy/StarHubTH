@@ -1,0 +1,43 @@
+{
+  "configurations": [
+    {
+      "id": "DC9FF8E5-E788-44DD-B14A-9AEC21AE0B13",
+      "name": "Fast",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "environmentVariableEntries": [
+      {
+        "key": "STARHUB_SKIP_LIVE_TESTS",
+        "value": "1"
+      }
+    ],
+    "targetForVariableExpansion": {
+      "containerPath": "container:StarHubTH.xcodeproj",
+      "identifier": "562E52E4707A9F0EF6685AD6",
+      "name": "StarHubTH"
+    }
+  },
+  "testTargets": [
+    {
+      "target": {
+        "containerPath": "container:StarHubTH.xcodeproj",
+        "identifier": "D29EBA2D69F9EE12C78A27AF",
+        "name": "StarHubTHTests"
+      },
+      "selectedTests": [
+        "ModTagInferenceTests",
+        "ModGraphTests",
+        "ModListFilterTests",
+        "SaveFileParserTests",
+        "NXMParserTests",
+        "SaveManagerTests",
+        "ModManifestParserTests",
+        "SmapiLogParserTests",
+        "SmapiInstallerTests"
+      ]
+    }
+  ],
+  "version": 1
+}

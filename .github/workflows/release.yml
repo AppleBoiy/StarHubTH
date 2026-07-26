@@ -36,9 +36,10 @@ jobs:
           fi
 
       - name: Test
-        # See build.yml: live-network Integration tests are skipped via a scheme-level
-        # environment variable (project.yml), not a workflow `env:` block.
-        run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
+        # See build.yml: live-network Integration tests aren't part of the Unit test plan
+        # at all — STARHUB_SKIP_LIVE_TESTS is baked into TestPlans/Unit.xctestplan, not a
+        # workflow `env:` block, which never reaches the test process.
+        run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan Unit
 
       - name: Build, package, and publish release
         run: python3 release.py --publish

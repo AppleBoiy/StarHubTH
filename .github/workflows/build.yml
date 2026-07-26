@@ -31,9 +31,11 @@ jobs:
         run: xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug
 
       - name: Test
-        # Live-network Integration tests (Tests/Integration/) are skipped via
-        # STARHUB_SKIP_LIVE_TESTS, baked into the StarHubTH scheme's TestAction by
-        # project.yml (schemes.StarHubTH.test.environmentVariables) — NOT settable here.
-        # `xcodebuild test`'s scheme has `shouldUseLaunchSchemeArgsEnv`, so a `env:` block
-        # on this step never reaches the test process; only a scheme-declared variable does.
-        run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
+        # -testPlan Unit runs Models/Services/Features only — Tests/Integration/ isn't part
+        # of this plan's selectedTests at all, so it can't slip through in CI regardless of
+        # parallelism. STARHUB_SKIP_LIVE_TESTS is baked into TestPlans/Unit.xctestplan's own
+        # environmentVariableEntries (see SWIFT_STANDARDS.md §10) — NOT settable via a
+        # workflow `env:` block here: `xcodebuild test`'s scheme has
+        # `shouldUseLaunchSchemeArgsEnv`, so a step-level `env:` never reaches the test
+        # process; only a scheme- or test-plan-declared variable does.
+        run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan Unit

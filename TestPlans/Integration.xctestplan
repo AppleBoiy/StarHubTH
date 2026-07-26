@@ -1,0 +1,32 @@
+{
+  "configurations": [
+    {
+      "id": "C908EF6B-2404-4CFC-B242-7A9C3BAA08B1",
+      "name": "Integration",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "targetForVariableExpansion": {
+      "containerPath": "container:StarHubTH.xcodeproj",
+      "identifier": "562E52E4707A9F0EF6685AD6",
+      "name": "StarHubTH"
+    }
+  },
+  "testTargets": [
+    {
+      "target": {
+        "containerPath": "container:StarHubTH.xcodeproj",
+        "identifier": "D29EBA2D69F9EE12C78A27AF",
+        "name": "StarHubTHTests"
+      },
+      "selectedTests": [
+        "NexusCollectionTests",
+        "ModUpdateTests",
+        "SmapiInstallerIntegrationTests",
+        "NXMDownloadIntegrationTests"
+      ]
+    }
+  ],
+  "version": 1
+}

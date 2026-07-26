@@ -68,6 +68,7 @@ targets:
     platform: macOS
     sources:
       - path: StarHubTHUITests/Sources
+        type: syncedFolder
     dependencies:
       - target: StarHubTH
     settings:
@@ -93,8 +94,9 @@ schemes:
       config: Debug
     test:
       config: Debug
-      environmentVariables:
-        STARHUB_SKIP_LIVE_TESTS: "1"
-      targets:
-        - StarHubTHTests
-        - StarHubTHUITests
+      testPlans:
+        - path: TestPlans/Unit.xctestplan
+          defaultPlan: true
+        - path: TestPlans/Fast.xctestplan
+        - path: TestPlans/Integration.xctestplan
+        - path: TestPlans/UI.xctestplan
