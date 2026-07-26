@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.7] - 2026-07-26
+
+### Changed
+- **Internal — Codebase brought into full compliance with `docs/SWIFT_STANDARDS.md`**: Resolved every finding from `scripts/check_standards.py` (56 total). Removed the last two `.shared` singleton call sites outside `App/`, replaced justified `DispatchQueue` usage with documented exceptions or `async`/`await`, audited every `@Published` property across the app for real external writes (adding `private(set)` where safe, a `STANDARDS-EXCEPTION` comment where not), and split five files that had grown past the 400-line convention (`ModsStore`, `L10n`, `LiveNexusAPIClient`, `SaveManager`, `SmapiInstaller`) along their existing logical sections. Also fixed a CI-only flakiness bug where a live-network integration test could run instead of skip under parallel test execution. No user-facing behavior change.
+
 ## [1.1.6] - 2026-07-26
 
 ### Changed
