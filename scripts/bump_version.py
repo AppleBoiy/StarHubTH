@@ -112,7 +112,8 @@ def bump_plist(new_version):
     return old_version
 
 
-def bump_changelog(new_version):
+def roll_unreleased(new_version):
+    """patch/minor/major/preview: [Unreleased]'s body becomes the new dated heading's body."""
     with open(CHANGELOG, "r", encoding="utf-8") as f:
         text = f.read()
 
@@ -137,6 +138,28 @@ def bump_changelog(new_version):
     print(f"[INFO] {CHANGELOG}: rolled [Unreleased] into [{new_version}] - {today}")
 
 
+def finalize_preview(current_version, new_version):
+    """release: rename the existing '## [X.Y.Z-preview.N] - date' heading in place — no new
+    changelog content to roll, since the preview's own bump already recorded it. Deliberately
+    does not touch [Unreleased]: unlike every other kind, this one shouldn't require or consume
+    it — a preview finalizing to stable often has nothing new to say beyond what preview.N
+    already documented."""
+    with open(CHANGELOG, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    heading_pattern = re.compile(rf"^## \[{re.escape(current_version)}\] - \d{{4}}-\d{{2}}-\d{{2}}$", re.MULTILINE)
+    if not heading_pattern.search(text):
+        sys.exit(f"[ERROR] Couldn't find a '## [{current_version}] - YYYY-MM-DD' heading in {CHANGELOG} to finalize.")
+
+    today = datetime.date.today().isoformat()
+    new_text = heading_pattern.sub(f"## [{new_version}] - {today}", text, count=1)
+
+    with open(CHANGELOG, "w", encoding="utf-8") as f:
+        f.write(new_text)
+
+    print(f"[INFO] {CHANGELOG}: renamed [{current_version}] heading to [{new_version}] - {today}")
+
+
 def get_current_version():
     with open(INFO_PLIST, "rb") as f:
         return plistlib.load(f).get("CFBundleShortVersionString")
@@ -158,8 +181,16 @@ def main():
     current = get_current_version()
     new_version = next_version(current, args.kind, args.preview)
 
+    # CHANGELOG.md first, deliberately: both changelog functions validate before writing
+    # anything, so a rejected bump (empty [Unreleased], missing preview heading) now leaves
+    # Info.plist untouched too — writing the plist first meant a validation failure left the
+    # version number bumped with no matching changelog entry, a real inconsistency this
+    # ordering exists to prevent.
+    if args.kind == "release":
+        finalize_preview(current, new_version)
+    else:
+        roll_unreleased(new_version)
     bump_plist(new_version)
-    bump_changelog(new_version)
 
     print(f"[SUCCESS] Bumped {current} -> {new_version}. Review the diff, then commit and tag:")
     print("    git add Info.plist CHANGELOG.md")
