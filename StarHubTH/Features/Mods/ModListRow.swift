@@ -220,6 +220,7 @@ struct ModListRow: View {
                     .buttonStyle(PlainButtonStyle())
                     .help(localizationStore.L(L10n.Settings.nexusModDetails))
                     .pointingHandCursor()
+                    .accessibilityLabel("mod-info-button")
                 }
             }
             .padding(.trailing, 8)
