@@ -33,4 +33,9 @@ jobs:
       - name: Test
         env:
           STARHUB_SKIP_LIVE_TESTS: "1"
-        run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
+        # -parallel-testing-enabled NO: parallel test workers don't reliably inherit this
+        # env var on this runner image — STARHUB_SKIP_LIVE_TESTS silently didn't reach one
+        # worker once, letting a live-network Integration test run for real in CI and fail
+        # on rate-limiting instead of skipping. Single-process execution is slower but
+        # deterministic; these tests are fast enough that it doesn't matter.
+        run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests -parallel-testing-enabled NO
