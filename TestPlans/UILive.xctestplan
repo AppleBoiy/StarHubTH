@@ -1,0 +1,30 @@
+{
+  "configurations": [
+    {
+      "id": "2CD98825-4ED6-4D47-B526-6760F9392485",
+      "name": "UILive",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "targetForVariableExpansion": {
+      "containerPath": "container:StarHubTH.xcodeproj",
+      "identifier": "562E52E4707A9F0EF6685AD6",
+      "name": "StarHubTH"
+    }
+  },
+  "testTargets": [
+    {
+      "target": {
+        "containerPath": "container:StarHubTH.xcodeproj",
+        "identifier": "F81B09DE149B14DE06EBAFAF",
+        "name": "StarHubTHUITests"
+      },
+      "selectedTests": [
+        "ModDetailLiveDataUITests",
+        "SyncTagLiveDataUITests"
+      ]
+    }
+  ],
+  "version": 1
+}

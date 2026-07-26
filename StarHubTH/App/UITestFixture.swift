@@ -20,11 +20,23 @@ struct UITestFixture {
     /// A fixed, non-`.standard` `UserDefaults` suite, reset at the start of every launch —
     /// so consecutive UI test runs never see state left over from a previous one, without
     /// needing per-process cleanup.
+    ///
+    /// When `STARHUB_UITEST_USE_REAL_API_KEY=1` is also set (Tier C "live" UI tests only —
+    /// see `TestPlans/UILive.xctestplan`), seeds the isolated suite with the real Nexus API
+    /// key from `UserDefaults.standard` — the same domain the app's own Settings screen
+    /// writes to, since this code runs inside the launched `StarHubTH.app` process itself,
+    /// not the test host (contrast `Tests/Integration/LiveTestGate.swift`, which needs
+    /// `.standard` for the opposite reason: avoiding a `suiteName:` that collides with the
+    /// *test host's* own bundle ID).
     @MainActor
     var preferenceStoring: PreferenceStoring {
         let defaults = UserDefaults(suiteName: Self.preferencesSuiteName) ?? .standard
         defaults.removePersistentDomain(forName: Self.preferencesSuiteName)
         defaults.set(gameDir, forKey: "gameDir")
+        if ProcessInfo.processInfo.environment["STARHUB_UITEST_USE_REAL_API_KEY"] == "1" {
+            let realApiKey = UserDefaults.standard.string(forKey: "nexusApiKey") ?? ""
+            defaults.set(realApiKey, forKey: "nexusApiKey")
+        }
         return PreferenceStore(defaults: defaults)
     }
 

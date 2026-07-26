@@ -84,6 +84,7 @@ struct ModListRow: View {
                             .padding(.vertical, 2)
                             .background(Color.secondary.opacity(0.12))
                             .cornerRadius(4)
+                            .accessibilityIdentifier("mod-row-tag-\(mod.folderName.rawValue)")
                     }
 
                     // Update available badge
@@ -219,6 +220,7 @@ struct ModListRow: View {
                     .buttonStyle(PlainButtonStyle())
                     .help(localizationStore.L(L10n.Settings.nexusModDetails))
                     .pointingHandCursor()
+                    .accessibilityIdentifier("mod-row-info-button-\(mod.folderName.rawValue)")
                 }
             }
             .padding(.trailing, 8)

@@ -57,6 +57,7 @@ struct ModDetailView: View {
                         } placeholder: {
                             ProgressView().frame(width: 64, height: 64)
                         }
+                        .accessibilityIdentifier("mod-detail-cover-image")
                     } else {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10)
@@ -140,10 +141,12 @@ struct ModDetailView: View {
                     if selectedTab == 0 {
                         if let blocks = nexusDescription {
                             BBCodeView(blocks: blocks)
+                                .accessibilityIdentifier("mod-detail-description")
                         } else {
                             Text(.init(mod.description))
                                 .font(.body)
                                 .textSelection(.enabled)
+                                .accessibilityIdentifier("mod-detail-description")
                         }
                     } else if selectedTab == 1 {
                         if let blocks = nexusChangelog {
@@ -203,6 +206,7 @@ struct ModDetailView: View {
                         }
                         .help(localizationStore.L(L10n.Tags.sync))
                     }
+                    .accessibilityIdentifier("mod-detail-sync-button")
                 }
                 
                 if !mod.nexusUrl.isEmpty {
