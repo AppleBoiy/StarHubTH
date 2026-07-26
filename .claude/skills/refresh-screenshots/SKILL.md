@@ -20,14 +20,11 @@ This drives the **real** `StarHubTH.app` against the **real** `gameDir` already 
    xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug
    ```
 
-3. **Run the capture tool**, once per language (the tool captures whatever language the app is currently set to — flip it via the real Settings screen or `defaults write com.appleboiy.StarHubTH currentLanguage en|th` between runs):
+3. **Run the capture tool**, once per language (the tool captures whatever language the app is currently set to — flip it via the real Settings screen or `defaults write com.appleboiy.StarHubTH currentLanguage en|th` between runs). Use `scripts/run_screenshot_capture.py`, not a bare `xcodebuild test` invocation — `xcodebuild test` does not inherit the invoking shell's environment (same gap `docs/SWIFT_STANDARDS.md` documents for `STARHUB_SKIP_LIVE_TESTS`), so plain `KEY=value xcodebuild test ...` silently captures nothing; the wrapper patches `TestPlans/ScreenshotCapture.xctestplan`'s `environmentVariableEntries` for the run and restores it after:
    ```bash
-   mkdir -p /tmp/starhubth-screenshots/en
-   STARHUB_SCREENSHOT_OUTPUT_DIR=/tmp/starhubth-screenshots/en \
-   STARHUB_SCREENSHOT_TARGETS_PATH="$(pwd)/scripts/screenshot_targets.local.json" \
-   STARHUB_SCREENSHOT_MANIFEST_PATH="$(pwd)/scripts/screenshot_manifest.json" \
-   xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug \
-     -destination 'platform=macOS' -testPlan ScreenshotCapture
+   python3 scripts/run_screenshot_capture.py \
+     --output-dir /tmp/starhubth-screenshots/en \
+     --targets scripts/screenshot_targets.local.json
    ```
    Repeat with `currentLanguage th` and a `/th` output dir. Check the test log for `[ScreenshotCaptureTool]` failure lines — a missing target/precondition shows up there, not as a hard test failure (the test only fails if *every* Core screen failed).
 
