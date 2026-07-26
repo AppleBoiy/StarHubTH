@@ -1,5 +1,5 @@
 import Foundation
-import AppKit
+import UniformTypeIdentifiers
 
 /// Phase 4.5. Owns mod-pack export/import/collection-fetch and the Nexus download flow
 /// used to fill in a pack's missing mods.
@@ -21,11 +21,13 @@ final class ModPacksStore: ObservableObject {
     private let nexusAPIClient: NexusAPIClient
     private let localization: LocalizationStore
     private let logStore: LogStore
+    private let filePicking: FilePicking
 
-    init(nexusAPIClient: NexusAPIClient, localization: LocalizationStore, logStore: LogStore) {
+    init(nexusAPIClient: NexusAPIClient, localization: LocalizationStore, logStore: LogStore, filePicking: FilePicking) {
         self.nexusAPIClient = nexusAPIClient
         self.localization = localization
         self.logStore = logStore
+        self.filePicking = filePicking
     }
 
     func exportModPack(name: String, mods: [Mod], steamUsername: String, showModal: (String) -> Void) -> URL? {
@@ -50,18 +52,17 @@ final class ModPacksStore: ObservableObject {
 
         guard let data = try? encoder.encode(pack) else { return nil }
 
-        let savePanel = NSSavePanel()
-        savePanel.allowedContentTypes = [.json]
-        savePanel.nameFieldStringValue = "\(name.replacingOccurrences(of: " ", with: "_")).starhubpack"
-        savePanel.canCreateDirectories = true
+        guard let url = filePicking.pickSaveLocation(
+            title: nil,
+            suggestedName: "\(name.replacingOccurrences(of: " ", with: "_")).starhubpack",
+            allowedContentTypes: [.json]
+        ) else { return nil }
 
-        if savePanel.runModal() == .OK, let url = savePanel.url {
-            do {
-                try data.write(to: url)
-                return url
-            } catch {
-                showModal(localization.L(L10n.VM.packSaveFailed))
-            }
+        do {
+            try data.write(to: url)
+            return url
+        } catch {
+            showModal(localization.L(L10n.VM.packSaveFailed))
         }
         return nil
     }

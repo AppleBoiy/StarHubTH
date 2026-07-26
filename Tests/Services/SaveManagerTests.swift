@@ -1,17 +1,11 @@
-import Foundation
+import XCTest
+@testable import StarHubTH
 
 /// Exercises real `SaveManager` filesystem operations against synthetic save folders on
 /// disk. `SavesStoreTests` only covers the store's delegation through `SaveStoring` — it
 /// never runs `SaveManager`'s actual file handling, which is where the fixed bugs lived.
-struct SaveManagerTests {
-    static func run() {
-        print("Running SaveManagerTests...")
-        testBackupSaveDoesNotCollideWithinSameSecond()
-        testUpdateInventoryPreservesUnrelatedContent()
-        testDuplicateSaveReportsFailureWhenRenameFails()
-    }
-
-    private static func makeTempSaveFolder(saveName: String, saveXML: String, saveGameInfoData: Data? = nil) -> URL {
+final class SaveManagerTests: XCTestCase {
+    private func makeTempSaveFolder(saveName: String, saveXML: String, saveGameInfoData: Data? = nil) -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("StarHubTH_SaveManagerTest_\(UUID().uuidString)")
         let folder = root.appendingPathComponent(saveName)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -22,7 +16,7 @@ struct SaveManagerTests {
         return folder
     }
 
-    private static func makeSaveGameInfo(fileURL: URL) -> SaveGameInfo {
+    private func makeSaveGameInfo(fileURL: URL) -> SaveGameInfo {
         SaveGameInfo(
             folderName: fileURL.deletingLastPathComponent().lastPathComponent,
             fileURL: fileURL,
@@ -47,7 +41,7 @@ struct SaveManagerTests {
 
     /// backupSave's timestamp has 1-second resolution — a second call within the same
     /// second used to throw "already exists" and silently no-op the caller's edit.
-    static func testBackupSaveDoesNotCollideWithinSameSecond() {
+    func testBackupSaveDoesNotCollideWithinSameSecond() {
         let saveName = "TestSave"
         let folder = makeTempSaveFolder(saveName: saveName, saveXML: "<SaveGame></SaveGame>")
         defer { try? FileManager.default.removeItem(at: folder.deletingLastPathComponent()) }
@@ -59,18 +53,18 @@ struct SaveManagerTests {
         do { try SaveManager.shared.backupSave(info: info) } catch { firstSucceeded = false }
         do { try SaveManager.shared.backupSave(info: info) } catch { secondSucceeded = false }
 
-        SimpleTestFramework.assertTrue(firstSucceeded, "First backup should succeed")
-        SimpleTestFramework.assertTrue(secondSucceeded, "A second backup within the same second should not collide and silently fail")
+        XCTAssertTrue(firstSucceeded, "First backup should succeed")
+        XCTAssertTrue(secondSucceeded, "A second backup within the same second should not collide and silently fail")
 
         let backups = (try? SaveManager.shared.listBackups(for: info)) ?? []
-        SimpleTestFramework.assertTrue(backups.count == 2, "Both backups should exist on disk, not one silently dropped")
+        XCTAssertTrue(backups.count == 2, "Both backups should exist on disk, not one silently dropped")
     }
 
     /// updateInventory used to round-trip the whole file through XMLDocument's
     /// .documentTidyXML + .nodePrettyPrint, which can reformat content it didn't touch —
     /// including SMAPI mods' own <modData> entries. This asserts unrelated content and
     /// unusual whitespace survive an edit exactly, not just "the file still parses."
-    static func testUpdateInventoryPreservesUnrelatedContent() {
+    func testUpdateInventoryPreservesUnrelatedContent() {
         let xml = """
         <?xml version="1.0" encoding="utf-8"?>
         <SaveGame xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -92,27 +86,27 @@ struct SaveManagerTests {
         let info = makeSaveGameInfo(fileURL: fileURL)
 
         guard var inventory = try? SaveManager.shared.fetchInventory(for: info) else {
-            SimpleTestFramework.assertTrue(false, "fetchInventory should parse the synthetic save")
+            XCTAssertTrue(false, "fetchInventory should parse the synthetic save")
             return
         }
-        SimpleTestFramework.assertTrue(inventory.count == 1, "Should find the one item slot")
+        XCTAssertTrue(inventory.count == 1, "Should find the one item slot")
 
         inventory[0].stack = 10
         var updated = true
         do { try SaveManager.shared.updateInventory(info: info, items: inventory) } catch { updated = false }
-        SimpleTestFramework.assertTrue(updated, "updateInventory should succeed")
+        XCTAssertTrue(updated, "updateInventory should succeed")
 
         let rewritten = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
-        SimpleTestFramework.assertTrue(
+        XCTAssertTrue(
             rewritten.contains("keep-me-exact:  spaced  "),
             "Unrelated modData content should survive the rewrite exactly, not be normalized by a tidy/pretty-print pass"
         )
-        SimpleTestFramework.assertTrue(rewritten.contains("<stack>10</stack>"), "The edited item's stack should reflect the new value")
+        XCTAssertTrue(rewritten.contains("<stack>10</stack>"), "The edited item's stack should reflect the new value")
     }
 
     /// modifyInternalSaveNames used to swallow its own read/write failures with `try?`,
     /// so duplicateSave reported success even when the rename silently didn't happen.
-    static func testDuplicateSaveReportsFailureWhenRenameFails() {
+    func testDuplicateSaveReportsFailureWhenRenameFails() {
         let saveName = "TestSaveDuplicate"
         // Invalid UTF-8 bytes make `String(contentsOf:encoding:.utf8)` fail to decode,
         // forcing modifyInternalSaveNames's read step to fail for this file.
@@ -128,6 +122,6 @@ struct SaveManagerTests {
             succeeded = false
         }
 
-        SimpleTestFramework.assertFalse(succeeded, "duplicateSave should report failure when the internal rename can't read a file, not silently claim success")
+        XCTAssertFalse(succeeded, "duplicateSave should report failure when the internal rename can't read a file, not silently claim success")
     }
 }

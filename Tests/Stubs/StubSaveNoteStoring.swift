@@ -1,4 +1,5 @@
 import Foundation
+@testable import StarHubTH
 
 final class StubSaveNoteStoring: SaveNoteStoring {
     private var notes: [String: SaveNote] = [:]

@@ -49,6 +49,6 @@ git tag vMAJOR.MINOR.PATCH                    # or vMAJOR.MINOR.PATCH-preview.N
 git push && git push --tags
 ```
 
-Pushing the tag is the deliberate, explicit trigger — that's where a human decides "yes, release this," same as any other push. From there, [`.github/workflows/release.yml`](../.github/workflows/release.yml) takes over: it checks the pushed tag matches `Info.plist` (fails loudly if you tagged without bumping), runs `run_tests.py`, then `python3 release.py --publish` to build, codesign, zip, and publish the GitHub Release with that version's changelog section as the release notes.
+Pushing the tag is the deliberate, explicit trigger — that's where a human decides "yes, release this," same as any other push. From there, [`.github/workflows/release.yml`](../.github/workflows/release.yml) takes over: it checks the pushed tag matches `Info.plist` (fails loudly if you tagged without bumping), runs `xcodebuild test` (the `StarHubTHTests` unit suite), then `python3 release.py --publish` to build via `xcodebuild`, codesign, zip, and publish the GitHub Release with that version's changelog section as the release notes.
 
 `release.py` still works standalone for a local build — run it without `--publish` and it either prompts (interactive terminal) or just skips the upload (non-interactive, no `--publish`), so it never hangs waiting on input that isn't there.

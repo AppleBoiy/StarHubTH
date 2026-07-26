@@ -11,6 +11,7 @@ from build_config import APP_NAME, APP_DIR
 BUNDLES_DIR = "bundles"
 CHANGELOG_PATH = "CHANGELOG.md"
 UNKNOWN_VERSION = "0.0.0"
+DERIVED_DATA_DIR = "build"
 
 def get_version():
     plist_path = "Info.plist"
@@ -56,15 +57,24 @@ def upload_to_github(version, zip_path):
 def create_release(publish):
     print("[INFO] Starting release process...")
 
-    # 1. Build the app using existing build_app.py
+    # 1. Build the app via xcodebuild (Xcode Migration Plan, Phase 3 — replaces the old
+    # build_app.py call; same Debug configuration build_app.py always produced, since it
+    # never distinguished Debug/Release).
     print("[INFO] Building application...")
-    result = subprocess.run([sys.executable, "build_app.py"])
+    result = subprocess.run([
+        "xcodebuild", "build",
+        "-project", "StarHubTH.xcodeproj",
+        "-scheme", APP_NAME,
+        "-configuration", "Debug",
+        "-derivedDataPath", DERIVED_DATA_DIR,
+    ])
     if result.returncode != 0:
         print("[ERROR] Application build failed. Check the errors above.")
         return 1
 
-    if not os.path.exists(APP_DIR):
-        print(f"[ERROR] Output folder {APP_DIR} not found after build.")
+    built_app_path = os.path.join(DERIVED_DATA_DIR, "Build", "Products", "Debug", APP_DIR)
+    if not os.path.exists(built_app_path):
+        print(f"[ERROR] Output folder {built_app_path} not found after build.")
         return 1
 
     # 2. Get version
@@ -85,7 +95,7 @@ def create_release(publish):
     print(f"[INFO] Archiving bundle to {zip_path}...")
 
     # We use ditto on macOS to preserve resource forks and codesignatures properly
-    ditto_result = subprocess.run(["ditto", "-c", "-k", "--keepParent", APP_DIR, zip_path])
+    ditto_result = subprocess.run(["ditto", "-c", "-k", "--keepParent", built_app_path, zip_path])
     if ditto_result.returncode != 0:
         print("[ERROR] Archiving with ditto failed.")
         return 1

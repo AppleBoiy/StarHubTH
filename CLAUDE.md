@@ -1,6 +1,6 @@
 # StarHubTH
 
-macOS app (SwiftUI + AppKit) for managing Stardew Valley mods, saves, and Thai translations. Swift 5, target `arm64-apple-macos13.0`. Bilingual (en/th).
+macOS app (SwiftUI + AppKit) for managing Stardew Valley mods, saves, and Thai translations. Swift 6 language mode, target `arm64-apple-macos13.0`. Bilingual (en/th).
 
 ## Read this first
 
@@ -14,16 +14,19 @@ macOS app (SwiftUI + AppKit) for managing Stardew Valley mods, saves, and Thai t
 
 ## Build and test
 
+`StarHubTH.xcodeproj` is a real, committed Xcode project generated from `project.yml` via [XcodeGen](https://github.com/yonaskolb/XcodeGen) — required after ANY change to `project.yml` itself, not after ordinary Swift edits:
+
 ```bash
-python3 build_app.py     # required after ANY Swift change — compiles + bundles + codesigns
-python3 run_tests.py     # custom TestRunner (not XCTest)
-open StarHubTH.app
+xcodegen generate        # only after editing project.yml — regenerates StarHubTH.xcodeproj
+xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug     # required after ANY Swift change
+xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
+open StarHubTH.xcodeproj # or: open StarHubTH.app once built
 python3 release.py       # zip to bundles/ for distribution
 ```
 
-- `build_app.py` compiles every `.swift` under `StarHubTH/` via `os.walk`. **New subfolders need no build-script change.**
-- `run_tests.py` compiles everything under `StarHubTH/` except the file named `StarHubTHApp.swift`, plus `Tests/`. Keep `@main` in a file with exactly that name.
-- The build **hard-fails** if `assets/en.json` and `assets/th.json` have mismatched keys. That's intentional. Add every new user-facing string to both.
+- `StarHubTH`'s sources (`StarHubTH/`) and `StarHubTHTests`'s sources (`Tests/`) are both wired as Xcode File System Synchronized Groups — new subfolders are picked up automatically, same zero-touch guarantee the old `os.walk`-based scripts gave, with no `xcodegen generate` needed for ordinary file adds. Keep `@main` in a file named exactly `StarHubTHApp.swift` — the app target still needs exactly one.
+- `StarHubTHUITests` (real UI-driving tests via `XCUIApplication`) exists but isn't run in CI — it needs a GUI session and one-time Accessibility permission for whatever process drives `xcodebuild test`. Run it locally: add `-only-testing:StarHubTHUITests` instead of `StarHubTHTests` above.
+- The build **hard-fails** if `assets/en.json` and `assets/th.json` have mismatched keys (enforced by the "Generate Localizable.strings" Run Script build phase, `scripts/generate_localizable_strings.py`). That's intentional. Add every new user-facing string to both.
 
 ## Non-negotiables for new code
 
@@ -43,12 +46,16 @@ Before finishing any Swift change, walk the pre-merge checklist in `docs/SWIFT_S
 
 ```
 StarHubTH/          app source — see docs/PROJECT_STRUCTURE.md for the full map
-Tests/              custom TestRunner suites
+Tests/              StarHubTHTests — XCTest unit suites (@testable import StarHubTH)
+StarHubTHUITests/   StarHubTHUITests — XCUITest UI-driving suites (real XCUIApplication, not run in CI)
 assets/             en.json / th.json → generated .lproj/Localizable.strings, icons, custom UI
 docs/               SWIFT_STANDARDS.md, PROJECT_STRUCTURE.md, DOMAIN_CONTEXT.md, plus any active docs/*_PLAN.md tracking file
-build_app.py        build + bundle + codesign
-run_tests.py        test runner
-release.py          package to bundles/
+project.yml         XcodeGen spec — source of truth for StarHubTH.xcodeproj; run `xcodegen generate` after editing
+StarHubTH.xcodeproj generated from project.yml, committed
+scripts/generate_localizable_strings.py   the Localizable.strings generation step, run as an Xcode Run Script phase
+scripts/check_standards.py                SWIFT_STANDARDS.md rule linter (advisory)
+scripts/bump_version.py                   version bump CLI — see docs/RELEASING.md
+release.py          builds via xcodebuild, packages to bundles/, optional GitHub release upload
 ```
 
 Layering, enforced by folder — a wrong-direction import is visible in the path:

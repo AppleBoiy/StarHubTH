@@ -1,4 +1,5 @@
 import Foundation
+@testable import StarHubTH
 
 /// Placeholder error for stub results a test hasn't configured yet.
 enum StubError: Error {

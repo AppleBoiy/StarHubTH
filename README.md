@@ -61,14 +61,15 @@
 
 ### ความต้องการของระบบ (Requirements)
 *   macOS 13.0 (Ventura) หรือใหม่กว่า
-*   Xcode 15.0 หรือใหม่กว่า (สำหรับการคอมไพล์ซอร์สโค้ด)
+*   Xcode 16.0 หรือใหม่กว่า
 
 ### วิธีการรันโปรเจกต์
-คุณสามารถเปิดโปรเจกต์ผ่าน Xcode หรือใช้สคริปต์คอมไพล์ผ่าน Terminal:
+เปิดไฟล์ `StarHubTH.xcodeproj` ด้วย Xcode ได้โดยตรง หรือคอมไพล์ผ่าน Terminal:
 ```bash
-python3 build_app.py
+xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug
 open StarHubTH.app
 ```
+หากแก้ไขไฟล์ `project.yml` (เพิ่ม build target ใหม่ หรือเปลี่ยน build settings) ต้องรัน `xcodegen generate` ใหม่ก่อน (ใช้ [XcodeGen](https://github.com/yonaskolb/XcodeGen)) — การแก้โค้ด Swift ทั่วไปไม่ต้องรันคำสั่งนี้
 
 ### การแพ็คแอปพลิเคชัน (Release)
 หากต้องการบีบอัดแอปพลิเคชัน (.app) เป็นไฟล์ `.zip` สำหรับนำไปแจกจ่าย สามารถรันคำสั่ง:
@@ -79,7 +80,7 @@ python3 release.py
 
 ### การรันเทส (Tests)
 ```bash
-python3 run_tests.py
+xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
 ```
 
 ### เอกสารสำหรับนักพัฒนา (Developer Docs)

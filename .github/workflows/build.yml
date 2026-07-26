@@ -19,9 +19,9 @@ jobs:
         run: python3 scripts/check_standards.py
 
       - name: Build
-        run: python3 build_app.py
+        run: xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug
 
       - name: Test
         env:
           STARHUB_SKIP_LIVE_TESTS: "1"
-        run: python3 run_tests.py
+        run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests

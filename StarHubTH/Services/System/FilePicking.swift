@@ -14,6 +14,10 @@ protocol FilePicking {
     /// `nil` title leaves the panel's default system title in place.
     func pickFiles(title: String?, allowedContentTypes: [UTType], allowsMultipleSelection: Bool, canChooseDirectories: Bool) -> [URL]
 
+    /// Presents a save panel pre-filled with `suggestedName`. Returns `nil` if the user
+    /// cancels. A `nil` title leaves the panel's default system title in place.
+    func pickSaveLocation(title: String?, suggestedName: String, allowedContentTypes: [UTType]) -> URL?
+
     /// Reveals a file or folder in Finder. The other AppKit-confinement half of this
     /// protocol — `NSWorkspace.shared.open` belongs here, not scattered across services/stores.
     func reveal(_ url: URL)

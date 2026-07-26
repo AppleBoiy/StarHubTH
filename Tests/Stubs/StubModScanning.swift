@@ -1,4 +1,5 @@
 import Foundation
+@testable import StarHubTH
 
 final class StubModScanning: ModScanning {
     var mods: [Mod] = []

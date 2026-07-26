@@ -8,12 +8,4 @@ enum LiveTestGate {
     static var isSkipped: Bool {
         ProcessInfo.processInfo.environment["STARHUB_SKIP_LIVE_TESTS"] == "1"
     }
-
-    /// Returns true (and prints/records a skip) if the caller should return early.
-    static func skipIfNeeded(_ testName: String) -> Bool {
-        guard isSkipped else { return false }
-        print("⚠️ SKIPPING \(testName): STARHUB_SKIP_LIVE_TESTS=1")
-        SimpleTestFramework.assertTrue(true, "Skipped due to STARHUB_SKIP_LIVE_TESTS")
-        return true
-    }
 }

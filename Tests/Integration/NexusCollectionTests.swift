@@ -1,42 +1,33 @@
-import Foundation
+import XCTest
+@testable import StarHubTH
 
-class NexusCollectionTests {
-    static func run() async {
-        print("Running NexusCollectionTests...")
-        await testFetchCollectionWithRealData()
-    }
-
-    static func testFetchCollectionWithRealData() async {
-        guard !LiveTestGate.skipIfNeeded("testFetchCollectionWithRealData") else { return }
+final class NexusCollectionTests: XCTestCase {
+    func testFetchCollectionWithRealData() async throws {
+        try XCTSkipIf(LiveTestGate.isSkipped, "STARHUB_SKIP_LIVE_TESTS=1")
 
         let defaults = UserDefaults(suiteName: "com.appleboiy.StarHubTH")
         let apiKey = defaults?.string(forKey: "nexusApiKey") ?? ""
-
-        if apiKey.isEmpty {
-            print("⚠️ SKIPPING testFetchCollectionWithRealData: No Nexus API Key found in com.appleboiy.StarHubTH defaults.")
-            SimpleTestFramework.assertTrue(true, "Skipped due to missing API key")
-            return
-        }
+        try XCTSkipIf(apiKey.isEmpty, "No Nexus API Key found in com.appleboiy.StarHubTH defaults.")
 
         let slug = "tckf0m"
 
         do {
             let collection = try await LiveNexusAPIClient.shared.collectionGraph(slug: slug, apiKey: apiKey)
-            SimpleTestFramework.assertEqual(collection.slug, slug, "Slug should match")
-            SimpleTestFramework.assertEqual(collection.game?.domainName, "stardewvalley", "Game domain should be stardewvalley")
-            SimpleTestFramework.assertTrue(collection.latestPublishedRevision != nil, "Should have a latest revision")
+            XCTAssertEqual(collection.slug, slug, "Slug should match")
+            XCTAssertEqual(collection.game?.domainName, "stardewvalley", "Game domain should be stardewvalley")
+            XCTAssertTrue(collection.latestPublishedRevision != nil, "Should have a latest revision")
 
             if let modFiles = collection.latestPublishedRevision?.modFiles {
-                SimpleTestFramework.assertTrue(modFiles.count > 0, "Collection should contain mods")
+                XCTAssertTrue(modFiles.count > 0, "Collection should contain mods")
                 if let firstMod = modFiles.first?.file?.mod {
-                    SimpleTestFramework.assertTrue(firstMod.modId > 0, "Mods should have a valid modId")
+                    XCTAssertTrue(firstMod.modId > 0, "Mods should have a valid modId")
                 }
             } else {
-                SimpleTestFramework.assertTrue(false, "Collection modFiles were nil")
+                XCTAssertTrue(false, "Collection modFiles were nil")
             }
         } catch {
             print("DECODING ERROR DETAILED: \(error)")
-            SimpleTestFramework.assertTrue(false, "Failed to fetch actual collection data: \(error.localizedDescription)")
+            XCTAssertTrue(false, "Failed to fetch actual collection data: \(error.localizedDescription)")
         }
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+@testable import StarHubTH
 
 /// In-memory stand-in for `UserDefaults`.
 final class StubPreferenceStoring: PreferenceStoring {

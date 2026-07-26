@@ -1,4 +1,5 @@
 import Foundation
+@testable import StarHubTH
 
 /// `@unchecked Sendable` — mutated only by the single test that configures it, before any
 /// concurrent use, never actually shared across threads despite the `var` canned results.

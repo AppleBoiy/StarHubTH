@@ -1,4 +1,5 @@
 import Foundation
+@testable import StarHubTH
 
 /// Test double for `NexusAPIClient`. Every method hands back a configurable canned
 /// result instead of making a network call. `@unchecked Sendable` because it's mutated

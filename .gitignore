@@ -33,6 +33,7 @@ unpack_batch.py
 
 # Build Outputs / Release Zips
 .build/
+build/
 bundles/
 StarHubTH.app/
 mods/*/README.md
@@ -40,3 +41,6 @@ mods/*/README.md
 check_translations.py
 .gitignore
 update_json.py
+
+# Xcode per-user state (StarHubTH.xcodeproj itself is committed — see docs/XCODE_MIGRATION_PLAN.md)
+xcuserdata/

@@ -276,7 +276,7 @@ StarHubTH/
 └── Support/             shared extensions
 ```
 
-`build_app.py` compiles via `os.walk("StarHubTH")`, so new subdirectories are picked up with **zero build-script changes**. Verified.
+`StarHubTH`'s sources are wired into `StarHubTH.xcodeproj` as an Xcode File System Synchronized Group (`project.yml`), so new subdirectories are picked up with **zero project changes**. Verified.
 
 **[`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) is the full expansion of this tree** — every folder's allowed imports, the complete current → target map for all 39 files, and a "where do I put a new file?" decision list. Consult it before creating any file.
 
@@ -444,7 +444,7 @@ struct Mod: Sendable, Identifiable { ... }
 
 ### 6.3 Concurrency checking is on, at the strictest level this toolchain supports
 
-`build_app.py`'s `concurrency_check_flags()` probes for `-swift-version 6` first (full Swift 6 language mode — every one of these diagnostics becomes a hard compile error, not a warning), falling back to `-strict-concurrency=complete` or the older `-warn-concurrency` on an unsupported toolchain, and to nothing rather than breaking the build on an unrecognized flag. The codebase compiles clean under full Swift 6 mode with zero warnings. `scripts/check_standards.py` additionally flags any new `@Published` without `private(set)`, new `.shared` outside `App/`, and non-`final` classes.
+`project.yml` sets `SWIFT_VERSION: "6"` on both the `StarHubTH` and `StarHubTHTests` targets — full Swift 6 language mode, where every one of these diagnostics is a hard compile error, not a warning. The codebase compiles clean under it with zero warnings. `scripts/check_standards.py` additionally flags any new `@Published` without `private(set)`, new `.shared` outside `App/`, and non-`final` classes.
 
 ### 6.4 Concurrency gotchas learned the hard way
 
@@ -541,7 +541,7 @@ Apply `private(set)` to every store property that views only read. That single c
 
 **Rule.** Every new service protocol ships with a stub implementation and at least one test. Pure functions (parsers, filters, sorters, dependency resolution) are tested directly. Every store extracted from the old ViewModel arrives with tests — that's the acceptance criterion for adding it, not a follow-up.
 
-**Today.** 32 files, driven by a hand-rolled `TestRunner`/`SimpleTestFramework` (not XCTest) via `run_tests.py`, 200+ assertions. Every store is tested through its injected `Stub*` protocol doubles — no store test reaches for a real singleton or a live network/filesystem call.
+**Today.** 32 files, the `StarHubTHTests` XCTest target (`Tests/`, `@testable import StarHubTH`), 79 test methods. Every store is tested through its injected `Stub*` protocol doubles — no store test reaches for a real singleton or a live network/filesystem call. A separate `StarHubTHUITests` target (`StarHubTHUITests/`) drives the real app via `XCUIApplication` for true end-to-end UI checks — not run in CI (needs a GUI session + Accessibility permission), run it locally with `-only-testing:StarHubTHUITests`.
 
 **Test taxonomy — four categories, one per `Tests/` subfolder:**
 
@@ -552,12 +552,12 @@ Apply `private(set)` to every store property that views only read. That single c
 | `Features/` | One suite per store, built with 100% injected `Stub*` doubles via a `makeStore()`-style factory | Fully isolated — no real singleton, no real network |
 | `Integration/` | Tests of the `Live*` implementations themselves against the real Nexus Mods API / GitHub API | **Not deterministic** — real network, real rate limits |
 
-`Integration/` is a different kind of test on purpose (verifying the real HTTP/parsing contract, not a DI consumer), not a lapse in stub discipline. Every file in it goes through the same `LiveTestGate.skipIfNeeded(_:)` check (`Tests/Integration/LiveTestGate.swift`) — set `STARHUB_SKIP_LIVE_TESTS=1` to skip all of them at once; CI does this by default. A few also separately no-op if no real Nexus API key is configured locally. If a test needs a live external call, it goes in `Integration/` with that gate — never bare in `Services/`/`Features/` with no way to skip it.
+`Integration/` is a different kind of test on purpose (verifying the real HTTP/parsing contract, not a DI consumer), not a lapse in stub discipline. Every file in it starts with `try XCTSkipIf(LiveTestGate.isSkipped, ...)` (`Tests/Integration/LiveTestGate.swift`) — set `STARHUB_SKIP_LIVE_TESTS=1` to skip all of them at once; CI does this by default. A few also separately no-op (`try XCTSkipIf(apiKey.isEmpty, ...)`) if no real Nexus API key is configured locally. If a test needs a live external call, it goes in `Integration/` with that gate — never bare in `Services/`/`Features/` with no way to skip it.
 
-`run_tests.py` compiles every file under `StarHubTH/` **except `StarHubTHApp.swift`** (matched by filename, not path) plus everything under `Tests/`. So:
+`StarHubTHTests`'s sources are an Xcode File System Synchronized Group over `Tests/` (`project.yml`), same as the app target. So:
 
-- Extracting types into new folders is test-safe.
-- Extracting `AppDelegate`/`URLDispatcher` out of `StarHubTHApp.swift` puts them **into** the test binary. That's fine (no `@main`), but keep `@main` in `StarHubTHApp.swift` and keep that filename.
+- Extracting types into new folders is test-safe, no project change needed.
+- `StarHubTHApp.swift` still must stay the one file with `@main` — `StarHubTHTests` hosts inside the `StarHubTH` app target (`TEST_HOST`/`BUNDLE_LOADER`) rather than compiling the app's sources a second time, so this is now an Xcode target-membership concern rather than a filename-matching one, but the rule is unchanged.
 
 ---
 
@@ -620,8 +620,8 @@ Copy into every PR description. An agent making changes states its answers expli
 - [ ] No new `print(`
 
 **Verification**
-- [ ] `python3 build_app.py` succeeds with no new warnings
-- [ ] `python3 run_tests.py` passes
+- [ ] `xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug` succeeds with no new warnings
+- [ ] `xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests` passes
 - [ ] New service protocols have a stub + at least one test
 - [ ] Localization keys exist in **both** `assets/en.json` and `assets/th.json` (the build fails otherwise — by design)
 
@@ -633,4 +633,4 @@ Copy into every PR description. An agent making changes states its answers expli
 - WWDC: *Protocol-Oriented Programming in Swift* (408, 2015) — §4.
 - WWDC: *Meet async/await in Swift* (10132, 2021), *Protect mutable state with Swift actors* (10133, 2021) — §6.
 - WWDC: *Data Essentials in SwiftUI* (10040, 2020), *Demystify SwiftUI* (10022, 2021) — §5.
-- [Swift Concurrency Migration Guide](https://www.swift.org/migration/documentation/migrationguide/) — for when the target moves past Swift 5.
+- [Swift Concurrency Migration Guide](https://www.swift.org/migration/documentation/migrationguide/) — background on the Swift 6 language mode this project already builds under.

@@ -1,4 +1,5 @@
 import Foundation
+@testable import StarHubTH
 
 final class StubSaveStoring: SaveStoring {
     var saves: [SaveGameInfo] = []

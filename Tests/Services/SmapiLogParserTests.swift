@@ -1,9 +1,8 @@
-import Foundation
+import XCTest
+@testable import StarHubTH
 
-struct SmapiLogParserTests {
-    static func run() {
-        print("Running SmapiLogParserTests...")
-        
+final class SmapiLogParserTests: XCTestCase {
+    func testParseLog() {
         let log = """
         [10:11:12 INFO  SMAPI] SMAPI 4.0.0 with Stardew Valley 1.6.0
         [10:11:13 ALERT SMAPI] You can update 2 mods:
@@ -17,23 +16,23 @@ struct SmapiLogParserTests {
         [10:11:16 ERROR SMAPI] A random red error outside skipped mods.
         [10:11:17 INFO  SMAPI] Normal log again
         """
-        
+
         let result = SmapiLogParser.parse(logContent: log)
-        
-        SimpleTestFramework.assertEqual(result.outOfDateMods.count, 2, "Should find 2 updates")
+
+        XCTAssertEqual(result.outOfDateMods.count, 2, "Should find 2 updates")
         if result.outOfDateMods.count >= 2 {
-            SimpleTestFramework.assertEqual(result.outOfDateMods[0].name, "Content Patcher", "Update 1 name")
-            SimpleTestFramework.assertEqual(result.outOfDateMods[0].version, "2.0.0", "Update 1 version")
-            SimpleTestFramework.assertEqual(result.outOfDateMods[0].url, "https://smapi.io/mods#Content_Patcher", "Update 1 URL")
-            
-            SimpleTestFramework.assertEqual(result.outOfDateMods[1].name, "SpaceCore", "Update 2 name")
-            SimpleTestFramework.assertEqual(result.outOfDateMods[1].version, "1.5.0", "Update 2 version")
+            XCTAssertEqual(result.outOfDateMods[0].name, "Content Patcher", "Update 1 name")
+            XCTAssertEqual(result.outOfDateMods[0].version, "2.0.0", "Update 1 version")
+            XCTAssertEqual(result.outOfDateMods[0].url, "https://smapi.io/mods#Content_Patcher", "Update 1 URL")
+
+            XCTAssertEqual(result.outOfDateMods[1].name, "SpaceCore", "Update 2 name")
+            XCTAssertEqual(result.outOfDateMods[1].version, "1.5.0", "Update 2 version")
         }
-        
-        SimpleTestFramework.assertEqual(result.errors.count, 2, "Should find 2 errors")
+
+        XCTAssertEqual(result.errors.count, 2, "Should find 2 errors")
         if result.errors.count >= 2 {
-            SimpleTestFramework.assertEqual(result.errors[0], "- BadMod because it contains files, but none of them are manifest.json.", "Error 1")
-            SimpleTestFramework.assertEqual(result.errors[1], "A random red error outside skipped mods.", "Error 2")
+            XCTAssertEqual(result.errors[0], "- BadMod because it contains files, but none of them are manifest.json.", "Error 1")
+            XCTAssertEqual(result.errors[1], "A random red error outside skipped mods.", "Error 2")
         }
     }
 }

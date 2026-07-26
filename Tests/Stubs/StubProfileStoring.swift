@@ -1,4 +1,5 @@
 import Foundation
+@testable import StarHubTH
 
 final class StubProfileStoring: ProfileStoring {
     var profiles: [ModProfile] = []

@@ -55,14 +55,15 @@ This app is built with **Swift** and **SwiftUI** as a native macOS application.
 
 ### Requirements
 *   macOS 13.0 (Ventura) or later
-*   Xcode 15.0 or later (for compiling from source)
+*   Xcode 16.0 or later
 
 ### Running the Project
-You can open the project in Xcode or compile via Terminal using the build script:
+Open `StarHubTH.xcodeproj` directly in Xcode, or build from Terminal:
 ```bash
-python3 build_app.py
+xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug
 open StarHubTH.app
 ```
+If you edit `project.yml` (adding a build target, changing build settings), regenerate the project with [XcodeGen](https://github.com/yonaskolb/XcodeGen) first: `xcodegen generate`. Ordinary Swift file changes need no regeneration.
 
 ### Building a Release
 To package the app into a `.zip` for distribution:
@@ -73,7 +74,7 @@ Release files will be saved in the `bundles/` folder.
 
 ### Running Tests
 ```bash
-python3 run_tests.py
+xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
 ```
 
 ### Developer Docs

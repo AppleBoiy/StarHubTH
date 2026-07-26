@@ -27,7 +27,7 @@ jobs:
           fi
 
       - name: Test
-        run: python3 run_tests.py
+        run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests
 
       - name: Build, package, and publish release
         run: python3 release.py --publish

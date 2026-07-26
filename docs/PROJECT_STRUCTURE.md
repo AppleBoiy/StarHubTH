@@ -2,7 +2,7 @@
 
 Companion to [`SWIFT_STANDARDS.md`](SWIFT_STANDARDS.md) (§3.3 states the rule). Explains the folder layout and the layering rule behind it, so nobody has to guess where a new file goes. The refactor that established this structure (`docs/REFACTOR_PLAN.md`, Phases 0–9) is complete — this doc now describes the current codebase, not a migration target.
 
-`build_app.py` compiles via `os.walk("StarHubTH")` and `run_tests.py` does the same minus `StarHubTHApp.swift`. **Every folder below is free — no build-script change is needed for any of it.** The one hard constraint: `@main` must stay in a file named exactly `StarHubTHApp.swift`.
+`StarHubTH.xcodeproj` (generated from `project.yml` via XcodeGen) wires `StarHubTH/` and `Tests/` in as Xcode File System Synchronized Groups. **Every folder below is free — no project change is needed for any of it.** The one hard constraint: `@main` must stay in a file named exactly `StarHubTHApp.swift`.
 
 ---
 
@@ -40,7 +40,7 @@ The refactor this doc originally planned (`docs/REFACTOR_PLAN.md`, Phases 0–9)
 ```
 StarHubTH/
 ├── App/                    composition root, app lifecycle — the only folder allowed to know everything
-│   ├── StarHubTHApp.swift  @main ONLY — keep this filename (run_tests.py excludes it by name)
+│   ├── StarHubTHApp.swift  @main ONLY — keep this filename (the one app target entry point)
 │   ├── DependencyContainer.swift   the only place .shared lives
 │   ├── AppCoordinator.swift        cross-store orchestration; owns no @Published state of its own
 │   ├── AppEnvironment.swift        game dir, Steam user, SMAPI version
@@ -101,7 +101,7 @@ Tests/
                                  ModUpdateTests, NexusCollectionTests
 ```
 
-Reorganising `Tests/` into subfolders is safe: `run_tests.py` walks `Tests/` recursively.
+Reorganising `Tests/` into subfolders is safe: it's an Xcode File System Synchronized Group (`project.yml`), recursively mirrored the same as `StarHubTH/`.
 
 **Why `Integration/` exists (QoC audit, see `docs/QOC_PLAN.md`):** `NXMParserTests` and
 `SmapiInstallerTests` each used to mix pure logic (parsing, string handling — fast,

@@ -29,6 +29,18 @@ struct FilePicker: FilePicking {
         return panel.urls
     }
 
+    func pickSaveLocation(title: String?, suggestedName: String, allowedContentTypes: [UTType]) -> URL? {
+        let panel = NSSavePanel()
+        if let title { panel.title = title }
+        panel.nameFieldStringValue = suggestedName
+        if !allowedContentTypes.isEmpty {
+            panel.allowedContentTypes = allowedContentTypes
+        }
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK else { return nil }
+        return panel.url
+    }
+
     func reveal(_ url: URL) {
         NSWorkspace.shared.open(url)
     }

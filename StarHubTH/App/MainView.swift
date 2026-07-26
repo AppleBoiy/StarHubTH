@@ -37,7 +37,7 @@ struct MainView: View {
         let appEnvironment = AppEnvironment(preferenceStoring: container.preferenceStoring, localization: localizationStore)
         let thaiHubStore = ThaiHubStore(localization: localizationStore)
         let profilesStore = ProfilesStore(profileStoring: container.profileStoring, localization: localizationStore)
-        let modPacksStore = ModPacksStore(nexusAPIClient: container.nexusAPIClient, localization: localizationStore, logStore: logStore)
+        let modPacksStore = ModPacksStore(nexusAPIClient: container.nexusAPIClient, localization: localizationStore, logStore: logStore, filePicking: container.filePicking)
         let savesStore = SavesStore(saveStoring: container.saveStoring, saveNoteStoring: container.saveNoteStoring, filePicking: container.filePicking, localization: localizationStore)
         let modsStore = ModsStore(
             modScanning: container.modScanning,

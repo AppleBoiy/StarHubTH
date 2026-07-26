@@ -254,6 +254,7 @@ struct ModListRow: View {
         .cornerRadius(6)
         .animation(.easeInOut(duration: 0.1), value: isHovered)
         .onHover { isHovered = $0 }
+        .accessibilityIdentifier("mod-row-\(mod.folderName.rawValue)")
         .contextMenu {
             Menu {
                 ForEach(["tag_nexus_2", "tag_nexus_3", "tag_nexus_4", "tag_nexus_5", "tag_nexus_6", "tag_nexus_7", "tag_nexus_8", "tag_nexus_9", "tag_nexus_10", "tag_nexus_11", "tag_nexus_12", "tag_nexus_13", "tag_nexus_14", "tag_nexus_15", "tag_nexus_16", "tag_nexus_17", "tag_nexus_18", "tag_nexus_19", "tag_nexus_20", "tag_nexus_21", "tag_nexus_22", "tag_nexus_23", "tag_nexus_24", "tag_nexus_25", "tag_nexus_26", "tag_nexus_27", "Content Patcher", "Translation", "Other"], id: \.self) { tag in

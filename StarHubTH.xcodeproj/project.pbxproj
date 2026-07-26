@@ -1,0 +1,629 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		117B7A6881828280F225B079 /* CHANGELOG.md in Resources */ = {isa = PBXBuildFile; fileRef = B14E18DD7FFFDDA11D719180 /* CHANGELOG.md */; };
+		1A4716B8267FCD5A2C4D6667 /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 25043FD28E49AF4ACA76AACC /* en.lproj */; };
+		1C1BB5C41BB5E7E022A94A3D /* wood_button.png in Resources */ = {isa = PBXBuildFile; fileRef = 66E8F7F8D4CC76E47927B2E5 /* wood_button.png */; };
+		2E9B0A117ACEBE583709624E /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = C7A6F8EA720A32BD0C656450 /* AppIcon.icns */; };
+		44358448C706897F2281E095 /* SmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22C382A4240FED998B17FDD2 /* SmokeUITests.swift */; };
+		A3F6CE9A6F75851F79570C54 /* green_button.png in Resources */ = {isa = PBXBuildFile; fileRef = 8AF96503714D8627DE089171 /* green_button.png */; };
+		BCCAE9A8FA637F06AA970A2D /* th.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 18969A284E2F529588D494BE /* th.lproj */; };
+		C9984029ED1727B9E28406CD /* wood_panel.png in Resources */ = {isa = PBXBuildFile; fileRef = B5C75FEEA75522567F355427 /* wood_panel.png */; };
+		F1FC77DFF184A152126BDF51 /* AppLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0C2F8397CE6F6D6C8FA09B /* AppLauncher.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		873A5F0A97231751A2852359 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8374A694A300C3D7C2140950 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 562E52E4707A9F0EF6685AD6;
+			remoteInfo = StarHubTH;
+		};
+		DB0FD9BF5833EE9469BD1610 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8374A694A300C3D7C2140950 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 562E52E4707A9F0EF6685AD6;
+			remoteInfo = StarHubTH;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		18969A284E2F529588D494BE /* th.lproj */ = {isa = PBXFileReference; path = th.lproj; sourceTree = "<group>"; };
+		1A791901B85DD22221EFE938 /* StarHubTHUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StarHubTHUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		22C382A4240FED998B17FDD2 /* SmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeUITests.swift; sourceTree = "<group>"; };
+		25043FD28E49AF4ACA76AACC /* en.lproj */ = {isa = PBXFileReference; path = en.lproj; sourceTree = "<group>"; };
+		4C0C2F8397CE6F6D6C8FA09B /* AppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncher.swift; sourceTree = "<group>"; };
+		66E8F7F8D4CC76E47927B2E5 /* wood_button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = wood_button.png; sourceTree = "<group>"; };
+		8AF96503714D8627DE089171 /* green_button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = green_button.png; sourceTree = "<group>"; };
+		976C7D35B2AD172B0F47CA52 /* StarHubTH.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StarHubTH.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B14E18DD7FFFDDA11D719180 /* CHANGELOG.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHANGELOG.md; sourceTree = "<group>"; };
+		B5C75FEEA75522567F355427 /* wood_panel.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = wood_panel.png; sourceTree = "<group>"; };
+		C7A6F8EA720A32BD0C656450 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		ED2BF2FFD5DB46A378602C8A /* StarHubTHTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StarHubTHTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		450981F4907FCC567F12299A /* Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		EA6A7DB70F2013C61DBE706E /* StarHubTH */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = StarHubTH;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXGroup section */
+		3CB7B9D4E7194727A50433D2 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				4C0C2F8397CE6F6D6C8FA09B /* AppLauncher.swift */,
+				22C382A4240FED998B17FDD2 /* SmokeUITests.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		4B560B03DA1AC9972ADCD6F2 = {
+			isa = PBXGroup;
+			children = (
+				B14E18DD7FFFDDA11D719180 /* CHANGELOG.md */,
+				6A7D7DFF4CEAA297BF8DFDF5 /* assets */,
+				EA6A7DB70F2013C61DBE706E /* StarHubTH */,
+				668FB3171A179EE4FF2146C8 /* StarHubTHUITests */,
+				450981F4907FCC567F12299A /* Tests */,
+				C9F3B30DAB243A7E6377D724 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		668FB3171A179EE4FF2146C8 /* StarHubTHUITests */ = {
+			isa = PBXGroup;
+			children = (
+				3CB7B9D4E7194727A50433D2 /* Sources */,
+			);
+			path = StarHubTHUITests;
+			sourceTree = "<group>";
+		};
+		6A7D7DFF4CEAA297BF8DFDF5 /* assets */ = {
+			isa = PBXGroup;
+			children = (
+				C7A6F8EA720A32BD0C656450 /* AppIcon.icns */,
+				25043FD28E49AF4ACA76AACC /* en.lproj */,
+				18969A284E2F529588D494BE /* th.lproj */,
+				9C848E33F4B4590D57144756 /* custom_ui */,
+			);
+			path = assets;
+			sourceTree = "<group>";
+		};
+		9C848E33F4B4590D57144756 /* custom_ui */ = {
+			isa = PBXGroup;
+			children = (
+				8AF96503714D8627DE089171 /* green_button.png */,
+				66E8F7F8D4CC76E47927B2E5 /* wood_button.png */,
+				B5C75FEEA75522567F355427 /* wood_panel.png */,
+			);
+			path = custom_ui;
+			sourceTree = "<group>";
+		};
+		C9F3B30DAB243A7E6377D724 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				976C7D35B2AD172B0F47CA52 /* StarHubTH.app */,
+				ED2BF2FFD5DB46A378602C8A /* StarHubTHTests.xctest */,
+				1A791901B85DD22221EFE938 /* StarHubTHUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		562E52E4707A9F0EF6685AD6 /* StarHubTH */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A7CB1FD5BE1C56FAC9E7DD37 /* Build configuration list for PBXNativeTarget "StarHubTH" */;
+			buildPhases = (
+				D2A2099185E95139C6A18227 /* Generate Localizable.strings */,
+				3071B9C4663AC11C480EB07C /* Sources */,
+				BEF2E380784C13600E46A4E2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				EA6A7DB70F2013C61DBE706E /* StarHubTH */,
+			);
+			name = StarHubTH;
+			packageProductDependencies = (
+			);
+			productName = StarHubTH;
+			productReference = 976C7D35B2AD172B0F47CA52 /* StarHubTH.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D29EBA2D69F9EE12C78A27AF /* StarHubTHTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 627935C8D795E9485AFFBD60 /* Build configuration list for PBXNativeTarget "StarHubTHTests" */;
+			buildPhases = (
+				BB8429A377EA75FD98C78EF4 /* Sources */,
+				80D551D03EE653BB0AAFD4ED /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A2E114C67E54905B77CC1A5F /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				450981F4907FCC567F12299A /* Tests */,
+			);
+			name = StarHubTHTests;
+			packageProductDependencies = (
+			);
+			productName = StarHubTHTests;
+			productReference = ED2BF2FFD5DB46A378602C8A /* StarHubTHTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F81B09DE149B14DE06EBAFAF /* StarHubTHUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9B3F17EBE721B593CD5C4804 /* Build configuration list for PBXNativeTarget "StarHubTHUITests" */;
+			buildPhases = (
+				F0B81C6596E46189345CE41A /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				ACC7F83D1AD217A1EBD69597 /* PBXTargetDependency */,
+			);
+			name = StarHubTHUITests;
+			packageProductDependencies = (
+			);
+			productName = StarHubTHUITests;
+			productReference = 1A791901B85DD22221EFE938 /* StarHubTHUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8374A694A300C3D7C2140950 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					562E52E4707A9F0EF6685AD6 = {
+						ProvisioningStyle = Manual;
+					};
+					D29EBA2D69F9EE12C78A27AF = {
+						ProvisioningStyle = Manual;
+					};
+					F81B09DE149B14DE06EBAFAF = {
+						ProvisioningStyle = Manual;
+						TestTargetID = 562E52E4707A9F0EF6685AD6;
+					};
+				};
+			};
+			buildConfigurationList = E2A1136FA2395C2AFAB7A77F /* Build configuration list for PBXProject "StarHubTH" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 4B560B03DA1AC9972ADCD6F2;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = C9F3B30DAB243A7E6377D724 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				562E52E4707A9F0EF6685AD6 /* StarHubTH */,
+				D29EBA2D69F9EE12C78A27AF /* StarHubTHTests */,
+				F81B09DE149B14DE06EBAFAF /* StarHubTHUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		80D551D03EE653BB0AAFD4ED /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BEF2E380784C13600E46A4E2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2E9B0A117ACEBE583709624E /* AppIcon.icns in Resources */,
+				117B7A6881828280F225B079 /* CHANGELOG.md in Resources */,
+				1A4716B8267FCD5A2C4D6667 /* en.lproj in Resources */,
+				A3F6CE9A6F75851F79570C54 /* green_button.png in Resources */,
+				BCCAE9A8FA637F06AA970A2D /* th.lproj in Resources */,
+				1C1BB5C41BB5E7E022A94A3D /* wood_button.png in Resources */,
+				C9984029ED1727B9E28406CD /* wood_panel.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		D2A2099185E95139C6A18227 /* Generate Localizable.strings */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Generate Localizable.strings";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\ncd \"$SRCROOT\"\npython3 scripts/generate_localizable_strings.py\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3071B9C4663AC11C480EB07C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB8429A377EA75FD98C78EF4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0B81C6596E46189345CE41A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1FC77DFF184A152126BDF51 /* AppLauncher.swift in Sources */,
+				44358448C706897F2281E095 /* SmokeUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A2E114C67E54905B77CC1A5F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 562E52E4707A9F0EF6685AD6 /* StarHubTH */;
+			targetProxy = DB0FD9BF5833EE9469BD1610 /* PBXContainerItemProxy */;
+		};
+		ACC7F83D1AD217A1EBD69597 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 562E52E4707A9F0EF6685AD6 /* StarHubTH */;
+			targetProxy = 873A5F0A97231751A2852359 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		41BB9C84B5B85F1A052A79B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		423A1EB03723DFF672583E7B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.appleboiy.StarHubTH;
+				PRODUCT_NAME = StarHubTH;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6;
+			};
+			name = Release;
+		};
+		45DBB108C3AB4E8C0C1002D7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6;
+				TEST_TARGET_NAME = StarHubTH;
+			};
+			name = Debug;
+		};
+		71DCA26CF45BFA29C911326A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StarHubTH.app/Contents/MacOS/StarHubTH";
+			};
+			name = Debug;
+		};
+		98764B0D4A93208E8B82623B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.appleboiy.StarHubTH;
+				PRODUCT_NAME = StarHubTH;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6;
+			};
+			name = Debug;
+		};
+		B13B343FB50BB8BFC0446962 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StarHubTH.app/Contents/MacOS/StarHubTH";
+			};
+			name = Release;
+		};
+		BC4DAC943B6CA101CEC6E73D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		D05ADE5A1C96FBD9D4863816 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6;
+				TEST_TARGET_NAME = StarHubTH;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		627935C8D795E9485AFFBD60 /* Build configuration list for PBXNativeTarget "StarHubTHTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				71DCA26CF45BFA29C911326A /* Debug */,
+				B13B343FB50BB8BFC0446962 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9B3F17EBE721B593CD5C4804 /* Build configuration list for PBXNativeTarget "StarHubTHUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				45DBB108C3AB4E8C0C1002D7 /* Debug */,
+				D05ADE5A1C96FBD9D4863816 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A7CB1FD5BE1C56FAC9E7DD37 /* Build configuration list for PBXNativeTarget "StarHubTH" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				98764B0D4A93208E8B82623B /* Debug */,
+				423A1EB03723DFF672583E7B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E2A1136FA2395C2AFAB7A77F /* Build configuration list for PBXProject "StarHubTH" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BC4DAC943B6CA101CEC6E73D /* Debug */,
+				41BB9C84B5B85F1A052A79B9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8374A694A300C3D7C2140950 /* Project object */;
+}

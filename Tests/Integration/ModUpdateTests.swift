@@ -1,22 +1,13 @@
-import Foundation
+import XCTest
+@testable import StarHubTH
 
-class ModUpdateTests {
-    static func run() async {
-        print("Running ModUpdateTests...")
-        await testAutoUpdateFlow()
-    }
-
-    static func testAutoUpdateFlow() async {
-        guard !LiveTestGate.skipIfNeeded("testAutoUpdateFlow") else { return }
+final class ModUpdateTests: XCTestCase {
+    func testAutoUpdateFlow() async throws {
+        try XCTSkipIf(LiveTestGate.isSkipped, "STARHUB_SKIP_LIVE_TESTS=1")
 
         let defaults = UserDefaults(suiteName: "com.appleboiy.StarHubTH")
         let apiKey = defaults?.string(forKey: "nexusApiKey") ?? ""
-
-        if apiKey.isEmpty {
-            print("⚠️ SKIPPING ModUpdateTests: No Nexus API Key found in com.appleboiy.StarHubTH defaults.")
-            SimpleTestFramework.assertTrue(true, "Skipped due to missing API key")
-            return
-        }
+        try XCTSkipIf(apiKey.isEmpty, "No Nexus API Key found in com.appleboiy.StarHubTH defaults.")
 
         // Mod to test updating: "Mail Framework Mod" (Nexus ID: 1536)
         let modId = 1536
@@ -40,7 +31,7 @@ class ModUpdateTests {
             print("Failed to fetch mod files: \(error.localizedDescription)")
         }
         guard let targetFileId = latestFileId else {
-            SimpleTestFramework.assertTrue(false, "No files returned for mod update check")
+            XCTAssertTrue(false, "No files returned for mod update check")
             return
         }
 
@@ -54,30 +45,22 @@ class ModUpdateTests {
             print("Failed to get update download link: \(error.localizedDescription)")
         }
         guard let dlURL = downloadURL else {
-            SimpleTestFramework.assertTrue(false, "No update download URL returned")
+            XCTAssertTrue(false, "No update download URL returned")
             return
         }
 
         // Step 3: Download the update zip
-        let dlSemaphore = DispatchSemaphore(value: 0)
         var localZipURL: URL? = nil
-        let dlTask = URLSession.shared.downloadTask(with: dlURL) { tempURL, _, error in
-            if let error = error {
-                print("Update download error: \(error.localizedDescription)")
-            } else if let tempURL = tempURL {
-                let dest = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).zip")
-                try? FileManager.default.moveItem(at: tempURL, to: dest)
-                localZipURL = dest
-            }
-            dlSemaphore.signal()
-        }
-        dlTask.resume()
-        guard dlSemaphore.wait(timeout: .now() + .seconds(60)) == .success else {
-            SimpleTestFramework.assertTrue(false, "Timed out downloading update zip")
-            return
+        do {
+            let (tempURL, _) = try await URLSession.shared.download(for: URLRequest(url: dlURL))
+            let dest = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).zip")
+            try FileManager.default.moveItem(at: tempURL, to: dest)
+            localZipURL = dest
+        } catch {
+            print("Update download error: \(error.localizedDescription)")
         }
         guard let zipURL = localZipURL else {
-            SimpleTestFramework.assertTrue(false, "Update zip download failed")
+            XCTAssertTrue(false, "Update zip download failed")
             return
         }
 
@@ -91,9 +74,9 @@ class ModUpdateTests {
             print("Update install error: \(error.localizedDescription)")
         }
 
-        SimpleTestFramework.assertTrue(installSuccess, "Auto-update mod download and install should succeed")
+        XCTAssertTrue(installSuccess, "Auto-update mod download and install should succeed")
 
         let contents = (try? FileManager.default.contentsOfDirectory(atPath: tempModsDir.path)) ?? []
-        SimpleTestFramework.assertTrue(contents.count > 0, "Mods directory should contain the updated mod")
+        XCTAssertTrue(contents.count > 0, "Mods directory should contain the updated mod")
     }
 }

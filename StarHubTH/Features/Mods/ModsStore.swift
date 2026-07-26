@@ -1,5 +1,4 @@
 import Foundation
-import AppKit
 import UniformTypeIdentifiers
 
 /// Phase 4.7. The largest store: owns the installed mod list, its filters, custom tags,
@@ -522,13 +521,7 @@ final class ModsStore: ObservableObject {
         let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium).replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "")
         let defaultFileName = "\(mod.folderName.rawValue)_Backup_\(timestamp).zip"
 
-        let panel = NSSavePanel()
-        panel.title = "Save Backup"
-        panel.nameFieldStringValue = defaultFileName
-        panel.allowedContentTypes = [.zip]
-        panel.canCreateDirectories = true
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let url = filePicking.pickSaveLocation(title: "Save Backup", suggestedName: defaultFileName, allowedContentTypes: [.zip]) else { return }
 
         do {
             let status = try await runProcess(executable: "/usr/bin/zip", arguments: ["-r", url.path, "."], currentDirectory: URL(fileURLWithPath: modDir))
@@ -550,12 +543,13 @@ final class ModsStore: ObservableObject {
         let basePath = (gameDir as NSString).appendingPathComponent(mod.isEnabled ? "Mods" : "Mods_disabled")
         let modDir = (basePath as NSString).appendingPathComponent(mod.folderName.rawValue)
 
-        let panel = NSOpenPanel()
-        panel.title = "Select Mod Backup (.zip)"
-        panel.allowedContentTypes = [.init(filenameExtension: "zip")!]
-        panel.allowsMultipleSelection = false
-
-        guard panel.runModal() == .OK, let zipUrl = panel.url else { return }
+        let urls = filePicking.pickFiles(
+            title: "Select Mod Backup (.zip)",
+            allowedContentTypes: [.init(filenameExtension: "zip")!],
+            allowsMultipleSelection: false,
+            canChooseDirectories: false
+        )
+        guard let zipUrl = urls.first else { return }
 
         do {
             let status = try await runProcess(executable: "/usr/bin/unzip", arguments: ["-o", zipUrl.path, "-d", modDir])

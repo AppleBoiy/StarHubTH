@@ -1,32 +1,23 @@
-import Foundation
+import XCTest
+@testable import StarHubTH
 
 /// Live integration test: real Nexus API call + real download + real install, no stubs.
 /// See LiveTestGate.swift — gated on STARHUB_SKIP_LIVE_TESTS, and separately short-circuits
 /// if no real Nexus API key is configured locally.
-class NXMDownloadIntegrationTests {
-    static func run() async {
-        print("Running NXMDownloadIntegrationTests...")
-        await testNXMDownloadAndInstall()
-    }
-
-    static func testNXMDownloadAndInstall() async {
-        guard !LiveTestGate.skipIfNeeded("testNXMDownloadAndInstall") else { return }
+final class NXMDownloadIntegrationTests: XCTestCase {
+    func testNXMDownloadAndInstall() async throws {
+        try XCTSkipIf(LiveTestGate.isSkipped, "STARHUB_SKIP_LIVE_TESTS=1")
 
         let defaults = UserDefaults(suiteName: "com.appleboiy.StarHubTH")
         let apiKey = defaults?.string(forKey: "nexusApiKey") ?? ""
-
-        if apiKey.isEmpty {
-            print("⚠️ SKIPPING testNXMDownloadAndInstall: No Nexus API Key found in com.appleboiy.StarHubTH defaults.")
-            SimpleTestFramework.assertTrue(true, "Skipped due to missing API key")
-            return
-        }
+        try XCTSkipIf(apiKey.isEmpty, "No Nexus API Key found in com.appleboiy.StarHubTH defaults.")
 
         // Small mod for testing: Mail Framework Mod (modId: 1536, fileId: 128517, ~50KB)
         let urlString = "nxm://stardewvalley/mods/1536/files/128517"
         let url = URL(string: urlString)!
 
         guard let result = NXMParser.parse(url: url), case .mod(let modId, let fileId, let key, let expires) = result else {
-            SimpleTestFramework.assertTrue(false, "Failed to parse test NXM link")
+            XCTAssertTrue(false, "Failed to parse test NXM link")
             return
         }
 
@@ -45,30 +36,22 @@ class NXMDownloadIntegrationTests {
             print("Failed to get download link: \(error.localizedDescription)")
         }
         guard let dlURL = downloadURL else {
-            SimpleTestFramework.assertTrue(false, "No download URL returned from Nexus API")
+            XCTAssertTrue(false, "No download URL returned from Nexus API")
             return
         }
 
         // Step 2: Download the zip
-        let dlSemaphore = DispatchSemaphore(value: 0)
         var localZipURL: URL? = nil
-        let dlTask = URLSession.shared.downloadTask(with: dlURL) { tempURL, _, error in
-            if let error = error {
-                print("Download error: \(error.localizedDescription)")
-            } else if let tempURL = tempURL {
-                let dest = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).zip")
-                try? FileManager.default.moveItem(at: tempURL, to: dest)
-                localZipURL = dest
-            }
-            dlSemaphore.signal()
-        }
-        dlTask.resume()
-        guard dlSemaphore.wait(timeout: .now() + .seconds(60)) == .success else {
-            SimpleTestFramework.assertTrue(false, "Timed out downloading mod zip")
-            return
+        do {
+            let (tempURL, _) = try await URLSession.shared.download(for: URLRequest(url: dlURL))
+            let dest = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).zip")
+            try FileManager.default.moveItem(at: tempURL, to: dest)
+            localZipURL = dest
+        } catch {
+            print("Download error: \(error.localizedDescription)")
         }
         guard let zipURL = localZipURL else {
-            SimpleTestFramework.assertTrue(false, "Mod zip download failed")
+            XCTAssertTrue(false, "Mod zip download failed")
             return
         }
         print("Downloaded zip to: \(zipURL.path)")
@@ -83,10 +66,10 @@ class NXMDownloadIntegrationTests {
             print("Install error: \(error.localizedDescription)")
         }
 
-        SimpleTestFramework.assertTrue(installSuccess, "Mod download and install from NXM link should succeed")
+        XCTAssertTrue(installSuccess, "Mod download and install from NXM link should succeed")
 
         let contents = (try? FileManager.default.contentsOfDirectory(atPath: tempModsDir.path)) ?? []
         print("Mods dir contents: \(contents)")
-        SimpleTestFramework.assertTrue(contents.count > 0, "Mods directory should contain the extracted mod")
+        XCTAssertTrue(contents.count > 0, "Mods directory should contain the extracted mod")
     }
 }

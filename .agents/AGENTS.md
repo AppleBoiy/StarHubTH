@@ -11,14 +11,16 @@
 
 ## Build & verify
 
-- Always run `./build_app.py` (or `python3 build_app.py`) to build the StarHubTH application when compiling or verifying application changes.
-- Automatically execute `./build_app.py` after modifying Swift view files, view models, or project resources to verify the build passes cleanly.
-- Run `python3 run_tests.py` after any change to models, services, or stores.
+- Always run `xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug` to build the StarHubTH application when compiling or verifying application changes.
+- Automatically run that build after modifying Swift view files, view models, or project resources to verify the build passes cleanly.
+- Run `xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -only-testing:StarHubTHTests` after any change to models, services, or stores.
 - Report the warning count. A change that adds warnings is not done.
+- Only run `xcodegen generate` after editing `project.yml` itself — not needed for ordinary Swift file changes.
 
 ## Things that will bite you
 
-- `build_app.py` walks `StarHubTH/` recursively — new subfolders are picked up automatically, no script edit needed.
-- `run_tests.py` compiles everything under `StarHubTH/` **except the file named `StarHubTHApp.swift`** (matched by filename, not path). Keep `@main` in a file with that exact name.
+- `StarHubTH`'s sources and `StarHubTHTests`'s sources are wired as Xcode File System Synchronized Groups — new subfolders under `StarHubTH/` or `Tests/` are picked up automatically, no project edit needed.
+- `StarHubTHTests` (`Tests/`) is a real XCTest target — every file needs `@testable import StarHubTH`. Keep `@main` in a file named exactly `StarHubTHApp.swift`.
+- `StarHubTHUITests` exists but isn't run in CI (needs a GUI session + Accessibility permission) — use `-only-testing:StarHubTHUITests` to run it locally.
 - The build **fails** if `assets/en.json` and `assets/th.json` key sets differ. Add every new user-facing string to both files.
 - Never hardcode a user-facing string. Use an `L10n` key.

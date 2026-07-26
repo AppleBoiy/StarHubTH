@@ -1,0 +1,98 @@
+name: StarHubTH
+options:
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+targets:
+  StarHubTH:
+    type: application
+    platform: macOS
+    sources:
+      - path: StarHubTH
+        type: syncedFolder
+      - path: assets/custom_ui
+        buildPhase: resources
+      - path: assets/AppIcon.icns
+        buildPhase: resources
+      - path: CHANGELOG.md
+        buildPhase: resources
+      - path: assets/en.lproj
+        buildPhase: resources
+      - path: assets/th.lproj
+        buildPhase: resources
+    settings:
+      base:
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        ARCHS: arm64
+        SWIFT_VERSION: "6"
+        PRODUCT_NAME: StarHubTH
+        PRODUCT_BUNDLE_IDENTIFIER: com.appleboiy.StarHubTH
+        INFOPLIST_FILE: Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: YES
+    prebuildScripts:
+      - name: Generate Localizable.strings
+        script: |
+          set -e
+          cd "$SRCROOT"
+          python3 scripts/generate_localizable_strings.py
+        basedOnDependencyAnalysis: false
+
+  StarHubTHTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+        type: syncedFolder
+    dependencies:
+      - target: StarHubTH
+    settings:
+      base:
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        ARCHS: arm64
+        SWIFT_VERSION: "6"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/StarHubTH.app/Contents/MacOS/StarHubTH"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+  StarHubTHUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: StarHubTHUITests/Sources
+    dependencies:
+      - target: StarHubTH
+    settings:
+      base:
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        ARCHS: arm64
+        SWIFT_VERSION: "6"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: YES
+        TEST_TARGET_NAME: StarHubTH
+
+schemes:
+  StarHubTH:
+    build:
+      targets:
+        StarHubTH: all
+        StarHubTHTests: [test]
+        StarHubTHUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - StarHubTHTests
+        - StarHubTHUITests

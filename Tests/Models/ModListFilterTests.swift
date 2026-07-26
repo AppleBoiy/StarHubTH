@@ -1,19 +1,20 @@
-import Foundation
+import XCTest
+@testable import StarHubTH
 
 /// Characterization tests for ModListFilter — the search/filter/sort pipeline extracted
 /// from ModListView.processedMods in refactor Phase 0.
-struct ModListFilterTests {
+final class ModListFilterTests: XCTestCase {
 
     // MARK: - Fixtures
 
     /// Fixed reference date so the relative date filter is deterministic.
-    private static let now = Date(timeIntervalSince1970: 1_700_000_000)
+    private let now = Date(timeIntervalSince1970: 1_700_000_000)
 
-    private static func daysAgo(_ days: Double) -> Date {
+    private func daysAgo(_ days: Double) -> Date {
         now.addingTimeInterval(-days * 24 * 3600)
     }
 
-    private static func mod(
+    private func mod(
         _ name: String,
         uniqueId: String = "",
         author: String = "Author",
@@ -40,7 +41,7 @@ struct ModListFilterTests {
         )
     }
 
-    private static func group(_ name: String, children: [Mod]) -> Mod {
+    private func group(_ name: String, children: [Mod]) -> Mod {
         Mod(
             uniqueId: "",
             name: name,
@@ -58,32 +59,19 @@ struct ModListFilterTests {
         )
     }
 
-    private static func names(_ mods: [Mod]) -> [String] {
+    private func names(_ mods: [Mod]) -> [String] {
         mods.map(\.name)
     }
 
-    // MARK: -
-
-    static func run() {
-        print("Running ModListFilterTests...")
-        testNoFilterPassesEverything()
-        testSearch()
-        testStatusFilter()
-        testTagFilter()
-        testDateFilter()
-        testSorting()
-        testGroupsFloatToTop()
-    }
-
-    private static func testNoFilterPassesEverything() {
+    func testNoFilterPassesEverything() {
         let mods = [mod("Alpha"), mod("Beta")]
         let result = ModListFilter().apply(to: mods, now: now)
-        SimpleTestFramework.assertEqual(result.count, 2, "an empty filter passes every mod through")
+        XCTAssertEqual(result.count, 2, "an empty filter passes every mod through")
     }
 
     // MARK: - Search
 
-    private static func testSearch() {
+    func testSearch() {
         let mods = [
             mod("Content Patcher", uniqueId: "Pathoschild.ContentPatcher", author: "Pathoschild"),
             mod("Automate", uniqueId: "Pathoschild.Automate", author: "Pathoschild"),
@@ -93,31 +81,31 @@ struct ModListFilterTests {
         var filter = ModListFilter()
 
         filter.searchText = "automate"
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["Automate"], "search matches name")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["Automate"], "search matches name")
 
         filter.searchText = "AUTOMATE"
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["Automate"], "search is case-insensitive")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["Automate"], "search is case-insensitive")
 
         filter.searchText = "pathoschild"
-        SimpleTestFramework.assertEqual(filter.apply(to: mods, now: now).count, 2, "search matches author")
+        XCTAssertEqual(filter.apply(to: mods, now: now).count, 2, "search matches author")
 
         filter.searchText = "other.lookup"
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["Lookup Anything"], "search matches unique ID")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["Lookup Anything"], "search matches unique ID")
 
         filter.searchText = "nothingmatchesthis"
-        SimpleTestFramework.assertEqual(filter.apply(to: mods, now: now).count, 0, "search with no match returns nothing")
+        XCTAssertEqual(filter.apply(to: mods, now: now).count, 0, "search with no match returns nothing")
     }
 
-    private static func testGroupsFloatToTop() {
+    func testGroupsFloatToTop() {
         let grouped = group("Bundle", children: [mod("Hidden Gem", uniqueId: "deep.gem")])
         let mods = [mod("Alpha"), grouped, mod("Beta")]
 
         let sorted = ModListFilter().apply(to: mods, now: now)
-        SimpleTestFramework.assertEqual(sorted.first?.name, "Bundle", "groups sort above standalone mods")
+        XCTAssertEqual(sorted.first?.name, "Bundle", "groups sort above standalone mods")
 
         var filter = ModListFilter()
         filter.searchText = "hidden gem"
-        SimpleTestFramework.assertEqual(
+        XCTAssertEqual(
             names(filter.apply(to: mods, now: now)), ["Bundle"],
             "a group matches when one of its children matches the search"
         )
@@ -125,39 +113,39 @@ struct ModListFilterTests {
 
     // MARK: - Filters
 
-    private static func testStatusFilter() {
+    func testStatusFilter() {
         let mods = [mod("On", enabled: true), mod("Off", enabled: false)]
         var filter = ModListFilter()
 
         filter.status = .enabled
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["On"], "status .enabled keeps only enabled mods")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["On"], "status .enabled keeps only enabled mods")
 
         filter.status = .disabled
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["Off"], "status .disabled keeps only disabled mods")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["Off"], "status .disabled keeps only disabled mods")
 
         filter.status = .all
-        SimpleTestFramework.assertEqual(filter.apply(to: mods, now: now).count, 2, "status .all keeps everything")
+        XCTAssertEqual(filter.apply(to: mods, now: now).count, 2, "status .all keeps everything")
     }
 
-    private static func testTagFilter() {
+    func testTagFilter() {
         let mods = [mod("Framework One", tag: "Framework"), mod("Pretty Thing", tag: "Cosmetic")]
         var filter = ModListFilter()
 
         filter.tag = "Framework"
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["Framework One"], "tag filter matches exactly")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["Framework One"], "tag filter matches exactly")
 
         filter.tag = ""
-        SimpleTestFramework.assertEqual(filter.apply(to: mods, now: now).count, 2, "an empty tag disables the tag filter")
+        XCTAssertEqual(filter.apply(to: mods, now: now).count, 2, "an empty tag disables the tag filter")
 
         let grouped = group("Bundle", children: [mod("Child", tag: "Audio")])
         filter.tag = "Audio"
-        SimpleTestFramework.assertEqual(
+        XCTAssertEqual(
             names(filter.apply(to: [grouped], now: now)), ["Bundle"],
             "a group matches when a child carries the tag"
         )
     }
 
-    private static func testDateFilter() {
+    func testDateFilter() {
         let mods = [
             mod("Today", modified: daysAgo(0.5)),
             mod("ThisWeek", modified: daysAgo(3)),
@@ -168,20 +156,20 @@ struct ModListFilterTests {
         var filter = ModListFilter()
 
         filter.date = .past24Hours
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["Today"], "past24Hours keeps only the last day")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["Today"], "past24Hours keeps only the last day")
 
         filter.date = .past7Days
-        SimpleTestFramework.assertEqual(filter.apply(to: mods, now: now).count, 2, "past7Days keeps the last week")
+        XCTAssertEqual(filter.apply(to: mods, now: now).count, 2, "past7Days keeps the last week")
 
         filter.date = .past30Days
-        SimpleTestFramework.assertEqual(filter.apply(to: mods, now: now).count, 3, "past30Days keeps the last month")
+        XCTAssertEqual(filter.apply(to: mods, now: now).count, 3, "past30Days keeps the last month")
 
         filter.date = .all
-        SimpleTestFramework.assertEqual(filter.apply(to: mods, now: now).count, 5, "date .all keeps everything including undated mods")
+        XCTAssertEqual(filter.apply(to: mods, now: now).count, 5, "date .all keeps everything including undated mods")
 
         // A mod with no dates falls back to Date.distantPast, so it is excluded by any window.
         filter.date = .past30Days
-        SimpleTestFramework.assertFalse(
+        XCTAssertFalse(
             names(filter.apply(to: mods, now: now)).contains("Undated"),
             "a mod with no install or modified date is excluded by a date window"
         )
@@ -189,7 +177,7 @@ struct ModListFilterTests {
 
     // MARK: - Sorting
 
-    private static func testSorting() {
+    func testSorting() {
         let mods = [
             mod("Charlie", author: "Zed", version: "3.0", enabled: false, installed: daysAgo(1), modified: daysAgo(1)),
             mod("alpha", author: "Yan", version: "1.0", enabled: true, installed: daysAgo(10), modified: daysAgo(30)),
@@ -198,24 +186,24 @@ struct ModListFilterTests {
         var filter = ModListFilter()
 
         filter.sort = .name
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["alpha", "Bravo", "Charlie"], "sort .name is case-insensitive ascending")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["alpha", "Bravo", "Charlie"], "sort .name is case-insensitive ascending")
 
         filter.sort = .nameDesc
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["Charlie", "Bravo", "alpha"], "sort .nameDesc is descending")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["Charlie", "Bravo", "alpha"], "sort .nameDesc is descending")
 
         filter.sort = .author
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["Bravo", "alpha", "Charlie"], "sort .author is ascending by author")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["Bravo", "alpha", "Charlie"], "sort .author is ascending by author")
 
         filter.sort = .version
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["alpha", "Bravo", "Charlie"], "sort .version is ascending by version string")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["alpha", "Bravo", "Charlie"], "sort .version is ascending by version string")
 
         filter.sort = .dateAddedDesc
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["Charlie", "Bravo", "alpha"], "sort .dateAddedDesc is newest-installed first")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["Charlie", "Bravo", "alpha"], "sort .dateAddedDesc is newest-installed first")
 
         filter.sort = .dateModifiedDesc
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["Charlie", "Bravo", "alpha"], "sort .dateModifiedDesc is newest-modified first")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["Charlie", "Bravo", "alpha"], "sort .dateModifiedDesc is newest-modified first")
 
         filter.sort = .status
-        SimpleTestFramework.assertEqual(names(filter.apply(to: mods, now: now)), ["alpha", "Bravo", "Charlie"], "sort .status puts enabled first, then name")
+        XCTAssertEqual(names(filter.apply(to: mods, now: now)), ["alpha", "Bravo", "Charlie"], "sort .status puts enabled first, then name")
     }
 }
