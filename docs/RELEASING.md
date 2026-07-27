@@ -40,7 +40,13 @@ StarHubTH is a shipped desktop app, not a library — there's no public API to b
 python3 scripts/bump_version.py patch   # or minor / major / preview / release
 ```
 
-It edits `Info.plist` (bumps `CFBundleShortVersionString` and increments `CFBundleVersion`) and rolls `CHANGELOG.md`'s `[Unreleased]` section into a dated `## [MAJOR.MINOR.PATCH] - YYYY-MM-DD` heading, then prints the remaining steps. It does **not** commit, tag, or push — review the diff, then:
+It edits `Info.plist` (bumps `CFBundleShortVersionString` and increments `CFBundleVersion`) and rolls `CHANGELOG.md`'s `[Unreleased]` section into a dated `## [MAJOR.MINOR.PATCH] - YYYY-MM-DD` heading, then prints the remaining steps. It does **not** commit, tag, or push — review the diff, then optionally draft this version's Nexus changelog entry before committing:
+
+```bash
+python3 scripts/generate_nexus_changelog.py MAJOR.MINOR.PATCH
+```
+
+This prints a draft BBCode block (mechanically transformed from the `CHANGELOG.md` section you just rolled, skipping any `**Internal —` entries the same way `assets/nexus_changelog.txt` already excludes internal-only versions like `1.1.4`–`1.1.8`) — never written to any file automatically. Review the English wording, translate the Thai half yourself (there's no Thai source to transform from), then paste both into Nexus's own changelog editor and prepend the same block to `assets/nexus_changelog.txt` as this repo's checked-in record. Skip this entirely if the version has nothing user-facing — the script says so itself when every entry is internal-only.
 
 ```bash
 git add Info.plist CHANGELOG.md
