@@ -38,7 +38,7 @@ struct PackModRow: View {
                         metaBit(icon: "person.fill", text: author)
                     }
                     if let nexusId = packMod.nexusId {
-                        metaBit(icon: "number", text: "#\(nexusId)")
+                        metaBit(icon: "number", text: "#\(nexusId.rawValue)")
                     }
                     if let downloads = packMod.modDownloads {
                         metaBit(icon: "arrow.down.circle", text: formatCount(downloads))
@@ -74,7 +74,7 @@ struct PackModRow: View {
 
                     if let nexusId = packMod.nexusId {
                         Button {
-                            if let url = URL(string: "https://www.nexusmods.com/stardewvalley/mods/\(nexusId)?tab=files") {
+                            if let url = URL(string: "https://www.nexusmods.com/stardewvalley/mods/\(nexusId.rawValue)?tab=files") {
                                 NSWorkspace.shared.open(url)
                             }
                         } label: {

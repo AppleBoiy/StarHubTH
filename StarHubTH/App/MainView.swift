@@ -14,6 +14,7 @@ struct MainView: View {
     @StateObject private var savesStore: SavesStore
     @StateObject private var modsStore: ModsStore
     @StateObject private var alertStore: AlertStore
+    @StateObject private var toastStore: ToastStore
     @StateObject private var appCoordinator: AppCoordinator
     /// Same instance as `appEnvironment.smapiInstaller` — its own `@EnvironmentObject`
     /// since it publishes independently of `AppEnvironment`'s own `@Published` state.
@@ -53,6 +54,7 @@ struct MainView: View {
             localization: localizationStore
         )
         let alertStore = AlertStore()
+        let toastStore = ToastStore()
         let appCoordinator = AppCoordinator(
             localizationStore: localizationStore,
             logStore: logStore,
@@ -63,6 +65,7 @@ struct MainView: View {
             modsStore: modsStore,
             appEnvironment: appEnvironment,
             alertStore: alertStore,
+            toastStore: toastStore,
             filePicking: container.filePicking,
             preferenceStoring: container.preferenceStoring
         )
@@ -76,6 +79,7 @@ struct MainView: View {
         _savesStore = StateObject(wrappedValue: savesStore)
         _modsStore = StateObject(wrappedValue: modsStore)
         _alertStore = StateObject(wrappedValue: alertStore)
+        _toastStore = StateObject(wrappedValue: toastStore)
         _appCoordinator = StateObject(wrappedValue: appCoordinator)
         _smapiInstaller = StateObject(wrappedValue: appEnvironment.smapiInstaller)
 
@@ -243,6 +247,12 @@ struct MainView: View {
                 dismissButton: .default(Text(localizationStore.L(L10n.Main.ok)))
             )
         }
+        .overlay(alignment: .bottom) {
+            if let message = toastStore.message {
+                ToastBannerView(message: message)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: toastStore.message)
         .onReceive(URLDispatcher.shared.$openedURL) { url in
             if let u = url {
                 Task { await appCoordinator.handleOpenURL(u) }
@@ -256,6 +266,7 @@ struct MainView: View {
         }
         // Available to every descendant view via @EnvironmentObject.
         .environmentObject(alertStore)
+        .environmentObject(toastStore)
         .environmentObject(appCoordinator)
         .environmentObject(localizationStore)
         .environmentObject(logStore)

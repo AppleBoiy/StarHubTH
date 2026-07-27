@@ -3,7 +3,7 @@ import Foundation
 /// Mod installation (ZIP or folder) and Nexus auto-download-and-install (§ file-size
 /// convention split, see ModsStore.swift's header comment).
 extension ModsStore {
-    func openInstallModPanel(gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
+    func openInstallModPanel(gameDir: String, showModal: @escaping (String) -> Void, showToast: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
         let urls = filePicking.pickFiles(
             title: localization.L(L10n.Mods.installMod),
             allowedContentTypes: [.init(filenameExtension: "zip")!],
@@ -14,12 +14,12 @@ extension ModsStore {
             // Each picked file/folder installs independently — one failing (already
             // shown to the user via showModal inside installMod) shouldn't stop the
             // rest of a multi-selection from being attempted.
-            try? await installMod(url: url, gameDir: gameDir, showModal: showModal, log: log)
+            try? await installMod(url: url, gameDir: gameDir, showModal: showModal, showToast: showToast, log: log)
         }
     }
 
     /// Entry point — detects whether the URL is a .zip or a folder and routes accordingly.
-    func installMod(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async throws(ModInstallerError) {
+    func installMod(url: URL, gameDir: String, showModal: @escaping (String) -> Void, showToast: @escaping (String) -> Void, log: @escaping (String) -> Void) async throws(ModInstallerError) {
         guard !gameDir.isEmpty else {
             showModal(localization.L(L10n.Settings.gameDirNotSet))
             return
@@ -28,43 +28,48 @@ extension ModsStore {
         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
 
         if isDir.boolValue {
-            try await installModFromFolder(url: url, gameDir: gameDir, showModal: showModal, log: log)
+            try await installModFromFolder(url: url, gameDir: gameDir, showModal: showModal, showToast: showToast, log: log)
         } else if url.pathExtension.lowercased() == "zip" {
-            try await installModFromZip(url: url, gameDir: gameDir, showModal: showModal, log: log)
+            try await installModFromZip(url: url, gameDir: gameDir, showModal: showModal, showToast: showToast, log: log)
         } else {
             showModal(localization.L(L10n.Mods.installInvalidFile))
         }
     }
 
     /// Installs a mod from a .zip file
-    func installModFromZip(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async throws(ModInstallerError) {
+    func installModFromZip(url: URL, gameDir: String, showModal: @escaping (String) -> Void, showToast: @escaping (String) -> Void, log: @escaping (String) -> Void) async throws(ModInstallerError) {
         isInstallingMod = true
         do {
             let installedNames = try await modInstalling.installFromZip(url: url, gameDir: gameDir)
-            try handleInstallResult(.success(installedNames), gameDir: gameDir, showModal: showModal, log: log)
+            try handleInstallResult(.success(installedNames), gameDir: gameDir, showModal: showModal, showToast: showToast, log: log)
         } catch {
-            try handleInstallResult(.failure(error), gameDir: gameDir, showModal: showModal, log: log)
+            try handleInstallResult(.failure(error), gameDir: gameDir, showModal: showModal, showToast: showToast, log: log)
         }
     }
 
     /// Installs a mod from an already-extracted folder.
-    func installModFromFolder(url: URL, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async throws(ModInstallerError) {
+    func installModFromFolder(url: URL, gameDir: String, showModal: @escaping (String) -> Void, showToast: @escaping (String) -> Void, log: @escaping (String) -> Void) async throws(ModInstallerError) {
         isInstallingMod = true
         do {
             let installedNames = try await modInstalling.installFromFolder(url: url, gameDir: gameDir)
-            try handleInstallResult(.success(installedNames), gameDir: gameDir, showModal: showModal, log: log)
+            try handleInstallResult(.success(installedNames), gameDir: gameDir, showModal: showModal, showToast: showToast, log: log)
         } catch {
-            try handleInstallResult(.failure(error), gameDir: gameDir, showModal: showModal, log: log)
+            try handleInstallResult(.failure(error), gameDir: gameDir, showModal: showModal, showToast: showToast, log: log)
         }
     }
 
-    private func handleInstallResult(_ result: Result<[String], ModInstallerError>, gameDir: String, showModal: (String) -> Void, log: (String) -> Void) throws(ModInstallerError) {
+    /// Success goes through `showToast` (non-blocking, auto-dismisses) instead of `showModal` —
+    /// a bulk operation like a Mod Pack's "download all missing" installs several mods in a row,
+    /// and a blocking alert per mod forced a click between every single one before the next
+    /// install could even start. Failures stay on `showModal`: rarer, and worth requiring
+    /// acknowledgment for since they mean something needs the user's attention.
+    private func handleInstallResult(_ result: Result<[String], ModInstallerError>, gameDir: String, showModal: (String) -> Void, showToast: (String) -> Void, log: (String) -> Void) throws(ModInstallerError) {
         isInstallingMod = false
         switch result {
         case .success(let installedNames):
             let names = installedNames.joined(separator: ", ")
             let msg = String(format: localization.L(L10n.Mods.installSuccess), names)
-            showModal(msg)
+            showToast(msg)
             log(msg)
             scanMods(gameDir: gameDir)
         case .failure(let error):
@@ -83,7 +88,7 @@ extension ModsStore {
         }
     }
 
-    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: Mod.NexusID, nexusApiKey: String, gameDir: String, showModal: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
+    func downloadAndInstallUpdate(for mod: ModUpdateInfo, nexusId: Mod.NexusID, nexusApiKey: String, gameDir: String, showModal: @escaping (String) -> Void, showToast: @escaping (String) -> Void, log: @escaping (String) -> Void) async {
         downloadingMods.insert(mod.name)
 
         let zipUrl: URL
@@ -99,7 +104,7 @@ extension ModsStore {
             return
         }
         downloadingMods.remove(mod.name)
-        // installModFromZip already shows its own success/failure message via showModal.
-        try? await installModFromZip(url: zipUrl, gameDir: gameDir, showModal: showModal, log: log)
+        // installModFromZip already shows its own success/failure message via showModal/showToast.
+        try? await installModFromZip(url: zipUrl, gameDir: gameDir, showModal: showModal, showToast: showToast, log: log)
     }
 }

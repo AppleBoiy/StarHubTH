@@ -102,7 +102,7 @@ final class ModsStoreTests: XCTestCase {
     func testInstallModRequiresGameDir() async {
         let (store, _, _, _, _, _) = makeStore()
         var modalMessage: String?
-        try? await store.installMod(url: URL(fileURLWithPath: "/tmp/mod.zip"), gameDir: "", showModal: { modalMessage = $0 }, log: { _ in })
+        try? await store.installMod(url: URL(fileURLWithPath: "/tmp/mod.zip"), gameDir: "", showModal: { modalMessage = $0 }, showToast: { _ in }, log: { _ in })
         XCTAssertTrue(modalMessage != nil, "installMod shows a modal when gameDir is empty")
     }
 
@@ -110,15 +110,16 @@ final class ModsStoreTests: XCTestCase {
         let (store, _, installing, _, _, _) = makeStore()
         installing.installFromZipResult = .success(["MyMod"])
 
-        var successMessage: String?
+        var toastMessage: String?
         var logged: String?
         try? await store.installModFromZip(
             url: URL(fileURLWithPath: "/tmp/mod.zip"),
             gameDir: "/fake/gamedir",
-            showModal: { successMessage = $0 },
+            showModal: { _ in },
+            showToast: { toastMessage = $0 },
             log: { logged = $0 }
         )
-        XCTAssertTrue(successMessage != nil, "a successful install shows a modal")
+        XCTAssertTrue(toastMessage != nil, "a successful install shows a non-blocking toast")
         XCTAssertTrue(logged != nil, "a successful install logs a message")
         XCTAssertFalse(store.isInstallingMod, "isInstallingMod resets to false after completion")
     }
@@ -128,9 +129,9 @@ final class ModsStoreTests: XCTestCase {
         installing.installFromZipResult = .success(["MyMod"])
         filePicking.filesToReturn = [URL(fileURLWithPath: "/tmp/one.zip"), URL(fileURLWithPath: "/tmp/two.zip")]
 
-        var modalCount = 0
-        await store.openInstallModPanel(gameDir: "/fake/gamedir", showModal: { _ in modalCount += 1 }, log: { _ in })
-        XCTAssertEqual(modalCount, 2, "openInstallModPanel installs every URL FilePicking returns")
+        var toastCount = 0
+        await store.openInstallModPanel(gameDir: "/fake/gamedir", showModal: { _ in }, showToast: { _ in toastCount += 1 }, log: { _ in })
+        XCTAssertEqual(toastCount, 2, "openInstallModPanel installs every URL FilePicking returns")
     }
 
     func testSyncTagFromNexusShowsModalOnApiFailure() async {

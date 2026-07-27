@@ -17,6 +17,7 @@ final class AppCoordinator: ObservableObject {
     let modsStore: ModsStore
     let appEnvironment: AppEnvironment
     let alertStore: AlertStore
+    let toastStore: ToastStore
 
     private let filePicking: FilePicking
     private let preferenceStoring: PreferenceStoring
@@ -31,6 +32,7 @@ final class AppCoordinator: ObservableObject {
         modsStore: ModsStore,
         appEnvironment: AppEnvironment,
         alertStore: AlertStore,
+        toastStore: ToastStore,
         filePicking: FilePicking,
         preferenceStoring: PreferenceStoring
     ) {
@@ -43,6 +45,7 @@ final class AppCoordinator: ObservableObject {
         self.modsStore = modsStore
         self.appEnvironment = appEnvironment
         self.alertStore = alertStore
+        self.toastStore = toastStore
         self.filePicking = filePicking
         self.preferenceStoring = preferenceStoring
     }
@@ -150,16 +153,18 @@ final class AppCoordinator: ObservableObject {
         await modsStore.openInstallModPanel(
             gameDir: appEnvironment.gameDir,
             showModal: { [weak self] message in self?.alertStore.show(message) },
+            showToast: { [weak self] message in self?.toastStore.show(message) },
             log: { [weak self] message in self?.logStore.log(message) }
         )
     }
 
     func installMod(url: URL) async {
-        // installMod already shows its own success/failure message via showModal.
+        // installMod already shows its own success/failure message via showModal/showToast.
         try? await modsStore.installMod(
             url: url,
             gameDir: appEnvironment.gameDir,
             showModal: { [weak self] message in self?.alertStore.show(message) },
+            showToast: { [weak self] message in self?.toastStore.show(message) },
             log: { [weak self] message in self?.logStore.log(message) }
         )
     }
@@ -174,6 +179,7 @@ final class AppCoordinator: ObservableObject {
                 url: url,
                 gameDir: appEnvironment.gameDir,
                 showModal: { [weak self] message in self?.alertStore.show(message) },
+                showToast: { [weak self] message in self?.toastStore.show(message) },
                 log: { [weak self] message in self?.logStore.log(message) }
             )
             return true
@@ -189,6 +195,7 @@ final class AppCoordinator: ObservableObject {
             nexusApiKey: appEnvironment.nexusApiKey,
             gameDir: appEnvironment.gameDir,
             showModal: { [weak self] message in self?.alertStore.show(message) },
+            showToast: { [weak self] message in self?.toastStore.show(message) },
             log: { [weak self] message in self?.logStore.log(message) }
         )
     }

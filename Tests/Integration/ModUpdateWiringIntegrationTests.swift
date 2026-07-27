@@ -35,6 +35,7 @@ final class ModUpdateWiringIntegrationTests: XCTestCase {
             nexusApiKey: apiKey,
             gameDir: tempGameDir.path,
             showModal: { _ in },
+            showToast: { _ in },
             log: { _ in }
         )
 

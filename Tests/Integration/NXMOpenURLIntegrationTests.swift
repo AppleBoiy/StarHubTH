@@ -37,6 +37,7 @@ final class NXMOpenURLIntegrationTests: XCTestCase {
         )
         let appEnvironment = AppEnvironment(preferenceStoring: preferenceStoring, localization: localizationStore)
         let alertStore = AlertStore()
+        let toastStore = ToastStore()
 
         let coordinator = AppCoordinator(
             localizationStore: localizationStore,
@@ -48,6 +49,7 @@ final class NXMOpenURLIntegrationTests: XCTestCase {
             modsStore: modsStore,
             appEnvironment: appEnvironment,
             alertStore: alertStore,
+            toastStore: toastStore,
             filePicking: StubFilePicking(),
             preferenceStoring: preferenceStoring
         )

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Mod install confirmations no longer block the UI**: Installing a mod (including every mod a Mod Pack's "download all missing" installs one at a time) used to show a blocking alert you had to click through before the next one could even start. Success now shows a brief, non-blocking notification at the bottom of the window instead, matching the existing Software Update badge's non-intrusive style. Install failures still show a blocking alert, since those need your attention.
+
+### Fixed
+- **Mod Packs — Wrong Nexus ID displayed and wrong "Get from Nexus" link**: A missing mod's row showed its Nexus ID as literal text like `#NexusID(rawValue: 21889)` instead of `#21889`, and the "Get from Nexus" button opened a broken URL with the same malformed ID instead of the mod's real Nexus page.
+
 ## [1.1.9] - 2026-07-27
 
 ### Added
