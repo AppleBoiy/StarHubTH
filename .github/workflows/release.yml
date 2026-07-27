@@ -42,6 +42,19 @@ jobs:
         run: xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan Unit
 
       - name: Build, package, and publish release
+        id: release
         run: python3 release.py --publish
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Upload release to Nexus Mods
+        uses: Nexus-Mods/upload-action@19da5c91527877cd0bfedc6e6239c911035846a0 # v1.0.0-beta.9
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: "7706256"
+          filename: ${{ steps.release.outputs.zip_path }}
+          version: ${{ steps.release.outputs.version }}
+          description: ${{ steps.release.outputs.changelog_notes }}
+          archive_existing_version: true
+          primary_mod_manager_download: true
+          update_mod_version: true

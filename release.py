@@ -37,9 +37,19 @@ def get_changelog_notes(version):
     notes = match.group(1).strip()
     return notes or None
 
-def upload_to_github(version, zip_path):
+def write_github_output(version, zip_path, notes):
+    """Exposes this run's version/zip path/changelog notes to later workflow steps
+    (e.g. the Nexus upload step) — a no-op locally, since GITHUB_OUTPUT is unset there."""
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if not output_path:
+        return
+    with open(output_path, "a", encoding="utf-8") as f:
+        f.write(f"version={version}\n")
+        f.write(f"zip_path={zip_path}\n")
+        f.write(f"changelog_notes<<GITHUB_OUTPUT_EOF\n{notes}\nGITHUB_OUTPUT_EOF\n")
+
+def upload_to_github(version, zip_path, notes):
     tag = f"v{version}"
-    notes = get_changelog_notes(version) or f"Automated release for StarHubTH {tag}."
     print(f"[INFO] Uploading {tag} to GitHub...")
     cmd = [
         "gh", "release", "create", tag, zip_path,
@@ -104,6 +114,9 @@ def create_release(publish):
     print(f"[INFO] The bundle is ready at {zip_path}.")
     print("-" * 40)
 
+    notes = get_changelog_notes(version) or f"Automated release for StarHubTH v{version}."
+    write_github_output(version, zip_path, notes)
+
     # 5. Upload — explicit --publish (CI) skips the prompt; an interactive
     # terminal without it still asks; a non-interactive session without it
     # just skips, so this never hangs waiting on stdin that isn't there.
@@ -117,7 +130,7 @@ def create_release(publish):
         should_upload = False
 
     if should_upload:
-        if not upload_to_github(version, zip_path):
+        if not upload_to_github(version, zip_path, notes):
             return 1
     else:
         print("[INFO] Skipping upload.")

@@ -2,7 +2,7 @@
 
 **Goal.** StarHubTH is itself published on Nexus Mods as a tool page (`docs/DOMAIN_CONTEXT.md`) — `assets/nexus_description.txt`/`nexus_description_en.txt`/`nexus_changelog.txt` are hand-maintained BBCode, pasted into the Nexus web listing by hand on every release, same as the screenshots. Reduce the manual work at release time: auto-upload the built release zip to the existing Nexus file slot from CI, and auto-generate the BBCode changelog text from `CHANGELOG.md` so it's never out of sync or hand-transcribed.
 
-**Status.** Planning only. Nothing in this doc is implemented.
+**Status.** Track 1 implemented 2026-07-27, pending its first real dry-run on the next tag push. Track 2 not started.
 
 ---
 
@@ -22,9 +22,9 @@ Nexus Mods has a genuine public **Upload API** (beta since March 2026, the stand
 
 Slot `Nexus-Mods/upload-action` into `.github/workflows/release.yml`, right after the existing `python3 release.py --publish` step (which already builds and zips via `ditto`, and already knows the version from `Info.plist` — see `docs/RELEASING.md`). The zip `release.py` already produces is exactly what this action wants as `filename`.
 
-Needs, as GitHub Actions repo secrets (**not** something I can supply or guess — see Open Questions):
-- A Nexus personal API key belonging to an account authorized to upload files to the StarHubTH mod page (almost certainly the maintainer's own key — distinct in *purpose*, if not necessarily in value, from the key an end user enters in the app's own Settings screen).
-- The `file_id` of StarHubTH's existing "Main" file slot on Nexus (a fixed number, found once in that file's API Info panel — not a secret, but there's nowhere in this repo it's recorded today, so it needs a home: a workflow input or a checked-in constant is fine, it's not sensitive).
+Needed, as GitHub Actions repo secrets — **done**:
+- A Nexus personal API key authorized to upload to the StarHubTH mod page — added as the `NEXUSMODS_API_KEY` repo secret 2026-07-27.
+- The `file_id` of StarHubTH's existing "Main" file slot on Nexus — `7706256`, not sensitive, checked directly into `release.yml`.
 
 Behavior: every tag push that reaches `release.py --publish` today also pushes that same build to Nexus, using that release's `CHANGELOG.md` section (already extracted by `release.py`'s `get_changelog_notes`, reusable as-is) as the file version's `description` input, with `update_mod_version: true` so the Nexus page's version badge stays in sync automatically.
 
@@ -40,22 +40,22 @@ A script (`scripts/generate_nexus_changelog.py`, mirroring `scripts/generate_loc
 
 ## Phases
 
-**Phase 1 — Track 1 prerequisites (blocks everything else in Track 1)**
-- [ ] 1.1 You provide: the Nexus `file_id` for StarHubTH's Main file slot, and confirm which Nexus account's API key should be used for uploads (see Open Questions).
-- [ ] 1.2 Add that API key as a GitHub Actions repo secret (e.g. `NEXUSMODS_API_KEY`) — this is a credential, so it goes through GitHub's own secret UI, not committed anywhere or handled by me directly.
+**Phase 1 — Track 1 prerequisites (blocks everything else in Track 1)** ✅ done 2026-07-27
+- [x] 1.1 `file_id` is `7706256`; account confirmed via the key already added below.
+- [x] 1.2 `NEXUSMODS_API_KEY` added as a GitHub Actions repo secret (confirmed via `gh secret list`, added 2026-07-27T04:44:40Z).
 
-**Phase 2 — Track 1 implementation**
-- [ ] 2.1 Add the `Nexus-Mods/upload-action` step to `release.yml`, wired to the zip `release.py` already produces and the changelog notes `release.py` already extracts.
-- [ ] 2.2 Set `archive_existing_version: true`, `update_mod_version: true`, and `primary_mod_manager_download: true` (all decided — see Decisions).
-- [ ] 2.3 Dry-run against a real tag push once secrets are in place; verify the Nexus file slot actually updates before treating this as done.
+**Phase 2 — Track 1 implementation** ✅ implemented 2026-07-27, not yet dry-run
+- [x] 2.1 Added the `Nexus-Mods/upload-action` step to `release.yml` (pinned to `v1.0.0-beta.9` by commit SHA), reading `zip_path`/`version`/`changelog_notes` from the existing "Build, package, and publish release" step's new outputs — `release.py` now writes those via `write_github_output()` whenever `GITHUB_OUTPUT` is set (no-op locally).
+- [x] 2.2 Set `archive_existing_version: true`, `update_mod_version: true`, and `primary_mod_manager_download: true`.
+- [ ] 2.3 **Not yet done** — needs a real tag push to dry-run against. This only proves out on the *next* release; verify the Nexus file slot actually updates before treating Track 1 as fully done.
 
-**Phase 3 — Track 2 implementation**
+**Phase 3 — Track 2 implementation** — not started
 - [ ] 3.1 Write `scripts/generate_nexus_changelog.py`: `CHANGELOG.md` version section → BBCode block, matching `assets/nexus_changelog.txt`'s existing format exactly.
 - [ ] 3.2 Wire it as an optional step documented in `docs/RELEASING.md`'s release procedure (after `bump_version.py`, before tagging) — never auto-committed, always reviewed before it's pasted into Nexus, same spirit as `docs/RELEASING.md`'s existing "Optional: refresh screenshots before a release" section.
 
 **Phase 4 — Document and fold in**
-- [ ] 4.1 Update `docs/RELEASING.md` with the new optional Track 2 step and the fact that Track 1 now happens automatically on tag push.
-- [ ] 4.2 Update `docs/DOMAIN_CONTEXT.md`'s note about `nexus_changelog.txt` being hand-maintained — it's now generated-then-reviewed, not hand-transcribed; `nexus_description*.txt` stays hand-maintained as-is.
+- [x] 4.1 `docs/RELEASING.md`'s release procedure now describes the automatic Nexus upload step.
+- [ ] 4.2 Update `docs/DOMAIN_CONTEXT.md`'s note about `nexus_changelog.txt` being hand-maintained — blocked on Phase 3 (still hand-transcribed until Track 2 exists); `nexus_description*.txt` stays hand-maintained as-is regardless.
 
 ---
 
@@ -70,7 +70,7 @@ A script (`scripts/generate_nexus_changelog.py`, mirroring `scripts/generate_loc
 
 ## Open questions — for you, not assumed
 
-- **Which Nexus account's API key authorizes uploads to StarHubTH's file slot, and the file_id itself** — both from the "API Info" panel on the existing Main file on Nexus. **Still open as of 2026-07-27** — you're getting these; Phase 1.1/1.2 and Phase 2 stay blocked until they're in hand (the key goes into a GitHub Actions secret directly through GitHub's UI, never pasted here). This is the only thing left blocking Phase 2 — every other input decision is made.
+None remaining for Track 1 — all resolved 2026-07-27 (see Decisions and Phase 1/2 above). Track 2 has no open questions blocking it either; it just hasn't been built yet.
 
 ---
 
