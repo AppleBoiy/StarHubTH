@@ -42,6 +42,8 @@ This drives the **real** `StarHubTH.app` against the **real** `gameDir` already 
 
 6. **Show the maintainer the report.** Never copy new PNGs into `screenshots/en`/`screenshots/th` or touch the README yourself without asking — same rule as any other file this assistant doesn't own the content of. Let the maintainer decide which `+`/`~` entries are worth keeping, then copy those specific files in and update `README.md`/`README_EN.md`'s `<img>` references if new slugs were added.
 
+7. **Check `assets/nexus_description.txt`/`nexus_description_en.txt` for stale screenshot links.** These embed the same gallery via `raw.githubusercontent.com/.../main/screenshots/<lang>/<slug>.png` links (separate from the hand-curated feature-list text and banner images, which stay out of scope — see `docs/NEXUS_RELEASE_AUTOMATION_PLAN.md`). A rename or removal in step 6 breaks these silently, since they point at `main` directly and nothing checks them. If any slug changed, grep both files for `screenshots/th/` and `screenshots/en/` and update the list to match — this needs a human paste into Nexus's own editor afterward regardless, same as any other description change.
+
 ## If something breaks
 
 - **Element not found / capture fails for one screen**: usually a stale `screenshot_targets.local.json` entry (renamed/deleted save or mod) or a precondition not met (e.g. `updates` needs a real out-of-date mod present). Check the `precondition` field on that entry in `scripts/screenshot_manifest.json`.
