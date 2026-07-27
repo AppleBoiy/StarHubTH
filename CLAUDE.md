@@ -20,7 +20,7 @@ macOS app (SwiftUI + AppKit) for managing Stardew Valley mods, saves, and Thai t
 xcodegen generate        # only after editing project.yml — regenerates StarHubTH.xcodeproj
 xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug     # required after ANY Swift change
 xcodebuild test -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -destination 'platform=macOS' -testPlan Unit
-open StarHubTH.xcodeproj # or: open StarHubTH.app once built
+open StarHubTH.xcodeproj # or, to actually launch a build made via the command above: add -derivedDataPath build to it, then `open build/Build/Products/Debug/StarHubTH.app` — plain `xcodebuild build` puts the app in Xcode's global DerivedData cache, not here, so a bare `open StarHubTH.app` will not find it
 python3 release.py       # zip to bundles/ for distribution
 ```
 

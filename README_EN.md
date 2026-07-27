@@ -63,10 +63,10 @@ This app is built with **Swift** and **SwiftUI** as a native macOS application.
 *   Xcode 16.0 or later — Swift 6 (the codebase uses typed `throws(ErrorType)`, which Swift 5.x can't parse; Xcode 16+ is also required for the project's File System Synchronized Groups)
 
 ### Running the Project
-Open `StarHubTH.xcodeproj` directly in Xcode, or build from Terminal:
+Open `StarHubTH.xcodeproj` directly in Xcode and hit Run, or build and launch from Terminal — plain `xcodebuild build` puts the app in Xcode's global DerivedData cache, not the project folder, so `-derivedDataPath build` is what makes `open build/Build/Products/Debug/StarHubTH.app` actually find it:
 ```bash
-xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug
-open StarHubTH.app
+xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -derivedDataPath build
+open build/Build/Products/Debug/StarHubTH.app
 ```
 If you edit `project.yml` (adding a build target, changing build settings), regenerate the project with [XcodeGen](https://github.com/yonaskolb/XcodeGen) first: `xcodegen generate`. Ordinary Swift file changes need no regeneration.
 

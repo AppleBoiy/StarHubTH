@@ -67,10 +67,10 @@
 *   Xcode 16.0 หรือใหม่กว่า — Swift 6 (โค้ดเบสใช้ typed `throws(ErrorType)` ซึ่ง Swift 5.x parse ไม่ได้ และ Xcode 16+ ยังจำเป็นสำหรับ File System Synchronized Groups ของโปรเจกต์ด้วย)
 
 ### วิธีการรันโปรเจกต์
-เปิดไฟล์ `StarHubTH.xcodeproj` ด้วย Xcode ได้โดยตรง หรือคอมไพล์ผ่าน Terminal:
+เปิดไฟล์ `StarHubTH.xcodeproj` ด้วย Xcode แล้วกด Run ได้โดยตรง หรือคอมไพล์และเปิดผ่าน Terminal — `xcodebuild build` เฉยๆ จะเก็บแอปไว้ใน DerivedData cache ของ Xcode ไม่ใช่ในโฟลเดอร์โปรเจกต์ ต้องใส่ `-derivedDataPath build` คำสั่ง `open` ด้านล่างถึงจะเจอไฟล์:
 ```bash
-xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug
-open StarHubTH.app
+xcodebuild build -project StarHubTH.xcodeproj -scheme StarHubTH -configuration Debug -derivedDataPath build
+open build/Build/Products/Debug/StarHubTH.app
 ```
 หากแก้ไขไฟล์ `project.yml` (เพิ่ม build target ใหม่ หรือเปลี่ยน build settings) ต้องรัน `xcodegen generate` ใหม่ก่อน (ใช้ [XcodeGen](https://github.com/yonaskolb/XcodeGen)) — การแก้โค้ด Swift ทั่วไปไม่ต้องรันคำสั่งนี้
 
