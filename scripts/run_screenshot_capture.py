@@ -12,9 +12,12 @@ hardcode into a committed plan file. This script patches TestPlans/ScreenshotCap
 in place with the requested values, runs the test, then restores the plan file's original
 committed content — so the repo tree is clean again afterward regardless of outcome.
 
-Run from the repo root:
-    python3 scripts/run_screenshot_capture.py --output-dir /tmp/starhubth-screenshots/en
-    python3 scripts/run_screenshot_capture.py --output-dir /tmp/starhubth-screenshots/th \
+Run from the repo root — output into screenshots_captured/ (gitignored, see .gitignore), not
+/tmp: a temp dir means a killed/crashed run leaves nothing to inspect or resume a diff report
+against, and the checked-in scripts/screenshot_diff_report.py already defaults its examples to
+this same path.
+    python3 scripts/run_screenshot_capture.py --output-dir screenshots_captured/en
+    python3 scripts/run_screenshot_capture.py --output-dir screenshots_captured/th \
         --targets scripts/screenshot_targets.local.json
 """
 import argparse

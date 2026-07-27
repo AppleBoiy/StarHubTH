@@ -1,6 +1,6 @@
 import XCTest
 
-/// Tier C — see `docs/LIVE_NEXUS_WORKFLOW_TEST_PLAN.md` ("Tier C") and `TestPlans/UILive.xctestplan`.
+/// Real API key + real GUI, at once — see `docs/SWIFT_STANDARDS.md` §10 ("`TestPlans/UILive.xctestplan`").
 /// Same real-key/real-GUI combination as `ModDetailLiveDataUITests`; see that file's doc
 /// comment for why this stays out of the default `UI` plan.
 @MainActor

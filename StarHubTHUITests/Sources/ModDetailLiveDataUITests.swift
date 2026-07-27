@@ -1,6 +1,6 @@
 import XCTest
 
-/// Tier C — see `docs/LIVE_NEXUS_WORKFLOW_TEST_PLAN.md` ("Tier C") and `TestPlans/UILive.xctestplan`.
+/// Real API key + real GUI, at once — see `docs/SWIFT_STANDARDS.md` §10 ("`TestPlans/UILive.xctestplan`").
 /// Combines a real GUI session with the real Nexus API key already configured in the app's own
 /// Settings screen (`LiveUITestGate`) — skips itself when none is configured, same discipline as
 /// `Tests/Integration/*`. Not part of the default `UI` plan: mixing a key-dependent self-skip

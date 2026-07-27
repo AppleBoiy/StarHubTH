@@ -5,7 +5,7 @@ description: Refresh StarHubTH's release screenshots (README + Nexus listing) ag
 
 # Refresh release screenshots
 
-Manual, pre-release step — same posture as running the `Integration`/`UI`/`UILive` test plans locally: deliberate, human-triggered, never automatic, never wired into CI. See `docs/RELEASE_SCREENSHOTS_PLAN.md` for the full rationale (or `docs/RELEASING.md` if that plan doc has since been retired).
+Manual, pre-release step — same posture as running the `Integration`/`UI`/`UILive` test plans locally: deliberate, human-triggered, never automatic, never wired into CI. See `docs/RELEASING.md`'s "Optional: refresh screenshots before a release" section for how this fits into the release procedure, and `docs/SWIFT_STANDARDS.md` §10 for why `ScreenshotCapture.xctestplan` exists as its own Test Plan.
 
 ## Precondition — check this first, don't skip it
 
@@ -13,7 +13,7 @@ This drives the **real** `StarHubTH.app` against the **real** `gameDir` already 
 
 ## Steps
 
-1. **Confirm/create the targets file.** `scripts/screenshot_targets.local.json` (gitignored — see `scripts/screenshot_targets.example.json` for the shape) names which of the maintainer's real saves/mods/profiles/Thai mods to open for entries that need one (`saveFolderName`, `modFolderName`, `groupFolderName`, `profileId`, `modName`). If it doesn't exist yet, ask the maintainer which real entities to use rather than guessing — a wrong guess means captured screenshots of the wrong mod/save.
+1. **Confirm/create the targets file.** `scripts/screenshot_targets.local.json` (gitignored — see `scripts/screenshot_targets.example.json` for the authoritative shape) names which of the maintainer's real saves/mods/profiles/Thai mods to open for entries that need one: `saveFolderName`, `saveSearchQuery`, `modFolderName`, `modSearchQuery`, `configModFolderName` (a *different* mod from `modFolderName` if that one has no `config.json` of its own — the Nexus-description-rich mod and the mod-with-a-config-editor aren't guaranteed to be the same real mod), `groupFolderName`, `profileId`, `modName`. If it doesn't exist yet, ask the maintainer which real entities to use rather than guessing — a wrong guess means captured screenshots of the wrong mod/save.
 
 2. **Build the app fresh:**
    ```bash
@@ -23,10 +23,10 @@ This drives the **real** `StarHubTH.app` against the **real** `gameDir` already 
 3. **Run the capture tool**, once per language (the tool captures whatever language the app is currently set to — flip it via the real Settings screen or `defaults write com.appleboiy.StarHubTH currentLanguage en|th` between runs). Use `scripts/run_screenshot_capture.py`, not a bare `xcodebuild test` invocation — `xcodebuild test` does not inherit the invoking shell's environment (same gap `docs/SWIFT_STANDARDS.md` documents for `STARHUB_SKIP_LIVE_TESTS`), so plain `KEY=value xcodebuild test ...` silently captures nothing; the wrapper patches `TestPlans/ScreenshotCapture.xctestplan`'s `environmentVariableEntries` for the run and restores it after:
    ```bash
    python3 scripts/run_screenshot_capture.py \
-     --output-dir /tmp/starhubth-screenshots/en \
+     --output-dir screenshots_captured/en \
      --targets scripts/screenshot_targets.local.json
    ```
-   Repeat with `currentLanguage th` and a `/th` output dir. Check the test log for `[ScreenshotCaptureTool]` failure lines — a missing target/precondition shows up there, not as a hard test failure (the test only fails if *every* Core screen failed).
+   Repeat with `currentLanguage th` and `--output-dir screenshots_captured/th`. `screenshots_captured/` is gitignored on purpose — use it, not `/tmp`, so a debug failure screenshot (`<id>-FAILURE.png`, written by the capture tool's own `catch` block) is still there to inspect after the run. Check the test log for `[ScreenshotCaptureTool]` failure lines — a missing target/precondition shows up there, not as a hard test failure (the test only fails if *every* Core screen failed).
 
 4. **Run the coverage check** — catches any screen the manifest doesn't know about yet:
    ```bash
@@ -36,8 +36,8 @@ This drives the **real** `StarHubTH.app` against the **real** `gameDir` already 
 
 5. **Run the diff report** against the checked-in screenshots, per language:
    ```bash
-   python3 scripts/screenshot_diff_report.py --new /tmp/starhubth-screenshots/en --existing screenshots/en
-   python3 scripts/screenshot_diff_report.py --new /tmp/starhubth-screenshots/th --existing screenshots/th
+   python3 scripts/screenshot_diff_report.py --new screenshots_captured/en --existing screenshots/en
+   python3 scripts/screenshot_diff_report.py --new screenshots_captured/th --existing screenshots/th
    ```
 
 6. **Show the maintainer the report.** Never copy new PNGs into `screenshots/en`/`screenshots/th` or touch the README yourself without asking — same rule as any other file this assistant doesn't own the content of. Let the maintainer decide which `+`/`~` entries are worth keeping, then copy those specific files in and update `README.md`/`README_EN.md`'s `<img>` references if new slugs were added.

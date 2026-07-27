@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Warns when a top-level `sidebar-tab-*` screen exists in source but scripts/screenshot_manifest.json
 doesn't know about it yet — the actual fix for "features get added and nobody remembers to add
-a matching screenshot" (docs/RELEASE_SCREENSHOTS_PLAN.md's stated goal).
+a matching screenshot" (see .claude/skills/refresh-screenshots/SKILL.md).
 
 Scoped deliberately to top-level tabs, not every sub-state the manifest lists — that catches
 the main failure mode (a whole new tab shipped with no screenshot at all) without needing this

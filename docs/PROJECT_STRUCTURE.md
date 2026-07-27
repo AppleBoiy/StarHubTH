@@ -103,6 +103,28 @@ Tests/
 
 Reorganising `Tests/` into subfolders is safe: it's an Xcode File System Synchronized Group (`project.yml`), recursively mirrored the same as `StarHubTH/`.
 
+---
+
+### `StarHubTHUITests/`
+
+A separate target — real `XCUIApplication`-driven tests, not run in CI (see `docs/SWIFT_STANDARDS.md` §10 for the full Test Plan breakdown of which suites live here vs. `Tests/`).
+
+```
+StarHubTHUITests/
+├── StarHubTHUITests.entitlements   App Sandbox OFF for this target only — the real app target
+│                                   stays sandboxed; only the test runner needs real filesystem
+│                                   writes (screenshot capture, mod backup round-trips)
+└── Sources/
+    ├── AppLauncher.swift, UITestEnvironment.swift, LiveUITestGate.swift   shared test setup
+    ├── SmokeUITests.swift, *RoundTripUITests.swift, *LiveDataUITests.swift   one file per flow
+    └── ScreenshotCapture/
+        └── ScreenshotCaptureTool.swift   drives the real, unfixtured app against the
+                                           maintainer's own gameDir — see
+                                           .claude/skills/refresh-screenshots/SKILL.md
+```
+
+A new UI-driving suite goes at `Sources/` top level, named `<Flow>UITests.swift`; a new self-contained tool (same shape as `ScreenshotCapture/`) gets its own subfolder under `Sources/`.
+
 **Why `Integration/` exists (QoC audit, see `docs/QOC_PLAN.md`):** `NXMParserTests` and
 `SmapiInstallerTests` each used to mix pure logic (parsing, string handling — fast,
 deterministic, no external dependency) with one method that makes a real network call. That

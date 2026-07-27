@@ -4,7 +4,7 @@ import XCTest
 /// Live integration test for "Sync Tag" (mod detail toolbar) — `ModsStoreTests` only
 /// exercises this against `StubNexusAPIClient`; this closes the "never tested against real
 /// Nexus data" gap for exactly one mod, not the full "Sync All" fan-out (that stays
-/// stub-only — see docs/LIVE_NEXUS_WORKFLOW_TEST_PLAN.md).
+/// stub-only — see docs/SWIFT_STANDARDS.md §10, `Integration/` section).
 @MainActor
 final class SyncTagIntegrationTests: XCTestCase {
     func testSyncTagFromNexusForOneMod() async throws {

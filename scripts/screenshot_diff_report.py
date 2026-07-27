@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reports how newly-captured screenshots differ from the checked-in ones — never overwrites
-or commits anything itself (docs/RELEASE_SCREENSHOTS_PLAN.md's stated caution level: a human
-reviews and pastes/commits, same as every other release step in this repo).
+or commits anything itself (see .claude/skills/refresh-screenshots/SKILL.md's stated caution
+level: a human reviews and pastes/commits, same as every other release step in this repo).
 
 Perceptual, not pixel-exact: resizes both images to a small thumbnail and compares average
 pixel difference, so a moved cursor or a single animation frame doesn't register as "changed"

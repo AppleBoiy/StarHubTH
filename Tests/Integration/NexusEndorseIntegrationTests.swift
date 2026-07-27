@@ -10,7 +10,8 @@ import XCTest
 /// `STARHUB_SKIP_LIVE_TESTS` — the normal live-test flag is not enough to run this, on
 /// purpose. Do not enable it unless you specifically intend to endorse "Mail Framework Mod"
 /// (Nexus ID 1536) on the account tied to your configured key. See
-/// docs/LIVE_NEXUS_WORKFLOW_TEST_PLAN.md ("Tier B") for the full reasoning.
+/// docs/SWIFT_STANDARDS.md §10 ("Mutating Nexus calls get their own, separate gate")
+/// for the full reasoning.
 final class NexusEndorseIntegrationTests: XCTestCase {
     func testEndorseModAgainstRealAccount() async throws {
         try XCTSkipIf(LiveTestGate.isSkipped, "STARHUB_SKIP_LIVE_TESTS=1")
