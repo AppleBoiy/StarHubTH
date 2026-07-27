@@ -2,7 +2,7 @@
 
 **Goal.** StarHubTH is itself published on Nexus Mods as a tool page (`docs/DOMAIN_CONTEXT.md`) — `assets/nexus_description.txt`/`nexus_description_en.txt`/`nexus_changelog.txt` are hand-maintained BBCode, pasted into the Nexus web listing by hand on every release, same as the screenshots. Reduce the manual work at release time: auto-upload the built release zip to the existing Nexus file slot from CI, and auto-generate the BBCode changelog text from `CHANGELOG.md` so it's never out of sync or hand-transcribed.
 
-**Status.** Track 1 implemented 2026-07-27, pending its first real dry-run on the next tag push. Track 2 not started.
+**Status.** Track 1 implemented and verified live 2026-07-27 (`v1.1.9` uploaded to Nexus automatically on tag push — see Phase 2.3). Track 2 not started.
 
 ---
 
@@ -47,7 +47,7 @@ A script (`scripts/generate_nexus_changelog.py`, mirroring `scripts/generate_loc
 **Phase 2 — Track 1 implementation** ✅ implemented 2026-07-27, not yet dry-run
 - [x] 2.1 Added the `Nexus-Mods/upload-action` step to `release.yml` (pinned to `v1.0.0-beta.9` by commit SHA), reading `zip_path`/`version`/`changelog_notes` from the existing "Build, package, and publish release" step's new outputs — `release.py` now writes those via `write_github_output()` whenever `GITHUB_OUTPUT` is set (no-op locally).
 - [x] 2.2 Set `archive_existing_version: true`, `update_mod_version: true`, and `primary_mod_manager_download: true`.
-- [ ] 2.3 **Not yet done** — needs a real tag push to dry-run against. This only proves out on the *next* release; verify the Nexus file slot actually updates before treating Track 1 as fully done.
+- [x] 2.3 Verified live on `v1.1.9` (2026-07-27): `Nexus-Mods/upload-action` completed successfully — multipart upload, finalized, mod file version created on file `7706256`. Track 1 is fully done.
 
 **Phase 3 — Track 2 implementation** — not started
 - [ ] 3.1 Write `scripts/generate_nexus_changelog.py`: `CHANGELOG.md` version section → BBCode block, matching `assets/nexus_changelog.txt`'s existing format exactly.
