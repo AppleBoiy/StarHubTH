@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.9] - 2026-07-27
+
+### Added
+- **Internal — Release builds now auto-upload to Nexus Mods**: `release.yml` pushes every tagged release's build to StarHubTH's existing Nexus Mods file slot right after publishing the GitHub Release, using the same version and `CHANGELOG.md` notes already extracted for GitHub. No user-facing behavior change — same build, one less manual upload step per release.
+
 ### Fixed
 - **Software Update screen never showed available mod updates**: SMAPI's real update-check output interleaves a blank line between each "you can update" entry — `SmapiLogParser` treated any non-matching line as the end of that block, so the blank line right after "You can update N mods:" silently ended parsing before a single real entry was ever read. Confirmed against a real, 122K-line SMAPI log with 4 genuinely out-of-date mods, none of which ever showed up. The existing unit test never caught this because its sample log had no blank lines between entries — unlike real SMAPI output.
+- **Internal — Nexus mod page's screenshot gallery was broken**: `assets/nexus_description.txt`/`nexus_description_en.txt` linked to numbered screenshot files (`1.png`…`15.png`) that no longer exist after the descriptive-slug rename, so every embedded image on the live Nexus listing 404'd. Repointed to the current slugs and expanded to the full 21-screen set in both languages. No in-app behavior change.
 
 ## [1.1.8] - 2026-07-26
 
